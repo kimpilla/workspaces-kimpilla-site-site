@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BMP-WAV | kimpilla</title>
+<link rel="stylesheet" href="../../style.css">
+</head>
+<body>
+<header>
+  <a class="home" href="../../index.html">kimpilla</a>
+  <nav><a href="../../music.html">音楽</a> <a href="../../apps.html">アプリ</a> <a href="../../memo.html">メモ</a></nav>
+</header>
+<main>
+<h1>BMP-WAV</h1>
+<p>音のデータを、そのまま画像として読む。画像のデータを、そのまま音として読む。色を音程に置きかえるような変換はしない。同じ数字の並びを、別のファイルの決まりで読み直すだけ。</p>
+<p class="small">ファイルはこの端末の中だけで処理します。どこにも送りません。</p>
+
+<section>
+<h2>1. ファイルを選ぶ</h2>
+<input type="file" id="file" accept=".wav,.bmp,image/*,audio/wav">
+<p class="small">WAV(非圧縮のPCM)、BMP(24bit・32bit)、ほかの画像(JPEG・PNGなど)。</p>
+<div id="srcinfo" class="info"></div>
+<fieldset id="fmt" hidden>
+  <legend>画像を音として読むときの形式</legend>
+  <label>サンプリング周波数
+    <select id="rate"><option>44100</option><option>48000</option><option>22050</option><option>96000</option><option>11025</option><option>8000</option></select></label>
+  <label>チャンネル <select id="ch"><option value="2">2(ステレオ)</option><option value="1">1(モノラル)</option></select></label>
+  <label>ビット <select id="sw"><option value="2">16</option><option value="1">8</option><option value="3">24</option></select></label>
+  <p class="small" id="fmtnote"></p>
+</fieldset>
+</section>
+
+<section>
+<h2>2. 加工を選ぶ(上から順にかかる)</h2>
+<div id="ops"></div>
+</section>
+
+<section>
+<h2>3. 変換する</h2>
+<button id="go" disabled>変換する</button>
+<div id="status" class="info"></div>
+<canvas id="preview" hidden></canvas>
+<audio id="player" controls hidden></audio>
+<p id="downloads"></p>
+</section>
+
+<section class="small">
+<h2>しくみ</h2>
+<ul>
+<li>WAVの音のデータ(PCM)を4バイトずつ区切って、1画素(青・緑・赤・α)にする。16bitステレオなら、1画素が1瞬間の左右の音。</li>
+<li>画素を正方形に並べる。上の行から下の行へ、時間が進む。足りない分は0(無音)で埋める。</li>
+<li>書き出したBMPを画像ソフトで加工して、ここに戻すと、加工が音になる。BMPには元の音の形式を書いておくが、画像ソフトで保存し直すと消えることがある。そのときは「形式」の設定で読む。</li>
+<li>24bitのBMPで保存し直すと、1画素が3バイトになり、音の区切りがずれる。それも、そのまま音になる。</li>
+</ul>
+</section>
+</main>
+<footer>kimpilla</footer>
+<script src="../common/wav.js"></script>
+<script src="bmpwav.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

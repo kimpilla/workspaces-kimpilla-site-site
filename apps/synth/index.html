@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>シンセ | kimpilla</title>
+<link rel="stylesheet" href="../../style.css">
+<style>
+  .waves label { margin-right: 14px; }
+  #keys { position: relative; height: 150px; margin: 16px 0 8px; user-select: none; touch-action: none; }
+  .key { position: absolute; top: 0; border: 1px solid var(--fg); }
+  .key.white { height: 100%; background: var(--key); z-index: 1; }
+  .key.black { height: 60%; background: var(--key-black); z-index: 2; }
+  .key span { position: absolute; bottom: 4px; left: 0; right: 0; text-align: center; font-size: 11px; color: #888; }
+  .key.on { background: var(--accent) !important; }
+  #scope { display: block; width: 100%; height: 90px; border: 1px solid var(--line); }
+</style>
+</head>
+<body>
+<header>
+  <a class="home" href="../../index.html">kimpilla</a>
+  <nav><a href="../../music.html">音楽</a> <a href="../../apps.html">アプリ</a> <a href="../../memo.html">メモ</a></nav>
+</header>
+<main>
+<h1>シンセ</h1>
+<p>鍵盤を押すと音が出る。下のつまみで、音の形・明るさ・響きを変えてみる。</p>
+<p class="small">パソコンのキーボードでも弾ける(下の段 Z S X D C V…、上の段 Q 2 W 3 E R…)。音が大きいので、最初は音量を下げてから。</p>
+
+<canvas id="scope"></canvas>
+<div id="keys"></div>
+<p><button id="octdown">オクターブ ↓</button><button id="octup">オクターブ ↑</button> <span class="small" id="octlabel"></span></p>
+
+<h2>音の形(オシレーター)</h2>
+<p class="waves" id="waves"></p>
+
+<h2>つまみ</h2>
+<div class="knobs" id="knobs"></div>
+<p><button id="reset">最初の音に戻す</button></p>
+
+<section class="small">
+<h2>なにが起きているか</h2>
+<ul>
+<li><b>音の形</b>: なめらかな波(sine)は丸い音、のこぎりの波(sawtooth)や四角い波(square)は、倍音が多いぶん、明るくてビリビリした音。</li>
+<li><b>FM</b>: もう一つの波で、音の高さを細かく揺らす。深くすると、金属や鐘のような音になる(FMシンセの考え方)。</li>
+<li><b>フィルター</b>: 高い成分を削る。下げるとこもった音、上げると明るい音。「クセ」を上げると、削る境目がピーキーになる。</li>
+<li><b>立ち上がり・余韻</b>: 押してから音が大きくなるまでの時間と、離してから消えるまでの時間。</li>
+<li><b>エコー</b>: 音を遅らせて重ねる。「くり返し」を上げると、ダブのように何度も返ってくる。</li>
+</ul>
+</section>
+</main>
+<footer>kimpilla</footer>
+<script src="synth.js"></script>
+</body>
+</html>
