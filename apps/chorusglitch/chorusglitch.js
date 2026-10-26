@@ -62,7 +62,7 @@
     const src = c.createBufferSource(); src.buffer = makeSource(c); src.loop = true;
     let node = src;
     const n = Math.round(p.stages);
-    const keep = [];
+    const keep = [], st = [], nWaves = extra.length;
     for (let s = 0; s < n; s++) {
       const input = c.createGain(), outG = c.createGain(), dry = c.createGain(), wet = c.createGain();
       const delay = c.createDelay(0.2), fb = c.createGain(), lfo = c.createOscillator(), lfoAmt = c.createGain();
@@ -72,12 +72,14 @@
       const sc = depthScale();
       lfoAmt.gain.value = p.depthMs * sc / 1000;
       lfo.connect(lfoAmt); lfoAmt.connect(delay.delayTime);
+      const ex = [];
       extra.forEach((w, k) => {                              // 追加した波も、同じ遅れの時間に足す
-        const o = c.createOscillator(), a = c.createGain();
+        const o = c.createOscillator(), a = c.createGain(); ex.push({ o, a });
         o.frequency.value = w.rate * Math.pow(2, seedsX[k][s] * p.spread * 2);
         a.gain.value = w.depth * sc / 1000;
         o.connect(a); a.connect(delay.delayTime); o.start(t0); keep.push(o);
       });
+      st.push({ delay, lfo, lfoAmt, fb, dry, wet, ex });
       dry.gain.value = 1 - p.mix; wet.gain.value = p.mix; fb.gain.value = p.feedback;
       node.connect(input);
       input.connect(dry); input.connect(delay);
@@ -97,7 +99,22 @@
     lim.threshold.value = -6; lim.ratio.value = 20; lim.attack.value = 0.002; lim.release.value = 0.1;
     node.connect(vol); vol.connect(lim); lim.connect(dest);
     src.start(t0);
-    return { comp, stop: () => { try { src.stop(); keep.forEach((l) => l.stop()); } catch (e) {} vol.disconnect(); } };
+    // 鳴らしたまま、つまみの値だけを、なめらかに変える(音を鳴らし直さない)。段数や元の音を変えたときは使えない。
+    const apply = () => {
+      if (extra.length !== nWaves) return false;
+      const now = c.currentTime, tc = 0.03, sc = depthScale(), to = (param, v) => param.setTargetAtTime(v, now, tc);
+      st.forEach((o, s) => {
+        to(o.delay.delayTime, p.delayMs / 1000);
+        to(o.lfo.frequency, p.rate * Math.pow(2, seeds[s] * p.spread * 2));
+        to(o.lfoAmt.gain, p.depthMs * sc / 1000);
+        o.ex.forEach((e, k) => { to(e.o.frequency, extra[k].rate * Math.pow(2, seedsX[k][s] * p.spread * 2)); to(e.a.gain, extra[k].depth * sc / 1000); });
+        to(o.fb.gain, p.feedback); to(o.dry.gain, 1 - p.mix); to(o.wet.gain, p.mix);
+      });
+      to(comp.threshold, -p.comp * 40); to(comp.ratio, 1 + p.comp * 11);
+      to(vol.gain, p.volume);
+      return true;
+    };
+    return { comp, apply, stop: () => { try { src.stop(); keep.forEach((l) => l.stop()); } catch (e) {} vol.disconnect(); } };
   }
 
   // ---- 再生 ----
@@ -127,7 +144,12 @@
       $('grOut').textContent = 'コンプが押さえている量: ' + (r < -0.05 ? r.toFixed(1) : '0.0') + ' dB';
     }, 120);
   }
-  function changed() {                // つまみを動かしたら、鳴っている音を組み直す
+  const LIVE = new Set(['delayMs', 'depthMs', 'rate', 'spread', 'feedback', 'mix', 'comp', 'volume', 'depth']);
+  function liveChanged(key) {         // 値だけ変えられるつまみは、鳴らしたまま変える。それ以外は、組み直す
+    if (running && LIVE.has(key) && running.apply && running.apply()) return;
+    changed();
+  }
+  function changed() {                // 段数・元の音・波の数を変えたら、鳴っている音を組み直す
     if (!running) return;
     clearTimeout(rebuildTimer);
     rebuildTimer = setTimeout(play, 80);
@@ -222,8 +244,8 @@
       play();
     } catch (err) { $('status').textContent = '読めませんでした(' + f.name + ')'; }
   };
-  const resyncMod = buildKnobs($('knobsMod'), KNOBS_MOD, p, changed);
-  const resyncOut = buildKnobs($('knobs'), KNOBS_OUT, p, changed);
+  const resyncMod = buildKnobs($('knobsMod'), KNOBS_MOD, p, liveChanged);
+  const resyncOut = buildKnobs($('knobs'), KNOBS_OUT, p, liveChanged);
   const showStages = () => { $('stOut').textContent = Math.round(p.stages) + '段'; };
   // 追加した波の行(速さ・深さ・消すボタン)
   const WAVEKNOBS = [
@@ -240,7 +262,7 @@
       x.onclick = () => { extra.splice(i, 1); renderWaves(); changed(); };
       head.append(t, x);
       const kb = document.createElement('div'); kb.className = 'knobs';
-      buildKnobs(kb, WAVEKNOBS, w, changed);
+      buildKnobs(kb, WAVEKNOBS, w, liveChanged);
       row.append(head, kb); box.appendChild(row);
     });
     $('addWave').disabled = extra.length >= MAXX;
