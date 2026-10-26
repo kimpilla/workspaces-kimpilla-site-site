@@ -5,6 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>コーラス重ね | kimpilla</title>
 <link rel="stylesheet" href="../../style.css">
+<style>
+  .stagerow { display: flex; align-items: center; gap: 8px; margin: 8px 0 12px; flex-wrap: wrap; }
+  .stagerow button { width: 2.4em; height: 2.4em; font-size: 16px; }
+  .stagerow output { min-width: 3.5em; text-align: center; font-size: 18px; }
+  .cgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 24px; align-items: start; margin-bottom: 8px; }
+  .cgrid .knobs { grid-template-columns: 1fr; }
+  canvas#lfo { display: block; width: 100%; height: 190px; border: 1px solid var(--line); }
+  .lfowrap .small { margin: 4px 0 0; }
+  .waverow { border-top: 1px solid var(--line); margin-top: 8px; padding-top: 6px; }
+  .wavehead { display: flex; justify-content: space-between; align-items: center; }
+  .wavehead button { padding: 2px 10px; }
+  @media (max-width: 700px) { .cgrid { grid-template-columns: 1fr; } .cgrid .lfowrap { order: -1; position: sticky; top: 0; z-index: 2; background: var(--bg); padding: 6px 0 2px; } canvas#lfo { height: 150px; } }
+</style>
 </head>
 <body>
 <header>
@@ -25,7 +38,20 @@
 <p id="filerow" hidden><input type="file" id="file" accept="audio/*"></p>
 
 <h2>コーラス</h2>
+<div class="stagerow"><span>段数</span><button id="stDown" aria-label="1段へらす">−</button><output id="stOut"></output><button id="stUp" aria-label="1段ふやす">+</button><span class="small">ボタンを押し続けると、どんどん変わる</span></div>
+<div class="cgrid">
+  <div>
+    <div class="knobs" id="knobsMod"></div>
+    <div id="waves"></div>
+    <p><button id="addWave">＋ 波を追加する</button></p>
+  </div>
+  <div class="lfowrap">
+    <canvas id="lfo"></canvas>
+    <p class="small" id="lfoNote"></p>
+  </div>
+</div>
 <div class="knobs" id="knobs"></div>
+<p class="small" id="grOut"></p>
 <p><button id="reshuffle">揺れのばらつきを振り直す</button><button id="random">でたらめにする</button><button id="reset">最初に戻す</button></p>
 
 <section class="small">
@@ -36,6 +62,8 @@
 <li><b>揺れの速さ</b>: ふつうのコーラスは1秒に1回前後。数十回まで速くすると、うねりがザラザラした音に変わる。</li>
 <li><b>ばらつき</b>: 段ごとに揺れの速さを変える。そろっていると規則的なうねり、ばらばらだと予測できない崩れ方になる。</li>
 <li><b>フィードバック</b>: 遅れた音を、もう一度、自分の入り口に戻す。上げると金属的に鳴り、段数が多いと、発振ぎりぎりのノイズになる。</li>
+<li><b>波を追加する</b>: 揺れの波を、もう1つ、足す。遅れの時間が、全部の波の足し算で動く。ゆっくりの波(0.02〜2回/秒)と細かい波(数回〜数十回/秒)を重ねると、テープやレコードのような「うねり」と「ザラつき」が同時に出る。6つまで足せる。遅れの時間が0より小さくならないように、深さの合計が大きすぎると、全部の波が同じ割合で小さくなる。</li>
+<li><b>コンプの強さ</b>: 大きな音を押さえて、小さな音との差を縮める。重ねて音が大きく暴れるのを抑える。0%で、なし。「でたらめにする」でも、この設定と音量は変わらない(最初は50%)。再生中は、いま押さえている量が出る。</li>
 <li>WAVで保存すると、今のつまみの状態のまま、10秒を書き出す(画面で鳴っているのと同じ計算)。</li>
 </ul>
 </section>
