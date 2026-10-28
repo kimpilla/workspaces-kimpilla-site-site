@@ -143,6 +143,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   <tbody id="rows"></tbody>
 </table>
 </div>
+<p class="small"><label>全体のテンポ <input type="number" id="allBpm" min="30" max="400" value="200" style="width:5em"></label> <button id="allBpmSet">全ブロックのテンポをそろえる</button> <span>(「はじめ → おわり」は、一定のテンポになる)</span></p>
 <p><button id="add">ブロックを足す</button><button id="example">例に戻す</button><button id="clear">全部消す</button></p>
 <p class="small">「編集」を押すと、そのブロックのパターンを、横=拍(16分刻み)・縦=パートの表で直せる。直した内容は、そのブロックだけに効く。</p>
 <p class="small">「長さ」は、何拍で切るか(4分=4分音符、8分=8分音符)。7と8分なら7/8拍子。パターンは頭から読んで、長さで切る(足りなければ頭に戻ってくり返す)。「テンポ」は、はじめ → おわり。140 → 160 のように入れると、そのブロックの中で少しずつ変わる。おわりを空にすると、一定のテンポ。</p>
@@ -234,28 +235,42 @@ function saveBlob(blob, filename, statusEl) {
   const $ = (id) => document.getElementById(id);
 
   // 1文字 = 16分音符、16文字 = 4/4の1小節
+  // 分類(プルダウンと、下の一覧で、この順に並ぶ)
+  const GROUPS = [
+    ['基本のビート', ['ツービート', 'ツービート(裏拍アクセント)', 'ツービート(フロアタム)', 'Dビート', 'Dビート(フロアタム)', 'Dビート(クラッシュ版)', 'パスパス(スネア頭+オープンハット)']],
+    ['ブラスト・連打', ['ブラスト(交互)', 'ハンマーブラスト', 'ドコドコ(2バス)']],
+    ['ハーフ・遅いビート', ['ハーフ(モッシュ)', '8ビート', '8ビート(フロアタム)']],
+    ['フィル・タム回し', ['スネア連打(スネアだけ)', 'スネア連打(タム回し)', 'タム回し(スネア→ロー→フロア)']],
+    ['キメ・休み', ['決め(キメ)', '3・3・2(クラッシュ+スネア+キック)', '休み']],
+  ];
   const PATTERNS = {
+    // ---- 基本のビート ----
     'ツービート': { K: 'x...x...x...x...', S: '..x...x...x...x.', H: 'x.x.x.x.x.x.x.x.' },
+    // 裏拍アクセント: 「ドタッ タッ」。キックは1拍目と3拍目、裏拍(「と」)にスネア+オープンハイハットをアクセント
+    'ツービート(裏拍アクセント)': { K: 'x.......x.......', S: '..X...X...X...X.', O: '..X...X...X...X.' },
+    'ツービート(フロアタム)': { K: 'x...x...x...x...', S: '..x...x...x...x.', T: 'x.x.x.x.x.x.x.x.' },
     // Dビート(Discharge型。Wikipedia「D-beat」の形): スネアは裏拍(「と」)、キックは 1・1の裏の裏…とずれて入る
     // アクセント(X)・ゴースト(o)入り。きんぴらさんが編集した形。クラッシュ版は、キックとスネアをそろえて、クラッシュは1拍目と3拍目の頭にアクセント
     'Dビート': { K: 'X..o.x..X..o.x..', S: '..o...X...o...X.', H: 'X.x.x.X.X.x.x.X.' },
     'Dビート(フロアタム)': { K: 'X..x.x..X..o.x..', S: '..o...X...o...X.', T: 'X.o...X.X.x...X.' },   // きんぴらさんが編集した形(フロアタムを間引いて、キックと「ドド」とならないように)
     'Dビート(クラッシュ版)': { K: 'X..o.x..X..o.x..', S: '..o...X...o...X.', C: 'X..x.x..X..x.x..' },
-    // 裏拍アクセント: 「ドタッ タッ」。キックは1拍目と3拍目、裏拍(「と」)にスネア+オープンハイハットをアクセント
-    'ツービート(裏拍アクセント)': { K: 'x.......x.......', S: '..X...X...X...X.', O: '..X...X...X...X.' },
-    'ツービート(フロアタム)': { K: 'x...x...x...x...', S: '..x...x...x...x.', T: 'x.x.x.x.x.x.x.x.' },
-    'ブラスト(交互)': { K: 'x.x.x.x.x.x.x.x.', S: '.x.x.x.x.x.x.x.x', R: 'x.x.x.x.x.x.x.x.' },
-    'ハンマーブラスト': { K: 'x.x.x.x.x.x.x.x.', S: 'x.x.x.x.x.x.x.x.', C: 'x.x.x.x.x.x.x.x.' },
-    '8ビート': { K: 'x.......x.x.....', S: '....x.......x...', H: 'x.x.x.x.x.x.x.x.' },
-    '8ビート(フロアタム)': { K: 'x.......x.x.....', S: '....x.......x...', T: 'x.x.x.x.x.x.x.x.' },
-    'ハーフ(モッシュ)': { K: 'x.....x...x.....', S: '........x.......', C: 'x.......x.......' },
-    'ドコドコ(2バス)': { K: 'xxxxxxxxxxxxxxxx', S: '....x.......x...', R: 'x...x...x...x...' },
-    'スネア連打(フィル)': { K: 'x.......x.......', S: '.ooooooooooooooo', C: 'x...............' },
-    'タム回し(スネア→ロー→フロア)': { K: 'x...............', S: 'xxxx............', M: '....xxxx........', T: '........xxxxxxxX', C: 'x...............' },
-    'スネア連打(タム回し)': { K: 'x.......x.......', S: '.ooooooo........', M: '........xxxx....', T: '............xxXX', C: 'x...............' },
-    '決め(キメ)': { K: 'x.....x.........', S: 'x.....x.........', C: 'x.....x.........' },
     // 「パスパスパスパス」: スネアは拍の頭(全部アクセント)、オープンハイハットは拍の頭にゴースト、キックは1拍目・3拍目の頭と、その前の裏。きんぴらさんが編集した形
     'パスパス(スネア頭+オープンハット)': { K: 'x.....x.x.....x.', S: 'X...X...X...X...', O: 'o...o...o...o...' },
+    // ---- ブラスト・連打 ----
+    'ブラスト(交互)': { K: 'x.x.x.x.x.x.x.x.', S: '.x.x.x.x.x.x.x.x', R: 'x.x.x.x.x.x.x.x.' },
+    'ハンマーブラスト': { K: 'x.x.x.x.x.x.x.x.', S: 'x.x.x.x.x.x.x.x.', C: 'x.x.x.x.x.x.x.x.' },
+    'ドコドコ(2バス)': { K: 'xxxxxxxxxxxxxxxx', S: '....x.......x...', R: 'x...x...x...x...' },
+    // ---- ハーフ・遅いビート ----
+    'ハーフ(モッシュ)': { K: 'x.....x...x.....', S: '........x.......', C: 'x.......x.......' },
+    '8ビート': { K: 'x.......x.x.....', S: '....x.......x...', H: 'x.x.x.x.x.x.x.x.' },
+    '8ビート(フロアタム)': { K: 'x.......x.x.....', S: '....x.......x...', T: 'x.x.x.x.x.x.x.x.' },
+    // ---- フィル・タム回し ----
+    // スネアだけ: 「スネア連打(タム回し)」の、ロータム・フロアタムの部分を、スネアに置き換えた形
+    'スネア連打(スネアだけ)': { K: 'x.......x.......', S: '.oooooooxxxxxxXX', C: 'x...............' },
+    'スネア連打(タム回し)': { K: 'x.......x.......', S: '.ooooooo........', M: '........xxxx....', T: '............xxXX', C: 'x...............' },
+    'タム回し(スネア→ロー→フロア)': { K: 'x...............', S: 'xxxx............', M: '....xxxx........', T: '........xxxxxxxX', C: 'x...............' },
+    // ---- キメ・休み ----
+    '決め(キメ)': { K: 'x.....x.........', S: 'x.....x.........', C: 'x.....x.........' },
     // 3・3・2: 8分音符を 3+3+2 に区切る「たーーたーーたー」。クラッシュ・スネア・キックを同時に鳴らす(16分では 1・7・13マス目)
     '3・3・2(クラッシュ+スネア+キック)': { K: 'X.....X.....X...', S: 'X.....X.....X...', C: 'X.....X.....X...' },
     '休み': {},
@@ -267,12 +282,12 @@ function saveBlob(blob, filename, statusEl) {
   const ACCENT = 1.45, GHOST = 0.45;                          // X(アクセント)と o(ゴースト)の強さ
   const EXAMPLE = [
     { pat: 'ツービート', n: 4, unit: 4, bpm: 200, rep: 2 },
-    { pat: 'ブラスト(交互)', n: 7, unit: 8, bpm: 240, rep: 4 },
+    { pat: 'ブラスト(交互)', n: 4, unit: 4, bpm: 240, rep: 2 },
     { pat: 'Dビート', n: 4, unit: 4, bpm: 240, bpmEnd: 170, rep: 2 },
     { pat: 'ハーフ(モッシュ)', n: 4, unit: 4, bpm: 85, rep: 2 },
-    { pat: 'ドコドコ(2バス)', n: 5, unit: 8, bpm: 85, rep: 2 },
-    { pat: 'スネア連打(フィル)', n: 4, unit: 4, bpm: 85, bpmEnd: 200, rep: 1 },
-    { pat: '決め(キメ)', n: 3, unit: 4, bpm: 200, rep: 1 },
+    { pat: 'ドコドコ(2バス)', n: 4, unit: 4, bpm: 85, rep: 2 },
+    { pat: 'スネア連打(スネアだけ)', n: 4, unit: 4, bpm: 85, bpmEnd: 200, rep: 1 },
+    { pat: '決め(キメ)', n: 4, unit: 4, bpm: 200, rep: 1 },
   ];
   let blocks = EXAMPLE.map((b) => Object.assign({}, b));
   const vol = { master: 0.7, K: 0.9, S: 0.8, M: 0.5, T: 0.5, H: 0.4, O: 0.4, R: 0.4, C: 0.5, drive: 0, dmix: 1, dtone: 9000 };
@@ -566,7 +581,11 @@ function saveBlob(blob, filename, statusEl) {
       const cell = (el, label) => { const td = document.createElement('td'); if (el) td.appendChild(el); if (label) td.dataset.label = label; tr.appendChild(td); return td; };
       cell().textContent = i + 1;
       const sel = document.createElement('select');
-      for (const n of NAMES) { const o = document.createElement('option'); o.textContent = n; o.selected = n === b.pat; sel.appendChild(o); }
+      for (const [gname, list] of GROUPS) {
+        const og = document.createElement('optgroup'); og.label = gname;
+        for (const n of list) { const o = document.createElement('option'); o.textContent = n; o.selected = n === b.pat; og.appendChild(o); }
+        sel.appendChild(og);
+      }
       sel.onchange = () => {
         if (b.cust && !window.confirm('このブロックの編集内容は捨てられます')) { sel.value = b.pat; return; }
         delete b.cust; b.pat = sel.value; renderRows(); changed();
@@ -627,11 +646,15 @@ function saveBlob(blob, filename, statusEl) {
   }
   function renderGrid() {
     const lines = [];
-    for (const n of NAMES) {
+    for (const [gname, list] of GROUPS) {
+     lines.push('■ ' + gname);
+     for (const n of list) {
       const p = PATTERNS[n];
       lines.push(n);
       for (const d of PARTS) if (p[d]) lines.push('  ' + d + ' ' + p[d].replace(/(.{4})/g, '$1 ').trim());
       if (!Object.keys(p).length) lines.push('  (音なし)');
+     }
+     lines.push('');
     }
     $('grid').textContent = lines.join('\n');
   }
@@ -652,6 +675,7 @@ function saveBlob(blob, filename, statusEl) {
     const old = o.patterns && typeof o.patterns === 'object' ? o.patterns : {};     // 前の版の「自作パターン」も、ブロックの編集内容として引き継ぐ
     const bl = o.blocks.slice(0, 200).map((b) => {
       b = b || {};
+      if (b.pat === 'スネア連打(フィル)') b.pat = 'スネア連打(スネアだけ)';   // 名前を変えた前の版の保存データ
       if (b.pat === 'パスパス(スネア頭+裏オープンハット)') b.pat = 'パスパス(スネア頭+オープンハット)';   // 名前を変えた前の版の保存データ
       const nb = { pat: NAMES.includes(b.pat) ? b.pat : 'ツービート', n: Math.round(clamp(b.n, 1, 32, 4)), unit: +b.unit === 8 ? 8 : 4,
         bpm: Math.round(clamp(b.bpm, 30, 400, 120)), rep: Math.round(clamp(b.rep, 1, 64, 1)) };
@@ -724,6 +748,14 @@ function saveBlob(blob, filename, statusEl) {
     row.classList.add('added'); setTimeout(() => row.classList.remove('added'), 1500);
     try { row.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (e) { row.scrollIntoView(); }
     if (!timer) $('status').textContent = 'ブロックを足しました(#' + blocks.length + '、一番下)。直前のブロックと同じ内容です。';
+  };
+  $('allBpmSet').onclick = () => {      // 全ブロックのテンポを、1つの値にそろえる(だんだん変わる設定は、やめる)
+    if (!blocks.length) return;
+    const v = Math.round(Math.max(30, Math.min(400, +$('allBpm').value || 200)));
+    $('allBpm').value = v;
+    blocks.forEach((b) => { b.bpm = v; delete b.bpmEnd; });
+    renderRows(); changed();
+    if (!timer) $('status').textContent = '全ブロックのテンポを ' + v + ' にそろえました。';
   };
   $('example').onclick = () => { blocks = EXAMPLE.map((b) => Object.assign({}, b)); renderRows(); changed(); };
   $('clear').onclick = () => { stop(); blocks = []; renderRows(); autosave(); };
