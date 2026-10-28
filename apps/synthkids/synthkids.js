@@ -241,7 +241,7 @@
     arpOn = on; clearInterval(arpTimer); arpTimer = null; arpIdx = 0;
     for (const n of [...voices.keys()]) noteOff(n);
     arpHeld.forEach((n) => keyEl(n, false, 'held')); arpHeld.clear();
-    $('arpBtn').textContent = on ? '🤖 じぶんで' : '🤖 ロボット';
+    $('arpBtn').textContent = on ? '🖐️ じぶんで' : '🤖 ロボット';
     $('arpSpeedRow').hidden = !on; $('arpTip').hidden = !on; $('robot').hidden = !on;
     $('keywrap').classList.toggle('arp', on);
     if (on) {                                                                            // はじめから、ド・ミ・ソを えらんでおく(おすと すぐ うごきだす)
