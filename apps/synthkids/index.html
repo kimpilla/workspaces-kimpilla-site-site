@@ -48,7 +48,7 @@
   /* ダブルタップでの拡大を止める(ピンチでの拡大・スクロールは、そのまま) */
   html, body { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
   .dock { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
-  main { padding-bottom: 300px; }
+  main { padding-bottom: 320px; }
   .dock { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; background: #fff7e0; border-top: 3px solid #ffd36b; box-shadow: 0 -4px 12px rgba(0,0,0,.18); padding: 2px 10px calc(54px + env(safe-area-inset-bottom, 0px)); }   /* 下の54pxは、Netlifyの「Powered by Netlify」の表示が、ボタンに かぶらないための あき */
   .dockin { max-width: 740px; margin: 0 auto; }
   .dockvol { position: absolute; left: 12px; bottom: max(12px, env(safe-area-inset-bottom, 0px)); width: 52%; max-width: 280px; display: flex; align-items: center; gap: 6px; font-size: 20px; margin: 0; }
@@ -59,7 +59,7 @@
   .dock button.big { font-size: 15px; padding: 6px 14px; white-space: nowrap; border-radius: 999px; border: 3px solid #ffb347; background: #fff; color: #7a4b00; margin: 0; }
   .dock button.big:hover:not(:disabled) { background: #ffe9bf; color: #7a4b00; }
   .dock button.big.sel { background: #ffb347; color: #fff; }
-  .keywrap { position: relative; padding-top: 70px; }
+  .keywrap { position: relative; padding-top: 86px; }
   #robot { position: absolute; top: 36px; left: 0; width: 30px; pointer-events: none; transition: left .09s ease-out; z-index: 3; }
   #robot svg { display: block; width: 100%; height: auto; }
   #robot.hop svg { animation: hop .2s ease-out; }
@@ -67,8 +67,13 @@
   .key.held { outline: 4px dashed #fff; outline-offset: -8px; }
   .scopewrap { position: relative; margin: 12px 0; }
   .scopewrap #scope { margin: 0; }
-  #singer { position: absolute; left: 0; top: 28px; width: 44px; pointer-events: none; transform-origin: center bottom; transition: left .09s ease-out, top .12s; z-index: 4; }
-  .keywrap.arp #singer { top: 1px; }
+  #singer { position: absolute; left: 0; top: 28px; width: 60px; pointer-events: none; transform-origin: center bottom; transition: left .09s ease-out, top .12s; z-index: 4; }
+  .keywrap.arp #singer, .keywrap.arp #singerClone, .keywrap.arp #singerBig { top: 1px; }
+  .ghost { position: absolute; left: 0; width: 60px; pointer-events: none; opacity: 0; transition: left .09s ease-out, top .12s; }
+  .ghost svg { width: 140%; height: auto; display: block; overflow: visible; margin: -20% 0 -20% -20%; }
+  #singerClone { top: 28px; z-index: 3; transform-origin: center bottom; }
+  #singerBig { top: 28px; z-index: 2; transform-origin: center bottom; filter: blur(3px) saturate(1.3); transform: scale(1.6); }
+  #singerClone.sing svg, #singerBig.sing svg { animation: bob .22s ease-in-out infinite alternate; }
   #singer svg { width: 100%; height: auto; display: block; overflow: visible; }
   #singer.sing svg { animation: bob .22s ease-in-out infinite alternate; }
   #singer .mouth { transform-box: fill-box; transform-origin: center; }
@@ -156,6 +161,7 @@
 <li><b>ロボット(アルペジエーター)</b>: ボタンを押すと、ド・ミ・ソを選んだ状態で、ロボットが1つずつ順番に鳴らし始める(のぼって、くだる)。キーをタッチすると、選ぶ・はずすが切り替わり、指を離しても続く。鍵盤の上を、ロボットが跳ねて移動する。3つ以上押さえると、折り返す。「はやさ」は、1分あたりの拍の数(BPM)で、8分音符で鳴らす。もう一度押すと、自分で弾く形に戻る。</li>
 <li><b>きらきら</b>: ド・レ・ミ・ソ・ラの5音だけを並べた音階(メジャーペンタトニック)。どの順で弾いても、ぶつかりにくい。<b>ドレミ</b>は、ドレミファソラシド(メジャースケール)。きらきらは、メジャースケールから、ぶつかりやすいファとシを抜いたもの。</li>
 <li><b>おとの おおきさのコース</b>: 音の大きさの形(ADSR)。①=立ち上がり(アタック)、②の横=減っていく時間(ディケイ)と縦=押している間の大きさ(サスティン)、③=離してから消えるまで(リリース)。ガムの顔は、実際の音と同じ計算で、いまの大きさに合わせてふくらむ。</li>
+<li><b>キャラクターのぶんしん</b>: 鍵盤の上のキャラクターに、うすい分身が出る。「ぶんしん」を上げると、少しずれた位置に、うすく出る。「ずれ」を上げると、ぼやけて、色がずれ、うすくなったり濃くなったりする速さも上がる(うなりの見える化)。「おおきな おにいさん」を上げると、後ろに、大きなやさしい色のぼかしが出てくる。</li>
 <li><b>ぶんしん</b>: 同じ波を、もう1つ重ねる。「ずれ」で、ほんの少しだけ音程をずらす(デチューン)と、2つの波の山と谷が、ゆっくり重なったり打ち消し合ったりして、音が厚くなる(うなり)。図は、ずれを大きく見せるため、ゆっくり動かしている。「おおきなおにいさん」は、1オクターブ下のサイン波(サブ)。</li>
 <li><b>あかるさ</b>=フィルター(高い成分を削る)。</li>
 <li><b>エフェクターを踏む</b>: ボタンで入り・切り。<b>ひずみ</b>=ディストーション(波をつぶして、ギザギザにする)、<b>ゆれゆれ</b>=コーラス(少し遅らせた音を、ゆらして重ねる)、<b>ゆらゆら</b>=ビブラート(音の高さを細かく揺らす)、<b>やまびこ</b>=ディレイ(エコー)。順番は、ひずみ → ゆれゆれ → やまびこ。色は、ギターの足元に並べるエフェクターのイメージ。</li>
@@ -164,7 +170,7 @@
 </section>
 </main>
 <div class="dock" id="dock"><div class="dockin">
-<div class="keywrap" id="keywrap"><div id="singer" aria-hidden="true"></div><div id="robot" hidden aria-hidden="true"><svg viewBox="0 0 40 48"><line x1="20" y1="2" x2="20" y2="9" stroke="#556" stroke-width="2"/><circle cx="20" cy="3" r="3" fill="#ff5a5a"/><rect x="6" y="9" width="28" height="20" rx="5" fill="#9fb4c8" stroke="#556" stroke-width="2"/><circle cx="14" cy="19" r="3.6" fill="#fff"/><circle cx="26" cy="19" r="3.6" fill="#fff"/><circle cx="14" cy="19" r="1.6" fill="#223"/><circle cx="26" cy="19" r="1.6" fill="#223"/><rect x="15" y="24" width="10" height="2.6" rx="1.3" fill="#556"/><rect x="10" y="31" width="20" height="13" rx="3" fill="#7e93a8" stroke="#556" stroke-width="2"/></svg></div><div id="keys"></div></div>
+<div class="keywrap" id="keywrap"><div id="singerBig" class="ghost" aria-hidden="true"></div><div id="singerClone" class="ghost" aria-hidden="true"></div><div id="singer" aria-hidden="true"></div><div id="robot" hidden aria-hidden="true"><svg viewBox="0 0 40 48"><line x1="20" y1="2" x2="20" y2="9" stroke="#556" stroke-width="2"/><circle cx="20" cy="3" r="3" fill="#ff5a5a"/><rect x="6" y="9" width="28" height="20" rx="5" fill="#9fb4c8" stroke="#556" stroke-width="2"/><circle cx="14" cy="19" r="3.6" fill="#fff"/><circle cx="26" cy="19" r="3.6" fill="#fff"/><circle cx="14" cy="19" r="1.6" fill="#223"/><circle cx="26" cy="19" r="1.6" fill="#223"/><rect x="15" y="24" width="10" height="2.6" rx="1.3" fill="#556"/><rect x="10" y="31" width="20" height="13" rx="3" fill="#7e93a8" stroke="#556" stroke-width="2"/></svg></div><div id="keys"></div></div>
 <div class="row dockrow">
 <button class="big" id="low" aria-label="ひくく">⬇</button>
 <button class="big" id="high" aria-label="たかく">⬆</button>

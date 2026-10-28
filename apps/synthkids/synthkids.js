@@ -34,7 +34,8 @@
     return '<path d="' + d + 'Z" fill="' + fill + '" stroke="' + fill + '" stroke-width="4" stroke-linejoin="round"/>';
   }
   CHARS[1].body = starBody(50, 54, 44, 34, 11, '#ffc93c');
-  function charSvg(c) {
+  function charSvg(c, bodyOnly) {
+    if (bodyOnly) return '<svg viewBox="-20 -20 140 140" aria-hidden="true">' + c.body + '</svg>';   // 分身は、顔なし(黒い点が目立たないように)
     return '<svg viewBox="0 0 100 100" aria-hidden="true">' + c.body +
       '<circle cx="' + (50 - c.ex) + '" cy="' + c.ey + '" r="6.5" fill="#fff"/><circle cx="' + (50 + c.ex) + '" cy="' + c.ey + '" r="6.5" fill="#fff"/>' +
       '<circle cx="' + (50 - c.ex) + '" cy="' + (c.ey + 1) + '" r="3" fill="#2b2150"/><circle cx="' + (50 + c.ex) + '" cy="' + (c.ey + 1) + '" r="3" fill="#2b2150"/>' +
@@ -198,7 +199,7 @@
     keyEl(n, false); sing();
   }
   function sing() {                                      // 鳴っているあいだ、キャラクターが歌う
-    document.querySelectorAll('.char.sel, .mixchar, #singer').forEach((el) => el.classList.toggle('sing', voices.size > 0));
+    document.querySelectorAll('.char.sel, .mixchar, #singer, #singerClone, #singerBig').forEach((el) => el.classList.toggle('sing', voices.size > 0));
   }
 
   // ---- 鍵盤(8つの大きなキー) ----
@@ -370,11 +371,25 @@
     const level = Math.min(1, pk / 70), el = $('singer');
     el.style.transform = 'scale(' + (1 + 0.25 * level).toFixed(3) + ')';
     const m = el.querySelector('.mouth'); if (m) m.style.transform = 'scaleY(' + (1 + 3 * level).toFixed(2) + ')';
+    // ぶんしん・おおきなおにいさんに合わせて、うすい もう1人ずつ が出る
+    const cl = $('singerClone'), bg = $('singerBig'), ms = 'scaleY(' + (1 + 3 * level).toFixed(2) + ')', tt = performance.now() / 1000;
+    const d = Math.min(1, p.detune / 40);                                                   // ずれ(0〜1)
+    if (p.osc2 < 0.02) cl.style.opacity = 0;
+    else {
+      const beat = 0.88 + 0.12 * Math.sin(2 * Math.PI * tt * (0.4 + d * 2.5));             // ずれが大きいほど、はやく うすくなったり こくなったり(うなり)
+      cl.style.opacity = ((0.4 + 0.45 * p.osc2) * beat).toFixed(3);
+      cl.style.transform = 'translateX(' + (7 + d * 15).toFixed(1) + 'px) scale(' + (1 + 0.25 * level).toFixed(3) + ')';
+      cl.style.filter = 'blur(' + (d * 2.6).toFixed(1) + 'px) hue-rotate(' + (d * 70).toFixed(0) + 'deg) saturate(' + (1 + d * 0.8).toFixed(2) + ')';
+    }
+    if (p.sub < 0.02) bg.style.opacity = 0;
+    else { bg.style.opacity = (0.16 + 0.34 * p.sub).toFixed(3); bg.style.transform = 'scale(' + (1.6 + 0.12 * level).toFixed(3) + ')'; }
+    const mc = cl.querySelector('.mouth'), mb = bg.querySelector('.mouth'); if (mc) mc.style.transform = ms; if (mb) mb.style.transform = ms;
   }
-  function buildSinger() { $('singer').innerHTML = charSvg(faceChar()); }
+  function buildSinger() { const s = charSvg(faceChar()); $('singer').innerHTML = s; const gs = charSvg(faceChar(), true); $('singerClone').innerHTML = gs; $('singerBig').innerHTML = gs; }
   function singerTo(n) {                                   // キャラクターは、いちばん さいごに ならした キーの うえで うたう
     const k = document.querySelector('.key[data-note="' + n + '"]'), s = $('singer'); if (!k) return;
-    s.style.left = (k.offsetLeft + k.offsetWidth / 2 - s.offsetWidth / 2) + 'px';
+    const x = (k.offsetLeft + k.offsetWidth / 2 - s.offsetWidth / 2) + 'px';
+    s.style.left = x; $('singerClone').style.left = x; $('singerBig').style.left = x;
   }
 
   // ---- 「おとの おおきさ」のコース(ジェットコースター)と、ガムの顔 ----
