@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>おとあそびシンセ | kimpilla</title>
+<link rel="stylesheet" href="../../style.css">
+<style>
+  .play { background: #fff7e0; color: #3a2a12; border-radius: 22px; padding: 14px 14px 18px; margin: 14px 0; border: 3px solid #ffd36b; font-family: "Hiragino Maru Gothic ProN", "Hiragino Kaku Gothic ProN", "Yu Gothic", system-ui, sans-serif; }
+  .play h2 { font-size: 17px; margin: 14px 0 8px; color: #7a4b00; }
+  .chars { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .char { background: #fff; border: 4px solid #f1dfae; border-radius: 20px; padding: 6px 2px 4px; margin: 0; cursor: pointer; color: #3a2a12; text-align: center; font-size: 13px; line-height: 1.3; }
+  .char:hover:not(:disabled) { background: #fff; color: #3a2a12; }
+  .char svg { width: 100%; height: auto; display: block; max-width: 110px; margin: 0 auto; overflow: visible; }
+  .char.sel { border-color: #ff7a3d; background: #fff1e6; transform: scale(1.06); box-shadow: 0 4px 0 #ffb98f; }
+  .char .mouth { transform-box: fill-box; transform-origin: center; transition: transform .08s; }
+  .char.sing .mouth { transform: scaleY(3); }
+  .char.sing svg { animation: bob .22s ease-in-out infinite alternate; }
+  @keyframes bob { from { transform: translateY(0) rotate(-3deg); } to { transform: translateY(-6px) rotate(3deg); } }
+  @media (prefers-reduced-motion: reduce) { .char.sing svg { animation: none; } }
+  #scope { display: block; width: 100%; height: 110px; background: #2b2150; border-radius: 16px; margin: 12px 0; }
+  #keys { display: flex; gap: 5px; touch-action: none; user-select: none; -webkit-user-select: none; margin: 10px 0; }
+  .key { flex: 1; height: 150px; border-radius: 12px 12px 18px 18px; border: 3px solid rgba(0,0,0,.18); display: flex; align-items: flex-end; justify-content: center; padding-bottom: 8px; font-size: 20px; font-weight: bold; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.4); cursor: pointer; }
+  .key.on { transform: translateY(5px) scale(.97); filter: brightness(1.25); box-shadow: 0 0 0 4px #fff, 0 0 0 7px #ff7a3d; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 8px 0; }
+  .play button.big { font-size: 16px; padding: 10px 16px; border-radius: 999px; border: 3px solid #ffb347; background: #fff; color: #7a4b00; margin: 0; }
+  .play button.big:hover:not(:disabled) { background: #ffe9bf; color: #7a4b00; }
+  .play button.big.sel { background: #ffb347; color: #fff; }
+  .sl { display: grid; grid-template-columns: 7.5em 1fr; gap: 6px 10px; align-items: center; margin: 10px 0; font-size: 16px; }
+  .sl input[type=range] { width: 100%; height: 34px; accent-color: #ff7a3d; }
+  .mixrow { display: flex; align-items: center; justify-content: center; gap: 4px; margin: 10px 0; }
+  .mixitem { flex: 1; max-width: 100px; text-align: center; font-size: 12px; line-height: 1.3; }
+  .mixitem svg { width: 100%; height: auto; display: block; overflow: visible; }
+  .mixitem .mouth, .face .mouth { transform-box: fill-box; transform-origin: center; transition: transform .06s; }
+  .mixchar.sing .mouth { transform: scaleY(3); }
+  .mixchar.sing svg { animation: bob .22s ease-in-out infinite alternate; }
+  .mixop { font-size: 22px; font-weight: bold; color: #7a4b00; }
+  .face { width: min(60%, 220px); margin: 8px auto; touch-action: none; user-select: none; -webkit-user-select: none; cursor: ns-resize; background: #fff; border: 4px solid #f1dfae; border-radius: 24px; padding: 8px; }
+  .face svg { width: 100%; height: auto; display: block; overflow: visible; }
+  .char.selA::before, .char.selB::before { position: absolute; top: 2px; left: 4px; font-size: 18px; }
+  .char.selA::before { content: '①'; } .char.selB::before { content: '②'; }
+  .char { position: relative; }
+  .co2 { display: grid; grid-template-columns: 3fr 2fr; gap: 10px; align-items: start; }
+  #coaster { display: block; width: 100%; height: 120px; background: #e8f4ff; border-radius: 14px; touch-action: none; cursor: pointer; }
+  #gum { background: #fff; border: 3px solid #f1dfae; border-radius: 14px; }
+  #gum svg { display: block; width: 100%; height: 120px; }
+  #beat { display: block; width: 100%; height: 150px; background: #fff; border-radius: 14px; margin: 8px 0; }
+  .tip { font-size: 13px; color: #8a6a3a; margin: 4px 0 0; }
+</style>
+</head>
+<body>
+<header>
+  <a class="home" href="../../index.html">kimpilla</a>
+  <nav><a href="../../music.html">音楽</a> <a href="../../apps.html">アプリ</a> <a href="../../memo.html">メモ</a></nav>
+</header>
+<main>
+<h1>おとあそびシンセ</h1>
+<p class="small">「シンセ」を、こども向けに遊べる形にした別バージョン。キャラクターが、音の波の形に対応している。</p>
+
+<div class="play">
+  <h2>① だれの こえで ならす？</h2>
+  <div class="chars" id="chars"></div>
+  <p class="tip" id="charTip"></p>
+  <p class="row"><button class="big" id="mixBtn">🧪 2体を まぜる</button></p>
+  <div id="mixPanel" hidden>
+    <div class="mixrow">
+      <div class="mixitem" id="mixA"></div><span class="mixop">＋</span><div class="mixitem" id="mixB"></div><span class="mixop">＝</span><div class="mixitem mixchar" id="mixOut"></div>
+    </div>
+    <div class="sl" style="grid-template-columns:7em 1fr"><span>🎚️ まぜぐあい</span><input type="range" id="mixAmt" min="0" max="1000"></div>
+    <p class="tip">①に よせるほど ①の こえ、②に よせるほど ②の こえ。まんなかは、ふたりの まざった ふしぎな こえ。おなかの せんは、まざった なみの かたち。</p>
+  </div>
+
+  <canvas id="scope"></canvas>
+
+  <h2>② タッチして ならそう</h2>
+  <div id="keys"></div>
+  <div class="row">
+    <button class="big" id="low">⬇ ひくく</button>
+    <button class="big" id="high">⬆ たかく</button>
+    <button class="big sel" id="modeSafe">🌈 まちがえない</button>
+    <button class="big" id="modeAll">🎹 ぜんぶの おと</button>
+  </div>
+  <p class="tip">「まちがえない」は、どれを どんな じゅんばんで ひいても きれいに きこえる おとだけ。ゆびを すべらせても ならせる。パソコンは A S D F G H J K でも ひける。おとが おおきいので、はじめは「おおきさ」を さげてから。</p>
+
+  <h2>③ おとの おおきさの コース</h2>
+  <div class="co2">
+    <div><canvas id="coaster"></canvas><p class="tip">●①②③を ゆびで うごかそう。たまが コースを はしる。たかい ところ = おおきい おと。</p></div>
+    <div><div id="gum" aria-label="ガムを ふくらませる かお"></div><p class="tip">おとが おおきいほど、ガムが ふくらむ。</p></div>
+  </div>
+
+  <h2>④ おくちを ドラッグして ワウワウ</h2>
+  <div class="face" id="face" aria-label="おくちを うえに ひっぱると ひらく"></div>
+  <p class="tip">キャラクターの かおを、ゆびで うえにスライドすると おくちが ひらいて、あかるい おとに。したにスライドすると、こもった おとに。おとを ならしながら やってみよう。</p>
+
+  <h2>⑤ ぶんしん</h2>
+  <canvas id="beat"></canvas>
+  <div class="sl"><span>👯 ぶんしん</span><input type="range" id="osc2" min="0" max="1000"></div>
+  <div class="sl"><span>↔️ ずれ</span><input type="range" id="detune" min="0" max="1000"></div>
+  <div class="sl"><span>🐘 おおきな おにいさん</span><input type="range" id="sub" min="0" max="1000"></div>
+  <p class="tip">「ぶんしん」を あげると、おなじ こえが もう1つ かさなる。「ずれ」を あげると、ほんの すこし おとが ずれて、たいらな ところと でこぼこの ところが ゆっくり いれかわる。それが「うなり」。おとが あつく なる ひみつ。「おおきな おにいさん」は、1オクターブ ひくい おとを たす。</p>
+
+  <h2>⑥ おとを かえてみよう</h2>
+  <div class="sl"><span>🔊 おおきさ</span><input type="range" id="volume" min="0" max="1000"></div>
+  <div class="sl"><span>☀️ あかるさ</span><input type="range" id="cutoff" min="0" max="1000"></div>
+  <div class="sl"><span>🏔️ やまびこ</span><input type="range" id="echo" min="0" max="1000"></div>
+  <div class="sl"><span>🌊 ゆらゆら</span><input type="range" id="vib" min="0" max="1000"></div>
+  <p><button class="big" id="reset" style="font-size:15px;padding:8px 14px;border-radius:999px;border:3px solid #ffb347;background:#fff;color:#7a4b00;margin:0">↺ もとに もどす</button></p>
+</div>
+
+<section class="small">
+<h2>おとなの人へ(なにが起きているか)</h2>
+<ul>
+<li><b>キャラクター</b>: 4体は、シンセの4つの波の形(sine・sawtooth・square・triangle)に対応している。おなかの線が、その波の形。なめらかな波は丸い音、ギザギザ・四角い波は、明るくてビリビリした音になる。</li>
+<li><b>2体をまぜる</b>: 2つの波を、倍音(1倍、2倍、3倍…の音)ごとに、まぜぐあいの分だけ足し合わせて、新しい波を作る。おなかの線は、その足した波の形。</li>
+<li><b>おくち</b>: 顔を上下にドラッグすると、フィルターの「あかるさ」が動く(口が大きいほど明るい)。鳴らしながら動かすと、ワウワウという音になる。</li>
+<li><b>まちがえない</b>: ド・レ・ミ・ソ・ラの5音だけを並べた音階(ペンタトニック)。どの順で弾いても、ぶつかりにくい。「ぜんぶの音」は、ドレミファソラシド。</li>
+<li><b>おとの おおきさのコース</b>: 音の大きさの形(ADSR)。①=立ち上がり(アタック)、②の横=減っていく時間(ディケイ)と縦=押している間の大きさ(サスティン)、③=離してから消えるまで(リリース)。ガムの顔は、実際の音と同じ計算で、いまの大きさに合わせてふくらむ。</li>
+<li><b>ぶんしん</b>: 同じ波を、もう1つ重ねる。「ずれ」で、ほんの少しだけ音程をずらす(デチューン)と、2つの波の山と谷が、ゆっくり重なったり打ち消し合ったりして、音が厚くなる(うなり)。図は、ずれを大きく見せるため、ゆっくり動かしている。「おおきなおにいさん」は、1オクターブ下のサイン波(サブ)。</li>
+<li><b>あかるさ</b>=フィルター(高い成分を削る)、<b>やまびこ</b>=エコー、<b>ゆらゆら</b>=音の高さを細かく揺らす(ビブラート)。</li>
+<li>キャラクターは、このサイト用のオリジナル。</li>
+</ul>
+</section>
+</main>
+<footer>kimpilla</footer>
+<script src="synthkids.js"></script>
+</body>
+</html>

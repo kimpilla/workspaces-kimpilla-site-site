@@ -3,7 +3,7 @@
   'use strict';
   const $ = (id) => document.getElementById(id);
 
-  const DEFAULTS = { wave: 'sawtooth', volume: 0.5, fmRatio: 2, fmDepth: 0, cutoff: 2400, q: 4, attack: 0.01, release: 0.4, delayTime: 0.35, feedback: 0.35, mix: 0.25 };
+  const DEFAULTS = { wave: 'sawtooth', volume: 0.5, fmRatio: 2, fmDepth: 0, cutoff: 2400, q: 4, attack: 0.01, decay: 1, sustain: 1, fEnv: 0, fDecay: 0.4, wave2: 'sawtooth', osc2: 0, detune: 12, sub: 0, release: 0.4, delayTime: 0.35, feedback: 0.35, mix: 0.25 };
   const KNOBS = [
     ['volume', '音量', 0, 1, 0.01, (v) => Math.round(v * 100) + '%'],
     ['cutoff', 'フィルター(明るさ)', 80, 12000, 1, (v) => Math.round(v) + 'Hz', true],
@@ -11,6 +11,13 @@
     ['fmDepth', 'FMの深さ', 0, 2000, 1, (v) => Math.round(v)],
     ['fmRatio', 'FMの比率', 0.5, 8, 0.5, (v) => '×' + v],
     ['attack', '立ち上がり', 0.001, 2, 0.001, (v) => v.toFixed(2) + '秒', true],
+    ['decay', 'ディケイ(減っていく時間)', 0.01, 3, 0.01, (v) => v.toFixed(2) + '秒', true],
+    ['sustain', 'サスティン(押している間の大きさ)', 0, 1, 0.01, (v) => Math.round(v * 100) + '%'],
+    ['fEnv', 'フィルターの開き(押した瞬間)', 0, 6, 0.1, (v) => v < 0.05 ? 'なし' : '+' + v.toFixed(1) + '段'],
+    ['fDecay', 'フィルターが閉じる時間', 0.02, 3, 0.01, (v) => v.toFixed(2) + '秒', true],
+    ['osc2', 'オシレーター2の量', 0, 1, 0.01, (v) => v < 0.02 ? 'なし' : Math.round(v * 100) + '%'],
+    ['detune', 'オシレーター2のずらし(デチューン)', 0, 50, 0.5, (v) => v.toFixed(1) + 'セント'],
+    ['sub', 'サブ(1オクターブ下の音)', 0, 1, 0.01, (v) => v < 0.02 ? 'なし' : Math.round(v * 100) + '%'],
     ['release', '余韻', 0.01, 4, 0.01, (v) => v.toFixed(2) + '秒', true],
     ['delayTime', 'エコーの間隔', 0.05, 1.2, 0.01, (v) => v.toFixed(2) + '秒'],
     ['feedback', 'エコーのくり返し', 0, 0.9, 0.01, (v) => Math.round(v * 100) + '%'],
@@ -49,9 +56,11 @@
       v.filter.Q.setTargetAtTime(p.q, t, 0.02);
       v.modGain.gain.setTargetAtTime(p.fmDepth, t, 0.02);
       v.mod.frequency.setTargetAtTime(v.freq * p.fmRatio, t, 0.02);
-      v.osc.type = p.wave;
+      v.osc.type = p.wave; v.osc2.type = p.wave2; v.osc2.detune.setTargetAtTime(p.detune, t, 0.02);
+      const g = mixGains(); v.g1.gain.setTargetAtTime(g[0], t, 0.02); v.g2.gain.setTargetAtTime(g[1], t, 0.02); v.gs.gain.setTargetAtTime(g[2], t, 0.02);
     }
   }
+  const mixGains = () => { const s = 1 + p.osc2 + p.sub; return [1 / s, p.osc2 / s, p.sub / s]; };   // 重ねても、全体の大きさが変わらないように
 
   // ---- 声(1音) ----
   const voices = new Map();
@@ -61,16 +70,30 @@
     if (voices.has(n)) return;
     const t = ctx.currentTime, freq = midiToHz(n);
     const osc = ctx.createOscillator(), mod = ctx.createOscillator(), modGain = ctx.createGain();
+    const osc2 = ctx.createOscillator(), sub = ctx.createOscillator(), g1 = ctx.createGain(), g2 = ctx.createGain(), gs = ctx.createGain();
     const filter = ctx.createBiquadFilter(), amp = ctx.createGain();
     osc.type = p.wave; osc.frequency.value = freq;
+    osc2.type = p.wave2; osc2.frequency.value = freq; osc2.detune.value = p.detune;      // オシレーター2: 少しずらして重ねる
+    sub.type = 'sine'; sub.frequency.value = freq / 2;                                      // サブ: 1オクターブ下
+    const mg = mixGains(); g1.gain.value = mg[0]; g2.gain.value = mg[1]; gs.gain.value = mg[2];
     mod.frequency.value = freq * p.fmRatio; modGain.gain.value = p.fmDepth;
     mod.connect(modGain); modGain.connect(osc.frequency);
     filter.type = 'lowpass'; filter.frequency.value = p.cutoff; filter.Q.value = p.q;
+    // 音の大きさの形: 0 → (アタック)→ 最大 → (ディケイ)→ サスティン
     amp.gain.setValueAtTime(0, t);
     amp.gain.linearRampToValueAtTime(0.25, t + p.attack);
-    osc.connect(filter); filter.connect(amp); amp.connect(out);
-    osc.start(t); mod.start(t);
-    voices.set(n, { osc, mod, modGain, filter, amp, freq });
+    amp.gain.setTargetAtTime(0.25 * p.sustain, t + p.attack, p.decay / 3);
+    // フィルターの形: 押した瞬間に、fEnv段(オクターブ)ぶん開いて、フィルターが閉じる時間かけて、もとの明るさに戻る
+    if (p.fEnv > 0.05) {
+      const peak = Math.min(20000, p.cutoff * Math.pow(2, p.fEnv));
+      filter.frequency.setValueAtTime(p.cutoff, t);
+      filter.frequency.linearRampToValueAtTime(peak, t + p.attack + 0.005);
+      filter.frequency.setTargetAtTime(p.cutoff, t + p.attack + 0.005, p.fDecay / 3);
+    }
+    osc.connect(g1); osc2.connect(g2); sub.connect(gs); g1.connect(filter); g2.connect(filter); gs.connect(filter);
+    filter.connect(amp); amp.connect(out);
+    osc.start(t); osc2.start(t); sub.start(t); mod.start(t);
+    voices.set(n, { osc, osc2, sub, g1, g2, gs, mod, modGain, filter, amp, freq });
     keyEl(n, true);
   }
   function noteOff(n) {
@@ -81,7 +104,7 @@
     v.amp.gain.cancelScheduledValues(t);
     v.amp.gain.setValueAtTime(v.amp.gain.value, t);
     v.amp.gain.linearRampToValueAtTime(0, t + p.release);
-    v.osc.stop(t + p.release + 0.05); v.mod.stop(t + p.release + 0.05);
+    v.osc.stop(t + p.release + 0.05); v.osc2.stop(t + p.release + 0.05); v.sub.stop(t + p.release + 0.05); v.mod.stop(t + p.release + 0.05);
     keyEl(n, false);
   }
 
@@ -155,6 +178,14 @@
       const r = l.querySelector('input'); r.checked = p.wave === w;
       r.onchange = () => { p.wave = w; applyGlobal(); };
       $('waves').appendChild(l);
+    }
+    $('waves2').innerHTML = '';
+    for (const [w, label] of WAVES) {
+      const l = document.createElement('label');
+      l.innerHTML = '<input type="radio" name="wave2" value="' + w + '"> ' + label;
+      const r = l.querySelector('input'); r.checked = p.wave2 === w;
+      r.onchange = () => { p.wave2 = w; applyGlobal(); };
+      $('waves2').appendChild(l);
     }
     $('knobs').innerHTML = '';
     for (const [key, label, min, max, step, fmt, log] of KNOBS) {
