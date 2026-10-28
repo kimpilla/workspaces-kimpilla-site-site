@@ -45,24 +45,24 @@
   #gum { background: #fff; border: 3px solid #f1dfae; border-radius: 14px; }
   #gum svg { display: block; width: 100%; height: 120px; }
   #beat { display: block; width: 100%; height: 150px; background: #fff; border-radius: 14px; margin: 8px 0; }
-  main { padding-bottom: 250px; }
-  .dock { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; background: #fff7e0; border-top: 3px solid #ffd36b; box-shadow: 0 -4px 12px rgba(0,0,0,.18); padding: 2px 10px max(8px, env(safe-area-inset-bottom)); }
+  main { padding-bottom: 300px; }
+  .dock { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; background: #fff7e0; border-top: 3px solid #ffd36b; box-shadow: 0 -4px 12px rgba(0,0,0,.18); padding: 2px 10px calc(54px + env(safe-area-inset-bottom, 0px)); }   /* 下の54pxは、Netlifyの「Powered by Netlify」の表示が、ボタンに かぶらないための あき */
   .dockin { max-width: 740px; margin: 0 auto; }
-  .dock .key { height: 74px; font-size: 18px; padding-bottom: 4px; }
+  .dock .key { height: 68px; font-size: 18px; padding-bottom: 4px; }
   .dock #keys { margin: 4px 0; gap: 4px; }
   .dockrow { margin: 4px 0 0; justify-content: center; flex-wrap: nowrap; }
   .dock button.big { font-size: 15px; padding: 6px 14px; white-space: nowrap; border-radius: 999px; border: 3px solid #ffb347; background: #fff; color: #7a4b00; margin: 0; }
   .dock button.big:hover:not(:disabled) { background: #ffe9bf; color: #7a4b00; }
   .dock button.big.sel { background: #ffb347; color: #fff; }
-  .keywrap { position: relative; padding-top: 74px; }
-  #robot { position: absolute; top: 40px; left: 0; width: 30px; pointer-events: none; transition: left .09s ease-out; z-index: 3; }
+  .keywrap { position: relative; padding-top: 70px; }
+  #robot { position: absolute; top: 36px; left: 0; width: 30px; pointer-events: none; transition: left .09s ease-out; z-index: 3; }
   #robot svg { display: block; width: 100%; height: auto; }
   #robot.hop svg { animation: hop .2s ease-out; }
   @keyframes hop { 0% { transform: translateY(8px); } 50% { transform: translateY(-8px); } 100% { transform: translateY(8px); } }
   .key.held { outline: 4px dashed #fff; outline-offset: -8px; }
   .scopewrap { position: relative; margin: 12px 0; }
   .scopewrap #scope { margin: 0; }
-  #singer { position: absolute; left: 0; top: 32px; width: 44px; pointer-events: none; transform-origin: center bottom; transition: left .09s ease-out, top .12s; z-index: 4; }
+  #singer { position: absolute; left: 0; top: 28px; width: 44px; pointer-events: none; transform-origin: center bottom; transition: left .09s ease-out, top .12s; z-index: 4; }
   .keywrap.arp #singer { top: 1px; }
   #singer svg { width: 100%; height: auto; display: block; overflow: visible; }
   #singer.sing svg { animation: bob .22s ease-in-out infinite alternate; }
