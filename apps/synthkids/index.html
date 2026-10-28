@@ -45,6 +45,9 @@
   #gum { background: #fff; border: 3px solid #f1dfae; border-radius: 14px; }
   #gum svg { display: block; width: 100%; height: 120px; }
   #beat { display: block; width: 100%; height: 150px; background: #fff; border-radius: 14px; margin: 8px 0; }
+  /* ダブルタップでの拡大を止める(ピンチでの拡大・スクロールは、そのまま) */
+  html, body { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+  .dock { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
   main { padding-bottom: 300px; }
   .dock { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; background: #fff7e0; border-top: 3px solid #ffd36b; box-shadow: 0 -4px 12px rgba(0,0,0,.18); padding: 2px 10px calc(54px + env(safe-area-inset-bottom, 0px)); }   /* 下の54pxは、Netlifyの「Powered by Netlify」の表示が、ボタンに かぶらないための あき */
   .dockin { max-width: 740px; margin: 0 auto; }
