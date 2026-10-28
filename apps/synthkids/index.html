@@ -48,6 +48,8 @@
   main { padding-bottom: 300px; }
   .dock { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; background: #fff7e0; border-top: 3px solid #ffd36b; box-shadow: 0 -4px 12px rgba(0,0,0,.18); padding: 2px 10px calc(54px + env(safe-area-inset-bottom, 0px)); }   /* 下の54pxは、Netlifyの「Powered by Netlify」の表示が、ボタンに かぶらないための あき */
   .dockin { max-width: 740px; margin: 0 auto; }
+  .dockvol { position: absolute; left: 12px; bottom: max(12px, env(safe-area-inset-bottom, 0px)); width: 52%; max-width: 280px; display: flex; align-items: center; gap: 6px; font-size: 20px; margin: 0; }
+  .dockvol input { flex: 1; min-width: 0; height: 30px; accent-color: #ff7a3d; }
   .dock .key { height: 68px; font-size: 18px; padding-bottom: 4px; }
   .dock #keys { margin: 4px 0; gap: 4px; }
   .dockrow { margin: 4px 0 0; justify-content: center; flex-wrap: nowrap; }
@@ -92,7 +94,6 @@
 <p class="small">「シンセ」を、こども向けに遊べる形にした別バージョン。キャラクターが、音の波の形に対応している。</p>
 
 <div class="play">
-  <div class="sl top"><span>🔊 おおきさ</span><input type="range" id="volume" min="0" max="1000"></div>
   <h2>① だれの こえで ならす？</h2>
   <div class="chars" id="chars"></div>
   <p class="tip" id="charTip"></p>
@@ -111,7 +112,7 @@
   <p class="tip">したに ずっと ある けんばんを タッチ。ページを スクロールしても、いつでも ひけるよ。えらんだ キャラクターが、ならした キーの うえで うたう。</p>
   <div class="row" id="arpSpeedRow" hidden><span>🤖 はやさ</span><input type="range" id="arpSpeed" min="0" max="1000" value="333" style="flex:1;min-width:120px;height:34px;accent-color:#ff7a3d"><span id="arpSpeedOut">120</span><button class="big" id="arpClear" style="font-size:14px;padding:6px 12px;border-radius:999px;border:3px solid #ffb347;background:#fff;color:#7a4b00;margin:0">🧹 ぜんぶ はずす</button></div>
   <p class="tip" id="arpTip" hidden>ロボットが ならす おとを、キーを タッチして えらぼう(もういちど タッチで はずす)。ゆびを はなしても、つづくよ。</p>
-  <p class="tip"><b id="modeNow"></b>。「きらきら」は、どれを どんな じゅんばんで ひいても きれいに きこえる 5つの おと。ゆびを すべらせても ならせる。パソコンは A S D F G H J K でも ひける。おとが おおきいので、はじめは「おおきさ」を さげてから。</p>
+  <p class="tip"><b id="modeNow"></b>。「きらきら」は、どれを どんな じゅんばんで ひいても きれいに きこえる 5つの おと。ゆびを すべらせても ならせる。パソコンは A S D F G H J K でも ひける。おとが おおきいので、はじめは、ひだりしたの 🔊 を さげてから。</p>
 
   <h2>③ おとの おおきさの コース</h2>
   <div class="co2">
@@ -166,7 +167,7 @@
 <button class="big" id="high" aria-label="たかく">⬆</button>
 <button class="big" id="modeBtn"></button>
 <button class="big" id="arpBtn">🤖 ロボット</button>
-</div></div></div>
+</div></div><label class="dockvol"><span aria-hidden="true">🔊</span><input type="range" id="volume" min="0" max="1000" aria-label="おおきさ"></label></div>
 <footer>kimpilla</footer>
 <script src="synthkids.js"></script>
 </body>
