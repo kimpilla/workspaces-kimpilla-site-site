@@ -133,18 +133,20 @@
   <p class="tip">キャラクターの かおを、ゆびで うえにスライドすると おくちが ひらいて、あかるい おとに。したにスライドすると、こもった おとに。おとを ならしながら やってみよう。</p>
   <div class="sl"><span>☀️ あかるさ</span><input type="range" id="cutoff" min="0" max="1000"></div>
 
-  <h2>⑤ ぶんしん</h2>
+  <h2>⑤ ぶんしんと ゆらゆら</h2>
   <canvas id="beat"></canvas>
   <div class="sl"><span>👯 ぶんしん</span><input type="range" id="osc2" min="0" max="1000"></div>
   <div class="sl"><span>↔️ ずれ</span><input type="range" id="detune" min="0" max="1000"></div>
   <div class="sl"><span>🐘 おおきな おにいさん</span><input type="range" id="sub" min="0" max="1000"></div>
+  <div class="sl"><span>〰️ ゆらゆら</span><input type="range" id="vib" min="0" max="1000"></div>
+  <div class="sl"><span>⏩ ゆらゆらの はやさ</span><input type="range" id="vibRate" min="0" max="1000"></div>
+  <p class="tip">「ゆらゆら」を あげると、おとの たかさが ゆらゆら ゆれる(ビブラート)。「はやさ」を はやくしていくと、ゆれが ぜんぶ くっついて、ちがう おとの いろ(おとの ひびき)に かわっていく。ためしてみて!</p>
   <p class="tip">「ぶんしん」を あげると、おなじ こえが もう1つ かさなる。「ずれ」を あげると、ほんの すこし おとが ずれて、たいらな ところと でこぼこの ところが ゆっくり いれかわる。それが「うなり」。おとが あつく なる ひみつ。「おおきな おにいさん」は、1オクターブ ひくい おとを たす。</p>
 
   <h2>⑥ エフェクターを ふもう</h2>
   <div class="pedals" id="pedals">
     <div class="pedal" data-fx="dist" style="--pc:#f08a1c;--pt:#fff"><div class="led"></div><div class="pname">ひずみ</div><button type="button" class="stomp" aria-pressed="false" aria-label="ひずみ"></button><button type="button" class="gear" aria-label="つまみを ひらく">⚙</button><div class="pk" hidden><input type="range" id="distAmt" min="0" max="1000" aria-label="ひずみの つよさ"></div></div>
     <div class="pedal" data-fx="chorus" style="--pc:#6ec6f0;--pt:#fff"><div class="led"></div><div class="pname">ゆれゆれ</div><button type="button" class="stomp" aria-pressed="false" aria-label="ゆれゆれ(コーラス)"></button><button type="button" class="gear" aria-label="つまみを ひらく">⚙</button><div class="pk" hidden><input type="range" id="chAmt" min="0" max="1000" aria-label="ゆれゆれの つよさ"></div></div>
-    <div class="pedal" data-fx="vib" style="--pc:#5cc26e;--pt:#fff"><div class="led"></div><div class="pname">ゆらゆら</div><button type="button" class="stomp" aria-pressed="false" aria-label="ゆらゆら(ビブラート)"></button><button type="button" class="gear" aria-label="つまみを ひらく">⚙</button><div class="pk" hidden><input type="range" id="vib" min="0" max="1000" aria-label="ゆらゆらの おおきさ"></div></div>
     <div class="pedal" data-fx="echo" style="--pc:#f2f0e6;--pt:#333"><div class="led"></div><div class="pname">やまびこ</div><button type="button" class="stomp" aria-pressed="false" aria-label="やまびこ(ディレイ)"></button><button type="button" class="gear" aria-label="つまみを ひらく">⚙</button><div class="pk" hidden><input type="range" id="echo" min="0" max="1000" aria-label="やまびこの おおきさ"></div></div>
   </div>
   <p class="tip">まるい ボタンを ふむと、エフェクターが ON(あかい ランプが つく)。もういちど ふむと OFF。⚙で、つよさを かえられる。</p>
@@ -164,7 +166,7 @@
 <li><b>キャラクターのぶんしん</b>: 鍵盤の上のキャラクターに、うすい分身が出る。「ぶんしん」を上げると、少しずれた位置に、うすく出る。「ずれ」を上げると、ぼやけて、色がずれ、うすくなったり濃くなったりする速さも上がる(うなりの見える化)。「おおきな おにいさん」を上げると、後ろに、大きなやさしい色のぼかしが出てくる。</li>
 <li><b>ぶんしん</b>: 同じ波を、もう1つ重ねる。「ずれ」で、ほんの少しだけ音程をずらす(デチューン)と、2つの波の山と谷が、ゆっくり重なったり打ち消し合ったりして、音が厚くなる(うなり)。図は、ずれを大きく見せるため、ゆっくり動かしている。「おおきなおにいさん」は、1オクターブ下のサイン波(サブ)。</li>
 <li><b>あかるさ</b>=フィルター(高い成分を削る)。</li>
-<li><b>エフェクターを踏む</b>: ボタンで入り・切り。<b>ひずみ</b>=ディストーション(波をつぶして、ギザギザにする)、<b>ゆれゆれ</b>=コーラス(少し遅らせた音を、ゆらして重ねる)、<b>ゆらゆら</b>=ビブラート(音の高さを細かく揺らす)、<b>やまびこ</b>=ディレイ(エコー)。順番は、ひずみ → ゆれゆれ → やまびこ。色は、ギターの足元に並べるエフェクターのイメージ。</li>
+<li><b>エフェクターを踏む</b>: ボタンで入り・切り。<b>ひずみ</b>=ディストーション(波をつぶして、ギザギザにする)、<b>ゆれゆれ</b>=コーラス(少し遅らせた音を、ゆらして重ねる)、<b>やまびこ</b>=ディレイ(エコー)。順番は、ひずみ → ゆれゆれ → やまびこ。色は、ギターの足元に並べるエフェクターのイメージ。</li>
 <li>キャラクターは、このサイト用のオリジナル。</li>
 </ul>
 </section>

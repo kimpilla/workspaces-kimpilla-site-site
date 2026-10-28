@@ -3,9 +3,9 @@
   'use strict';
   const $ = (id) => document.getElementById(id);
 
-  const DEFAULTS = { char: 'furarin', volume: 0.35, cutoff: 4500, echo: 0.35, vib: 30, distAmt: 0.5, chAmt: 0.5, attack: 0.03, decay: 0.5, sustain: 0.7, release: 0.5, osc2: 0, detune: 8, sub: 0 };
+  const DEFAULTS = { char: 'furarin', volume: 0.35, cutoff: 4500, echo: 0.35, vib: 0, vibRate: 6, distAmt: 0.5, chAmt: 0.5, attack: 0.03, decay: 0.5, sustain: 0.7, release: 0.5, osc2: 0, detune: 8, sub: 0 };
   const p = Object.assign({}, DEFAULTS);
-  p.fx = { dist: false, chorus: false, vib: false, echo: false };      // エフェクターの、入り・切り
+  p.fx = { dist: false, chorus: false, echo: false };      // エフェクターの、入り・切り
   let mode = 'safe', base = 60;                       // base = 一番左のド(MIDI 60 = 真ん中のド)
 
   // ---- キャラクター(このサイトのオリジナル)。波の形 → 見た目 ----
@@ -121,9 +121,12 @@
     for (let i = 0; i < 2048; i++) { const x = i / 1024 - 1; curve[i] = Math.tanh(3 * x); }
     ws.curve = curve; ws.oversample = '2x'; dist.pre = pre; dist.post = post;
     dist.in.connect(pre); pre.connect(ws); ws.connect(post); post.connect(dist.wet);
-    cho = fxBlock(); const cd = ctx.createDelay(0.1), lfo = ctx.createOscillator(), lg = ctx.createGain();
-    cd.delayTime.value = 0.02; lfo.frequency.value = 0.8; lfo.connect(lg); lg.connect(cd.delayTime); lfo.start();
-    cho.in.connect(cd); cd.connect(cho.wet); cho.lfo = lfo; cho.lg = lg;
+    cho = fxBlock(); cho.lfos = []; cho.lgs = [];
+    [[0.016, 0.9, 1], [0.026, 1.25, 1.5]].forEach(([base, fr, k]) => {          // ゆれゆれ: 少し遅れて、少し音程が揺れる声を2人ぶん重ねる(3人で歌うみたいに)
+      const cd = ctx.createDelay(0.1), lf = ctx.createOscillator(), lg = ctx.createGain();
+      cd.delayTime.value = base; lf.frequency.value = fr; lf.connect(lg); lg.connect(cd.delayTime); lf.start();
+      cho.in.connect(cd); cd.connect(cho.wet); cho.lfos.push([lf, fr]); cho.lgs.push([lg, k]);
+    });
     out.connect(dist.in); dist.out.connect(cho.in); cho.out.connect(dry); cho.out.connect(delay); delay.connect(fb); fb.connect(delay); delay.connect(wet);
     dry.connect(master); wet.connect(master); master.connect(comp); comp.connect(analyser); analyser.connect(ctx.destination);
     applyGlobal();
@@ -137,10 +140,10 @@
     dry.gain.setTargetAtTime(1 - ew * 0.5, t, 0.02); wet.gain.setTargetAtTime(ew, t, 0.02);
     dist.dry.gain.setTargetAtTime(p.fx.dist ? 0 : 1, t, 0.01); dist.wet.gain.setTargetAtTime(p.fx.dist ? 1 : 0, t, 0.01);
     dist.pre.gain.setTargetAtTime(1 + p.distAmt * 20, t, 0.02); dist.post.gain.setTargetAtTime(0.5 / (1 + p.distAmt * 1.5), t, 0.02);
-    cho.wet.gain.setTargetAtTime(p.fx.chorus ? 0.7 : 0, t, 0.02); cho.lg.gain.setTargetAtTime(0.001 + p.chAmt * 0.008, t, 0.02); cho.lfo.frequency.setTargetAtTime(0.5 + p.chAmt * 1.5, t, 0.05);
+    cho.wet.gain.setTargetAtTime(p.fx.chorus ? 0.85 : 0, t, 0.02); cho.lgs.forEach(([lg, k]) => lg.gain.setTargetAtTime((0.0012 + p.chAmt * 0.0035) * k, t, 0.02)); cho.lfos.forEach(([lf, fr]) => lf.frequency.setTargetAtTime(fr * (0.6 + p.chAmt * 0.8), t, 0.05));
     for (const v of voices.values()) {
       v.filter.frequency.setTargetAtTime(p.cutoff, t, 0.02);
-      v.vibGain.gain.setTargetAtTime(p.fx.vib ? p.vib : 0, t, 0.05);
+      v.vibGain.gain.setTargetAtTime(p.vib, t, 0.05); v.lfo.frequency.setTargetAtTime(p.vibRate, t, 0.05);
       setOscWave(v.osc); setOscWave(v.osc2); v.osc2.detune.setTargetAtTime(p.detune, t, 0.02);
       const g = mixGains(); v.g1.gain.setTargetAtTime(g[0], t, 0.02); v.g2.gain.setTargetAtTime(g[1], t, 0.02); v.gs.gain.setTargetAtTime(g[2], t, 0.02);
     }
@@ -175,7 +178,7 @@
     setOscWave(osc2); osc2.frequency.value = midiToHz(n); osc2.detune.value = p.detune;      // ぶんしん: 少しずらして重ねる
     sub.type = 'sine'; sub.frequency.value = midiToHz(n) / 2;                                // おおきなおにいさん: 1オクターブ下
     const mg = mixGains(); g1.gain.value = mg[0]; g2.gain.value = mg[1]; gs.gain.value = mg[2];
-    lfo.frequency.value = 5.5; vibGain.gain.value = p.fx.vib ? p.vib : 0;
+    lfo.frequency.value = p.vibRate; vibGain.gain.value = p.vib;
     lfo.connect(vibGain); vibGain.connect(osc.detune);
     filter.type = 'lowpass'; filter.frequency.value = p.cutoff; filter.Q.value = 1;
     amp.gain.setValueAtTime(0, t); amp.gain.linearRampToValueAtTime(0.25, t + p.attack);                 // 0 → さいだい(アタック)
@@ -343,13 +346,13 @@
 
   // ---- つまみ(0〜1000のスライダー。対数にするものは、耳の感じ方に合わせる) ----
   const MAP = {
-    volume: { lin: [0, 1] }, cutoff: { log: [300, 12000] }, echo: { lin: [0, 0.7] }, vib: { lin: [0, 80] }, distAmt: { lin: [0, 1] }, chAmt: { lin: [0, 1] }, osc2: { lin: [0, 1] }, detune: { lin: [0, 40] }, sub: { lin: [0, 1] },
+    volume: { lin: [0, 1] }, cutoff: { log: [300, 12000] }, echo: { lin: [0, 0.7] }, vib: { lin: [0, 100] }, vibRate: { log: [1, 80] }, distAmt: { lin: [0, 1] }, chAmt: { lin: [0, 1] }, osc2: { lin: [0, 1] }, detune: { lin: [0, 40] }, sub: { lin: [0, 1] },
   };
   const toS = (k, v) => { const m = MAP[k]; if (m.log) return Math.log(v / m.log[0]) / Math.log(m.log[1] / m.log[0]); return (v - m.lin[0]) / (m.lin[1] - m.lin[0]); };
   const fromS = (k, s) => { const m = MAP[k]; if (m.log) return m.log[0] * Math.pow(m.log[1] / m.log[0], s); return m.lin[0] + s * (m.lin[1] - m.lin[0]); };
   function syncSliders() { for (const k of Object.keys(MAP)) $(k).value = Math.round(toS(k, p[k]) * 1000); updateMouth(); }
   for (const k of Object.keys(MAP)) $(k).oninput = () => { p[k] = fromS(k, $(k).value / 1000); updateMouth(); applyGlobal(); };
-  $('reset').onclick = () => { Object.assign(p, DEFAULTS); p.fx = { dist: false, chorus: false, vib: false, echo: false }; mixOn = false; setMode('safe'); syncSliders(); syncPedals(); buildChars(); applyGlobal(); };
+  $('reset').onclick = () => { Object.assign(p, DEFAULTS); p.fx = { dist: false, chorus: false, echo: false }; mixOn = false; setMode('safe'); syncSliders(); syncPedals(); buildChars(); applyGlobal(); };
 
   // ---- 波の表示(虹色)と、波の上で歌うキャラクター ----
   const FLAT = new Uint8Array(2048).fill(128);
@@ -383,6 +386,8 @@
     }
     if (p.sub < 0.02) bg.style.opacity = 0;
     else { bg.style.opacity = (0.16 + 0.34 * p.sub).toFixed(3); bg.style.transform = 'scale(' + (1.6 + 0.12 * level).toFixed(3) + ')'; }
+    // ゆらゆら(ビブラート): 声がふるえている間、キャラが ぷるぷる 揺れる
+    if (p.vib > 2 && level > 0.05) el.style.transform += ' rotate(' + (Math.sin(2 * Math.PI * Math.min(p.vibRate, 10) * tt) * (p.vib / 100 * 14)).toFixed(1) + 'deg)';   // ゆらゆら: ぷるぷる震える(速すぎる時は、見えるぎりぎりの速さまで)
     const mc = cl.querySelector('.mouth'), mb = bg.querySelector('.mouth'); if (mc) mc.style.transform = ms; if (mb) mb.style.transform = ms;
   }
   function buildSinger() { const s = charSvg(faceChar()); $('singer').innerHTML = s; const gs = charSvg(faceChar(), true); $('singerClone').innerHTML = gs; $('singerBig').innerHTML = gs; }
