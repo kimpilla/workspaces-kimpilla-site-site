@@ -49,38 +49,45 @@
     '<g transform="translate(30 ' + c.wy + ')"><path d="' + WAVEPATH[c.wave] + '" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" transform="scale(1 0.9)"/></g></svg>';
 
   // ---- 音 ----
-  let ctx = null, master = null, noiseBuf = null, dSend = null, dNode = null;
+  let ctx = null, master = null, partGain = null, curPart = 0, noiseBuf = null, dSend = null, dNode = null;
   S.dly = false;
   function ensureAudio() {
     if (ctx) { if (ctx.state === 'suspended') ctx.resume(); return; }
     ctx = new (window.AudioContext || window.webkitAudioContext)();
     const comp = ctx.createDynamicsCompressor(); master = ctx.createGain(); master.gain.value = 0.8;
     master.connect(comp); comp.connect(ctx.destination);
+    partGain = [0, 1, 2, 3].map((g) => { const n = ctx.createGain(); n.gain.value = volGain(S.vol[g]); n.connect(master); return n; });
     dSend = ctx.createGain(); dSend.gain.value = S.dly ? 0.55 : 0;                       // やまびこ(BPMに あわせた ディレイ): メロディだけ
     dNode = ctx.createDelay(2); const fb = ctx.createGain(), lp = ctx.createBiquadFilter(); fb.gain.value = 0.38; lp.type = 'lowpass'; lp.frequency.value = 2600;
-    dSend.connect(dNode); dNode.connect(lp); lp.connect(fb); fb.connect(dNode); lp.connect(master);
+    dSend.connect(dNode); dNode.connect(lp); lp.connect(fb); fb.connect(dNode); lp.connect(master); partGain[0].connect(dSend);
     noiseBuf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
     const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
   }
   function noise(t, dur, type, freq, vol) {
     const s = ctx.createBufferSource(); s.buffer = noiseBuf; const f = ctx.createBiquadFilter(), g = ctx.createGain();
     f.type = type; f.frequency.value = freq; g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
-    s.connect(f); f.connect(g); g.connect(master); s.start(t); s.stop(t + dur + 0.02); return g;
+    s.connect(f); f.connect(g); g.connect(pdest()); s.start(t); s.stop(t + dur + 0.02); return g;
   }
   S.kit = { kick: 0, snare: 0, hat: 0 };
+  S.bkit = 0;
+  S.vol = [8, 8, 8, 8];
+  S.oct = [0, 0, 0, 0];                                   // オクターブ: メロディ -1〜+1、ベース 0〜2(2=ふつう/たかいを かわりばんこ。スマホの スピーカーは ひくい おとが ならないので ひくくは しない)
+  const OCTR = { 0: [-1, 1], 1: [0, 2] }, OCTL = { 0: ['ひくい', 'ふつう', 'たかい'], 1: ['ふつう', 'たかい', 'ぴょん'] };
+  const volGain = (v) => Math.pow(v / 8, 2);                        // 8 = いつもの おおきさ、10 = ちょっと おおきく
+  const pdest = () => (partGain ? partGain[curPart] : master);
   const KITN = { kick: ['1', '2', '3', '4'], snare: ['A', 'B', 'C', 'D'], hat: ['あ', 'い', 'う'] };
   function tone(t, type, f0, f1, dur, vol, rate) {
     const o = ctx.createOscillator(), g = ctx.createGain(); o.type = type; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t + (rate || dur * 0.45));
-    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur); o.connect(g); g.connect(master); o.start(t); o.stop(t + dur + 0.03); return g;
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur); o.connect(g); g.connect(pdest()); o.start(t); o.stop(t + dur + 0.03); return g;
   }
-  function kick(t) {
+  function kick(t) { curPart = 3;
     const k = S.kit.kick;
     if (k === 1) { tone(t, 'sine', 125, 40, 0.75, 1.0, 0.25); }                               // ずしん(808風: ひくくて ながい)
     else if (k === 2) { tone(t, 'triangle', 230, 52, 0.2, 1.0, 0.05); noise(t, 0.012, 'highpass', 3000, 0.5); }   // ばちっ(はっきりした ハード)
     else if (k === 3) { tone(t, 'sine', 105, 62, 0.16, 0.85, 0.05); }                            // ぽこ(かるい)
     else { tone(t, 'sine', 160, 42, 0.32, 1.0, 0.14); }                                           // ふつう
   }
-  function snare(t) {
+  function snare(t) { curPart = 3;
     const k = S.kit.snare;
     if (k === 1) { [0, 0.011, 0.022].forEach((d) => noise(t + d, 0.025, 'bandpass', 1500, 0.5)); noise(t + 0.03, 0.14, 'bandpass', 1400, 0.45); }   // クラップ
     else if (k === 2) { tone(t, 'triangle', 1700, 1200, 0.03, 0.5, 0.02); noise(t, 0.03, 'bandpass', 3200, 0.35); }      // カッ(リムショット)
@@ -90,37 +97,71 @@
   function metal(t, dur, vol) {                                // 金属っぽい ハイハット(四角い波を いくつか かさねて)
     const g = ctx.createGain(), f = ctx.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = 7000;
     [205, 296, 369, 421, 553].forEach((fr) => { const o = ctx.createOscillator(); o.type = 'square'; o.frequency.value = fr * 1.7; o.connect(f); o.start(t); o.stop(t + dur + 0.02); });
-    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur); f.connect(g); g.connect(master); return g;
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur); f.connect(g); g.connect(pdest()); return g;
   }
   let openG = null;                                           // 鳴っている「あいたハイハット」(とじたハイハットで止まる)
-  function hat(t, open) {
+  function hat(t, open) { curPart = 3;
     const k = S.kit.hat;
     if (open) { openG = k === 1 ? metal(t, 0.28, 0.09) : k === 2 ? noise(t, 0.36, 'bandpass', 5000, 0.3) : noise(t, 0.3, 'highpass', 6500, 0.3); return; }
     if (openG) { try { openG.gain.cancelScheduledValues(t); openG.gain.setValueAtTime(openG.gain.value, t); openG.gain.linearRampToValueAtTime(0.0001, t + 0.012); } catch (e) {} openG = null; }
     if (k === 1) metal(t, 0.045, 0.09); else if (k === 2) noise(t, 0.09, 'bandpass', 5000, 0.3); else noise(t, 0.045, 'highpass', 7500, 0.28);
   }
-  function melody(t, deg) {
+  function melody(t, deg) { curPart = 0;
     const c = byId(S.char), o = ctx.createOscillator(), g = ctx.createGain(), f = ctx.createBiquadFilter(), dur = Math.max(0.16, stepDur() * 2.2);
-    o.type = c.wave; o.frequency.value = 440 * Math.pow(2, (BASE + PITCHES[deg] - 69) / 12);
+    o.type = c.wave; o.frequency.value = 440 * Math.pow(2, (BASE + PITCHES[deg] - 69) / 12 + S.oct[0]);
     f.type = 'lowpass'; f.frequency.value = 3800; f.Q.value = 0.8;
     g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(c.gain, t + 0.008); g.gain.exponentialRampToValueAtTime(0.0008, t + dur);
-    o.connect(f); f.connect(g); g.connect(master); g.connect(dSend); dNode.delayTime.setValueAtTime(stepDur() * 3, t); o.start(t); o.stop(t + dur + 0.02);   // 3マス = 付点8ぶおんぷ
+    o.connect(f); f.connect(g); g.connect(pdest()); dNode.delayTime.setValueAtTime(stepDur() * 3, t); o.start(t); o.stop(t + dur + 0.02);   // 3マス = 付点8ぶおんぷ
   }
-  function bass(t, deg) {
-    const dur = Math.max(0.2, stepDur() * 2.6), f = 440 * Math.pow(2, (36 + PITCHES[deg] - 69) / 12);
-    const o = ctx.createOscillator(), o2 = ctx.createOscillator(), g = ctx.createGain(), fl = ctx.createBiquadFilter();
-    o.type = 'sawtooth'; o2.type = 'sine'; o.frequency.value = f; o2.frequency.value = f;
-    fl.type = 'lowpass'; fl.frequency.setValueAtTime(900, t); fl.frequency.exponentialRampToValueAtTime(260, t + dur); fl.Q.value = 2;
-    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.4, t + 0.008); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
-    o.connect(fl); o2.connect(g); fl.connect(g); g.connect(master); o.start(t); o2.start(t); o.stop(t + dur + 0.02); o2.stop(t + dur + 0.02);
+  let bassLast = null;
+  let schedStep = -1, previewUp = false;                                        // いま よやくしている マス(ベースの「ぴょん」で つかう)
+  function bassOct() {                                       // ベースの オクターブ: 0=ふつう 1=たかい 2=ぴょん(ふつう→たかい→ふつう→… と かわりばんこ)
+    if (S.oct[1] !== 2) return S.oct[1];
+    if (schedStep < 0) return previewUp ? 1 : 0;
+    let rank = 0; for (let i = S.range[1] === 'back' ? STEPS / 2 : 0; i < schedStep; i++) if (S.cells.bass[i] >= 0) rank++;   // 「うしろだけ」の ときは うしろの さいしょの おとが 「ふつう」
+    return rank % 2;
+  }
+  const BKN = ['ブンブン', 'まるい', 'ビヨーン', 'アシッド'];
+  function bass(t, deg) { curPart = 1;
+    const k = S.bkit || 0, f = 440 * Math.pow(2, (36 + PITCHES[deg] - 69) / 12 + bassOct());
+    const g = ctx.createGain(), fl = ctx.createBiquadFilter(), oscs = [];
+    const osc = (type, fr) => { const o = ctx.createOscillator(); o.type = type; o.frequency.setValueAtTime(fr, t); oscs.push(o); return o; };
+    let dur = Math.max(0.2, stepDur() * 2.6);
+    if (k === 0) {                                                  // ブンブン: のこぎり+サイン(いままでの おと)
+      const o = osc('sawtooth', f), o2 = osc('sine', f);
+      fl.type = 'lowpass'; fl.frequency.setValueAtTime(900, t); fl.frequency.exponentialRampToValueAtTime(260, t + dur); fl.Q.value = 2;
+      g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.4, t + 0.008); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+      o.connect(fl); o2.connect(g); fl.connect(g);
+    } else if (k === 1) {                                           // まるい: サイン+さんかく、やわらかくて ながい
+      dur = Math.max(0.3, stepDur() * 3.4);
+      const o = osc('sine', f), o2 = osc('triangle', f * 2);
+      const g2 = ctx.createGain(); g2.gain.value = 0.18;
+      fl.type = 'lowpass'; fl.frequency.value = 700; fl.Q.value = 0.5;
+      g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.5, t + 0.03); g.gain.setValueAtTime(0.5, t + dur * 0.55); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+      o.connect(g); o2.connect(g2); g2.connect(fl); fl.connect(g);
+    } else if (k === 2) {                                           // ビヨーン: しかくい波 + フィルターが ビヨッと ひらく
+      const o = osc('square', f), o2 = osc('square', f * 1.005);
+      fl.type = 'lowpass'; fl.Q.value = 9; fl.frequency.setValueAtTime(250, t); fl.frequency.exponentialRampToValueAtTime(2400, t + 0.07); fl.frequency.exponentialRampToValueAtTime(300, t + dur);
+      g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.2, t + 0.006); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+      o.connect(fl); o2.connect(fl); fl.connect(g);
+    } else {                                                        // アシッド(TB-303ふう): のこぎり波 + ググッと とがった フィルター + ちょっと すべる
+      dur = Math.max(0.2, stepDur() * 1.9);
+      const o = osc('sawtooth', f);
+      if (bassLast && t - bassLast.t < stepDur() * 2.5 && bassLast.t < t) { o.frequency.setValueAtTime(bassLast.f, t); o.frequency.exponentialRampToValueAtTime(f, t + 0.05); }   // まえの おとから すべる(スライド)
+      bassLast = { t, f };
+      fl.type = 'lowpass'; fl.Q.value = 16; fl.frequency.setValueAtTime(180, t); fl.frequency.exponentialRampToValueAtTime(3000, t + 0.012); fl.frequency.exponentialRampToValueAtTime(170, t + dur * 0.85);
+      g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.3, t + 0.004); g.gain.setValueAtTime(0.3, t + dur * 0.7); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+      o.connect(fl); fl.connect(g);
+    }
+    g.connect(pdest()); oscs.forEach((o) => { o.start(t); o.stop(t + dur + 0.02); });
   }
   function blip(t, type, f0, f1, dur, vol, mid) {
     const o = ctx.createOscillator(), g = ctx.createGain(); o.type = type; o.frequency.setValueAtTime(f0, t);
     if (mid) { o.frequency.exponentialRampToValueAtTime(mid, t + dur * 0.4); }
     o.frequency.exponentialRampToValueAtTime(f1, t + dur);
-    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur); o.connect(g); g.connect(master); o.start(t); o.stop(t + dur + 0.02); return o;
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur); o.connect(g); g.connect(pdest()); o.start(t); o.stop(t + dur + 0.02); return o;
   }
-  function fxSound(t, k) {
+  function fxSound(t, k) { curPart = 2;
     if (k === 0) blip(t, 'sine', 900, 1900, 0.11, 0.32);                                  // ぴこ
     else if (k === 1) blip(t, 'sine', 180, 160, 0.34, 0.4, 520);                          // ぼよん
     else if (k === 2) [1568, 2093, 2637].forEach((f, i) => blip(t + i * 0.055, 'sine', f, f, 0.14, 0.16));   // きらきら
@@ -138,7 +179,7 @@
   let nextT = 0, tick = 0, timer = null; const queue = [];      // queue: {t, tick}
   function schedule() {
     while (nextT < ctx.currentTime + 0.12) {
-      RINGS.forEach((r) => { const g = GROUP[r.id]; if (!S.mute[g]) playCell(r.id, S.cells[r.id][stepOf(g, tick)], nextT); });
+      RINGS.forEach((r) => { const g = GROUP[r.id]; if (!S.mute[g]) { schedStep = stepOf(g, tick); playCell(r.id, S.cells[r.id][schedStep], nextT); schedStep = -1; } });
       queue.push({ t: nextT, tick });
       nextT += stepDur(); tick++;
     }
@@ -215,6 +256,7 @@
   let GW = 0;
   function gResize() { const dpr = window.devicePixelRatio || 1; GW = gc.clientWidth; gc.style.height = gH() + 'px'; gc.width = GW * dpr; gc.height = gH() * dpr; gg.setTransform(dpr, 0, 0, dpr, 0, 0); }
   window.addEventListener('resize', gResize);
+  $('gridDet').addEventListener('toggle', () => { if ($('gridDet').open) { gResize(); window.scrollTo(window.scrollX, window.scrollY); } });
   const blockY = (half) => half * (blockH() + GAP);
   function drawGrid(now) {
     if (!GW) gResize();
@@ -257,15 +299,33 @@
     return null;
   }
   // タブ(楽器えらび)
+  // ---- ミキサー: たてに うごかす フェーダー(おおきさ)+ しー(ミュート) ----
   function buildMutes() {
-    $('mutes').innerHTML = GTAB.map((t, i) => '<button type="button" class="mbtn' + (S.mute[i] ? ' off' : '') + '" data-g="' + i + '" aria-pressed="' + S.mute[i] + '">' + (S.mute[i] ? '🤫 しー' : '🔊 なる') + '</button>').join('');
-    $('mutes').querySelectorAll('.mbtn').forEach((el) => el.onclick = () => { S.mute[+el.dataset.g] = !S.mute[+el.dataset.g]; buildMutes(); });
+    $('mixer').innerHTML = GTAB.map((t, i) => { const [em, nm] = t.split(' '); return '<div class="strip" data-g="' + i + '"><div class="sname"><span>' + em + '</span>' + nm + '</div><div class="fader" data-g="' + i + '" role="slider" aria-label="' + nm + 'の おおきさ" aria-valuemin="0" aria-valuemax="10" aria-valuenow="' + S.vol[i] + '"><div class="ftrack"><div class="ffill" style="height:' + S.vol[i] * 10 + '%"></div></div><div class="fthumb" style="bottom:calc(' + S.vol[i] * 10 + '% - 22px)"></div></div><button type="button" class="mbtn' + (S.mute[i] ? ' off' : '') + '" data-g="' + i + '" aria-pressed="' + !!S.mute[i] + '">' + (S.mute[i] ? '🤫 しー' : '🔊 なる') + '</button></div>'; }).join('');
+    $('mixer').querySelectorAll('.mbtn').forEach((el) => el.onclick = () => { S.mute[+el.dataset.g] = !S.mute[+el.dataset.g]; buildMutes(); });
+    $('mixer').querySelectorAll('.fader').forEach((el) => {
+      const g = +el.dataset.g;
+      const setV = (ev, first) => {
+        const b = el.getBoundingClientRect(), v = Math.max(0, Math.min(10, Math.round((1 - (ev.clientY - b.top) / b.height) * 10)));
+        if (v === S.vol[g] && !first) return; S.vol[g] = v; if (partGain) partGain[g].gain.value = volGain(v);
+        el.setAttribute('aria-valuenow', v); el.querySelector('.ffill').style.height = v * 10 + '%'; el.querySelector('.fthumb').style.bottom = 'calc(' + v * 10 + '% - 22px)';
+      };
+      let down = false;
+      el.addEventListener('pointerdown', (ev) => { ev.preventDefault(); down = true; el.setPointerCapture(ev.pointerId); setV(ev, true); ensureAudio(); });
+      el.addEventListener('pointermove', (ev) => { if (down) setV(ev, false); });
+      ['pointerup', 'pointercancel'].forEach((n) => el.addEventListener(n, () => { if (!down) return; down = false; ensureAudio(); const t = ctx.currentTime + 0.02; if (g === 0) melody(t, 0); else if (g === 1) bass(t, 0); else if (g === 2) fxSound(t, 0); else kick(t); }));   // はなすと おとが なる
+      el.tabIndex = 0;
+      el.addEventListener('keydown', (ev) => { const d = ev.key === 'ArrowUp' || ev.key === 'ArrowRight' ? 1 : ev.key === 'ArrowDown' || ev.key === 'ArrowLeft' ? -1 : 0; if (!d) return; ev.preventDefault(); S.vol[g] = Math.max(0, Math.min(10, S.vol[g] + d)); if (partGain) partGain[g].gain.value = volGain(S.vol[g]); buildMutes(); $('mixer').querySelector('.fader[data-g="' + g + '"]').focus(); });
+    });
   }
   function buildTabs() {
     buildMutes();
-    $('gtabs').innerHTML = GTAB.map((t, i) => '<button type="button" class="gtab' + (i === gGroup ? ' sel' : '') + '" data-g="' + i + '">' + t.replace(' ', '<br>') + (S.range[i] === 'front' ? ' ↻前' : S.range[i] === 'back' ? ' ↻後' : '') + '</button>').join('');
-    $('gtabs').querySelectorAll('.gtab').forEach((el) => el.onclick = () => { const g = +el.dataset.g;
-      gGroup = g; gPaint = null; gResize(); syncPart(); });
+    const tabsHtml = GTAB.map((t, i) => '<button type="button" class="gtab' + (i === gGroup ? ' sel' : '') + '" data-g="' + i + '">' + '<span class="te">' + t.split(' ')[0] + '</span><span class="tt">' + t.split(' ').slice(1).join(' ') + '</span>' + (S.range[i] === 'front' ? ' ↻前' : S.range[i] === 'back' ? ' ↻後' : '') + '</button>').join('');
+    ['gtabs'].forEach((bid) => { $(bid).innerHTML = tabsHtml; $(bid).querySelectorAll('.gtab').forEach((el) => el.onclick = () => { const g = +el.dataset.g;
+      const top0 = $(bid).getBoundingClientRect().top;                 // おした タブの いちを おぼえて、うえの パーツの たかさが かわっても 画面が とばないように
+      gGroup = g; gPaint = null; gResize(); syncPart();
+      const d = $(bid).getBoundingClientRect().top - top0; if (d) window.scrollBy(0, d); }); });
+    const rp = document.querySelector('.rep'); rp.dataset.g = gGroup; $('repHead').textContent = GTAB[gGroup] + ' の せってい'; // いま えらんでいる パートを、色つきの見出しで しめす
   }
   let gPaint = null;
   function gTap(h, first) {
@@ -336,8 +396,15 @@
   // パートごとの くりかえし・コピー・けす・ミュート(いま えらんでいる タブの パート)
   const syncPart = () => {
     if (typeof renderBlocks === 'function') renderBlocks(true);
-    $('rotBtns').innerHTML = GTAB.map((t, i) => '<button type="button" class="rot' + (S.range[i] !== 'all' ? ' on' : '') + '" data-g="' + i + '">' + t.replace(' ', '<br>') + '<br><small>' + { all: 'ぜんぶ', front: 'まえだけ ↻', back: 'うしろだけ ↻' }[S.range[i]] + '</small></button>').join('');
+    const BAR = { all: '<i class="b on"></i><i class="b on"></i>', front: '<i class="b on"></i><i class="b"></i>', back: '<i class="b"></i><i class="b on"></i>' }, LAB = { all: 'ぜんぶ', front: 'まえだけ', back: 'うしろだけ' };
+    $('rotBtns').innerHTML = GTAB.map((t, i) => { const [em, nm] = t.split(' '); return '<div class="mixc"><button type="button" class="rot' + (S.range[i] !== 'all' ? ' on' : '') + '" data-g="' + i + '"><span class="re">' + em + '</span><span class="rn">' + nm + '</span><span class="rs"><span class="bars">' + BAR[S.range[i]] + '</span>' + LAB[S.range[i]] + '</span></button>' + (OCTR[i] ? '<div class="octs" data-g="' + i + '"><input type="range" class="octr" min="0" max="2" step="1" value="' + (S.oct[i] - OCTR[i][0]) + '" data-g="' + i + '" aria-label="' + (i === 0 ? 'メロディ' : 'ベース') + 'の おとの たかさ"><div class="octl">' + OCTL[i].map((n, k) => '<span' + (S.oct[i] - OCTR[i][0] === k ? ' class="on"' : '') + '>' + n + '</span>').join('') + '</div></div>' : '') + '</div>'; }).join('');
     $('rotBtns').querySelectorAll('.rot').forEach((el) => el.onclick = () => { const g = +el.dataset.g; S.range[g] = { all: 'front', front: 'back', back: 'all' }[S.range[g]]; syncPart(); });      // おすたびに: ぜんぶ → まえだけ → うしろだけ → ぜんぶ
+    $('rotBtns').querySelectorAll('input.octr').forEach((el) => {                       // 3てんで とまる スライダー(ひくい・ふつう・たかい)
+      const g = +el.dataset.g, play = () => { ensureAudio(); const t = ctx.currentTime + 0.02; if (g === 0) { melody(t, 0); melody(t + 0.25, 3); } else { previewUp = false; bass(t, 0); previewUp = true; bass(t + 0.35, 3); previewUp = false; } };
+      el.oninput = () => { S.oct[g] = +el.value + OCTR[g][0]; el.parentNode.querySelectorAll('.octl span').forEach((sp, k) => sp.classList.toggle('on', k === +el.value)); };
+      el.onchange = play;
+    });
+    
     buildTabs();
   };
   const partIds = () => RINGS.filter((r) => GROUP[r.id] === gGroup).map((r) => r.id);
@@ -354,7 +421,7 @@
   const setSlot = (s, vals) => { const arr = S.cells[blockId()]; vals.forEach((v, i) => { arr[s * BL + i] = v; }); };
   function renderBlocks(force) {
     if (padsFor !== gGroup) renderPads();
-    const id = blockId(), box = $('blocksBox'); box.hidden = !id; $('drumBox').hidden = gGroup !== 3; $('voiceBox').hidden = gGroup !== 0;
+    const id = blockId(), box = $('blocksBox'); box.hidden = !id; $('drumBox').hidden = gGroup !== 3; $('voiceBox').hidden = gGroup !== 0; $('bassBox').hidden = gGroup !== 1;
     if (!id) return;
     const sig = gGroup + '|' + S.cells[id].join();
     if (!force && sig === blocksSig) return; blocksSig = sig;
@@ -410,6 +477,11 @@
     $('kits').querySelectorAll('.kit').forEach((el) => el.onclick = () => { S.kit[el.dataset.k] = +el.dataset.i; ensureAudio(); const t = ctx.currentTime + 0.02; if (el.dataset.k === 'hat') { hat(t, false); hat(t + 0.25, true); } else playCell(el.dataset.k, 1, t); renderKits(); });
   }
   renderKits();
+  function renderBKits() {
+    $('bkits').innerHTML = BKN.map((nm, i) => '<button type="button" class="kit' + (S.bkit === i ? ' sel' : '') + '" data-i="' + i + '">' + nm + '</button>').join('');
+    $('bkits').querySelectorAll('.kit').forEach((el) => el.onclick = () => { S.bkit = +el.dataset.i; ensureAudio(); const t = ctx.currentTime + 0.02; bass(t, 0); bass(t + 0.4, 3); renderBKits(); });
+  }
+  renderBKits();
   // ---- ドラムの パターン(ボタンで えらぶ)。K=ドン S=パン H=チッ(x=とじた o=あいた) ----
   const DPAT = [                                          // [名前, ハイハット, スネア(クラップ), キック, はやさ(BPM), いろ, えもじ]
     ['ハウス', '..o...o...o...o.', '....x.......x...', 'x...x...x...x...', 122, '#ff7eb3', '🏠'],
@@ -422,6 +494,7 @@
     ['ドラムンベース', 'x.x.x.x.x.x.x.x.', '....x.......x...', 'x.........x.....', 170, '#22c55e', '🚀'],
     ['ガバ', '..o...o...o...o.', '....x.......x...', 'x...x...x...x.xx', 180, '#ef4444', '🔥'],
     ['カメさん', 'x...x...x...x...', '........x.......', 'x.......x.......', 48, '#4caf50', '🐢'],
+    ['うさぎさん', 'x.x.x.x.x.x.x.x.', '..x...x...x...x.', 'x..x..x.x..x..x.', 180, '#ff8fb1', '🐇'],
     ['ドンだけ', '................', '................', 'x...x...x...x...', 0, '#ff7a3d', '🥁'],
   ];
   // 見た目: まるい ばんの ミニ版(そとから ハイハット・スネア・キック)。まんなかに えもじ。はりは、そのジャンルの はやさで まわる
@@ -446,7 +519,7 @@
     const now = S.playing && curTick >= 0 && !S.mute[gGroup] ? Math.floor(stepOf(gGroup, curTick) / BL) : -1;
     $('slots').querySelectorAll('.slot').forEach((el, s) => el.classList.toggle('now', s === now));
   }
-  $('clearPart').onclick = () => { if (!confirm('このタブの おとを ぜんぶ けすよ。いい?\n(「もどす」で もどせるよ)')) return; snap(); partIds().forEach((id) => S.cells[id].fill(kindOf(id) === 'drum' ? 0 : -1)); };
+  $('clearPart').onclick = () => { if (!confirm('このパートの おとを ぜんぶ けすよ。いい?\n(「もどす」で もどせるよ)')) return; snap(); partIds().forEach((id) => S.cells[id].fill(kindOf(id) === 'drum' ? 0 : -1)); };
   $('clearBtn').onclick = () => { if (!confirm('ぜんぶの タブの おとを けすよ。ほんとに いい?\n(「もどす」で もどせるよ)')) return; snap(); RINGS.forEach((r) => S.cells[r.id].fill(r.kind === 'drum' ? 0 : -1)); };
   $('randBtn').onclick = () => {
     snap();
@@ -462,7 +535,7 @@
   // ---- テキストで ほぞん・よみこみ ----
   function toText() {
     const mel = S.cells.mel.map((v) => (v < 0 ? '.' : String(v))).join(''), dr = (id) => S.cells[id].map((v) => (v ? 'x' : '.')).join('');
-    return ['おとならべ', 'はやさ: ' + S.bpm, 'こえ: ' + byId(S.char).name, 'メロ: ' + mel + '   (0=ド 1=レ 2=ミ 3=ソ 4=ラ 5=高いド)', 'ベース: ' + S.cells.bass.map((v) => (v < 0 ? '.' : String(v))).join(''), 'こうか: ' + S.cells.fx.map((v) => (v < 0 ? '.' : String(v))).join('') + '   (0=ぴこ 1=ぼよん 2=きらきら 3=ぶー)', 'チッ: ' + S.cells.hat.map((v) => (v < 0 ? '.' : v ? 'o' : 'x')).join('') + '   (x=とじた o=あいた)', 'パン: ' + dr('snare'), 'ドン: ' + dr('kick') + '\nやまびこ: ' + (S.dly ? 'あり' : 'なし') + '\nおとの いろ: ドン=' + S.kit.kick + ' パン=' + S.kit.snare + ' チッ=' + S.kit.hat].join('\n');
+    return ['おとならべ', 'はやさ: ' + S.bpm, 'こえ: ' + byId(S.char).name, 'ベースの いろ: ' + BKN[S.bkit], 'おおきさ: ' + S.vol.join(' ') + '   (メロ ベース こうか ドラム、0〜10)', 'オクターブ: ' + S.oct[0] + ' ' + S.oct[1] + '   (メロ ベース。メロは -1〜1、ベースは 0〜2)', 'メロ: ' + mel + '   (0=ド 1=レ 2=ミ 3=ソ 4=ラ 5=高いド)', 'ベース: ' + S.cells.bass.map((v) => (v < 0 ? '.' : String(v))).join(''), 'こうか: ' + S.cells.fx.map((v) => (v < 0 ? '.' : String(v))).join('') + '   (0=ぴこ 1=ぼよん 2=きらきら 3=ぶー)', 'チッ: ' + S.cells.hat.map((v) => (v < 0 ? '.' : v ? 'o' : 'x')).join('') + '   (x=とじた o=あいた)', 'パン: ' + dr('snare'), 'ドン: ' + dr('kick') + '\nやまびこ: ' + (S.dly ? 'あり' : 'なし') + '\nおとの いろ: ドン=' + S.kit.kick + ' パン=' + S.kit.snare + ' チッ=' + S.kit.hat].join('\n');
   }
   function fromText(txt) {
     const get = (key) => { const m = txt.match(new RegExp('^\\s*' + key + '\\s*[:：]\\s*(.*)$', 'm')); return m ? m[1] : null; };
@@ -479,6 +552,9 @@
     { const dl = get('やまびこ'); S.dly = !!dl && dl.trim().startsWith('あり'); buildDly(); }
     { const kl = get('おとの いろ'); if (kl) { const m = (k) => { const r = kl.match(new RegExp(k + '=(\\d)')); return r && +r[1] < KITN[{ 'ドン': 'kick', 'パン': 'snare', 'チッ': 'hat' }[k]].length ? +r[1] : null; }; [['ドン', 'kick'], ['パン', 'snare'], ['チッ', 'hat']].forEach(([n, k]) => { const v = m(n); if (v != null) S.kit[k] = v; }); renderKits(); } }
     const bpm = get('はやさ'); if (bpm && +bpm >= 40 && +bpm <= 180) { S.bpm = +bpm; $('tempo').value = S.bpm; $('tempoOut').textContent = S.bpm; }
+    { const oc = get('オクターブ'); if (oc) { const n = oc.trim().split(/\s+/).slice(0, 2).map(Number); if (n.length === 2 && n.every((x, g) => Number.isInteger(x) && x >= OCTR[g][0] && x <= OCTR[g][1])) { S.oct[0] = n[0]; S.oct[1] = n[1]; syncPart(); } } }
+    { const ov = get('おおきさ'); if (ov) { const n = ov.trim().split(/\s+/).slice(0, 4).map(Number); if (n.length === 4 && n.every((x) => Number.isInteger(x) && x >= 0 && x <= 10)) { S.vol = n; if (partGain) partGain.forEach((p, g) => { p.gain.value = volGain(S.vol[g]); }); buildMutes(); } } }
+    { const bv = get('ベースの いろ'); const bi = bv ? BKN.findIndex((n) => bv.trim().startsWith(n)) : -1; if (bi >= 0) { S.bkit = bi; renderBKits(); } }
     const vo = get('こえ'); const c = vo && CHARS.find((x) => vo.trim().startsWith(x.name)); if (c) { S.char = c.id; buildChars(); }
     return null;
   }

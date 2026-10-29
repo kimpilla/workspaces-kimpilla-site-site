@@ -7,7 +7,11 @@
 <link rel="stylesheet" href="../../style.css">
 <style>
   html, body { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
-  .play { background: #fff7e0; color: #3a2a12; border-radius: 22px; padding: 14px 14px 18px; margin: 14px 0; border: 3px solid #ffd36b; font-family: "Hiragino Maru Gothic ProN", "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif; }
+  .play { background: transparent; color: #3a2a12; padding: 0; margin: 14px 0; border: 0; font-family: "Hiragino Maru Gothic ProN", "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif; }
+  .sec { border: 3px solid var(--sb); background: var(--sg); border-radius: 20px; padding: 6px 12px 12px; margin: 14px 0; }
+  .sec h2 { margin-top: 8px; }
+  .sec { --sb: #ffd36b; --sg: #fff7e0; }
+  .sec .rep.all { margin-top: 12px; }
   .play h2 { font-size: 17px; margin: 14px 0 8px; color: #7a4b00; }
   .ringwrap { position: relative; width: min(100%, 380px); margin: 6px auto; aspect-ratio: 1; }
   #ring { display: block; width: 100%; height: 100%; touch-action: none; user-select: none; -webkit-user-select: none; cursor: pointer; }
@@ -28,7 +32,7 @@
   button.big:hover { background: #fff; color: #7a4b00; }
   button.big.on { background: #ff7a3d; border-color: #e5601f; color: #fff; }
   button.sm { font-size: 14px; padding: 6px 12px; }
-  .transport { position: sticky; top: 0; z-index: 5; background: #fff7e0; padding: 4px 0 2px; margin: -4px 0 4px; border-bottom: 2px dashed #ffd36b; }
+  .transport { position: sticky; top: 4px; z-index: 5; background: #fff7e0; padding: 6px 12px 4px; margin: 0 0 12px; border: 3px solid #ffd36b; border-radius: 20px; box-shadow: 0 3px 8px #0002; }
   .transport .row { margin: 4px 0; gap: 6px; flex-wrap: nowrap; }
   .transport button.big { font-size: 15px; padding: 6px 11px; border-width: 3px; white-space: nowrap; }
   /* こども向け: スライダーは、太く・つまみを大きく・さわれる範囲を縦に広く */
@@ -48,10 +52,14 @@
   .rbtn.sel, .rbtn.sel:hover:not(:disabled) { border-color: #ff7a3d; background: #ffe3cf; color: #7a4b00; }
   .rep button.big.sm { margin: 0; font-size: 13px; padding: 6px 10px; border-width: 3px; }
   .rep button.big:disabled { opacity: .4; }
-  .rot { margin: 0; font-size: 11px; letter-spacing: -0.5px; font-weight: bold; line-height: 1.35; padding: 7px 2px; border-radius: 14px; border: 3px solid #f1dfae; background: #fff; color: #7a4b00; cursor: pointer; font-family: inherit; }
-  .rot small { font-size: 11px; font-weight: normal; }
+  #rotBtns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .rot { --pc: #ffe08a; margin: 0; display: grid; grid-template-columns: auto 1fr; grid-template-areas: "e n" "s s"; align-items: center; gap: 2px 8px; text-align: left; font-size: 15px; font-weight: bold; padding: 8px 8px; min-height: 84px; white-space: nowrap; border-radius: 18px; border: 4px solid var(--pc); background: #fff; color: #7a4b00; cursor: pointer; font-family: inherit; }
+  .rot[data-g="0"] { --pc: #ffd54a; } .rot[data-g="1"] { --pc: #6fcf8c; } .rot[data-g="2"] { --pc: #b79bff; } .rot[data-g="3"] { --pc: #ff9a5c; }
+  .rot .re { grid-area: e; font-size: 28px; line-height: 1; } .rot .rn { grid-area: n; }
+  .rot .rs { grid-area: s; display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: normal; }
+  .rot .bars { display: inline-flex; gap: 3px; } .rot .b { display: block; width: 17px; height: 12px; border-radius: 4px; background: #eee; border: 2px solid var(--pc); box-sizing: border-box; } .rot .b.on { background: var(--pc); }
   .rot:hover:not(:disabled) { background: #fff; color: #7a4b00; }
-  .rot.on, .rot.on:hover:not(:disabled) { border-color: #ff7a3d; background: #ff7a3d; color: #fff; }
+  .rot.on, .rot.on:hover:not(:disabled) { background: color-mix(in srgb, var(--pc) 30%, #fff); color: #7a4b00; }
   .padhead { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 2px 0 6px; font-size: 14px; }
   .padhead button.big { margin: 0; }
   #recBtn.rec { background: #e5382c; border-color: #b9241a; color: #fff; }
@@ -67,6 +75,7 @@
   .kitrow { display: flex; align-items: center; gap: 5px; margin: 5px 0; flex-wrap: wrap; }
   .kitrow > span { width: 4.6em; font-size: 13px; font-weight: bold; color: #7a4b00; }
   .kit { margin: 0; font-size: 16px; min-width: 44px; padding: 8px 10px; border-radius: 999px; border: 3px solid #f1dfae; background: #fff; color: #7a4b00; cursor: pointer; font-family: inherit; font-weight: bold; }
+  #bkits .kit { font-size: 13px; padding: 10px 2px; min-width: 0; flex: 1 1 0; white-space: nowrap; }
   .kit:hover:not(:disabled) { background: #fff; color: #7a4b00; }
   .kit.sel, .kit.sel:hover:not(:disabled) { border-color: #ff7a3d; background: #ffe3cf; color: #7a4b00; }
   .dpdet { margin: 10px 0 4px; }
@@ -85,35 +94,62 @@
   .dpat:active { transform: translateY(4px); box-shadow: 0 1px 0 color-mix(in srgb, var(--c, #f1dfae) 75%, #000); }
   .dpat.sel, .dpat.sel:hover:not(:disabled) { border-color: #ff7a3d; box-shadow: 0 5px 0 #ff7a3d, 0 0 0 4px #ffd2b5; }
   .dpat.sel span::before { content: '▶ '; color: #ff7a3d; }
-  .slots { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
-  .slot { position: relative; border: 3px solid #f1dfae; border-radius: 14px; padding: 4px 3px 5px; text-align: center; background: #fffdf5; }
+  .slots { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .slot { position: relative; border: 3px solid #f1dfae; border-radius: 16px; padding: 6px 6px 8px; text-align: center; background: #fffdf5; }
   .slot.now { border-color: #ff7a3d; background: #ffe3cf; }
-  .slot .sv { margin: 0; width: 100%; border: 0; background: transparent; color: #7a4b00; font-family: inherit; font-size: 12px; font-weight: bold; padding: 2px 0 4px; cursor: pointer; position: relative; }
+  .slot .sv { margin: 0; width: 100%; border: 0; background: transparent; color: #7a4b00; font-family: inherit; font-size: 14px; font-weight: bold; padding: 2px 0 6px; cursor: pointer; position: relative; }
   .slot .sv:hover:not(:disabled) { background: transparent; color: #7a4b00; }
   .slot .sv b { position: absolute; left: 2px; top: 0; font-size: 11px; color: #a98a4a; }
   .slot .sv svg { width: 100%; height: auto; display: block; margin: 12px auto 4px; }
-  .slot .sb3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; }
-  .slot .sb3 button { margin: 0; font-size: 14px; padding: 7px 0; border-radius: 10px; border: 2px solid #ffb347; background: #fff; color: #7a4b00; cursor: pointer; font-family: inherit; }
+  .slot .sb3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 4px; }
+  .slot .sb3 button { margin: 0; font-size: 24px; min-height: 58px; padding: 0; border-radius: 14px; border: 2px solid #ffb347; background: #fff; color: #7a4b00; cursor: pointer; font-family: inherit; }
   .slot .sb3 button:hover:not(:disabled) { background: #ffe3cf; color: #7a4b00; }
-  .gtabs.mutes { margin: 4px 0 0; }
+  #mixer { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 4px; }
+  .strip { --pc: #ffe08a; display: flex; flex-direction: column; align-items: center; gap: 6px; background: color-mix(in srgb, var(--pc) 14%, #fff); border: 3px solid color-mix(in srgb, var(--pc) 50%, #fff); border-radius: 16px; padding: 8px 4px 8px; }
+  .strip[data-g="0"] { --pc: #ffd54a; } .strip[data-g="1"] { --pc: #6fcf8c; } .strip[data-g="2"] { --pc: #b79bff; } .strip[data-g="3"] { --pc: #ff9a5c; }
+  .sname { font-size: 11px; font-weight: bold; color: #7a4b00; text-align: center; line-height: 1.2; } .sname span { display: block; font-size: 26px; }
+  .fader { position: relative; width: 100%; height: 170px; touch-action: none; cursor: pointer; }
+  .ftrack { position: absolute; left: 50%; top: 0; bottom: 0; width: 18px; margin-left: -9px; border-radius: 9px; background: #eee3c6; border: 2px solid #e2d3a6; box-sizing: border-box; overflow: hidden; }
+  .ffill { position: absolute; left: 0; right: 0; bottom: 0; background: var(--pc); }
+  .fthumb { position: absolute; left: 50%; width: 44px; height: 44px; margin-left: -22px; border-radius: 50%; background: #fff; border: 5px solid var(--pc); box-shadow: 0 2px 6px #0004; box-sizing: border-box; }
+  .fader:focus-visible .fthumb { outline: 3px solid #ff7a3d; }
+  .octs { padding: 0 6px; }
+  .octs input[type=range] { width: 100%; --tk: 16px; --th: 40px; height: 44px !important; display: block; }
+  .octl { display: flex; justify-content: space-between; font-size: 12px; color: #a08040; margin-top: -2px; }
+  .octl span { flex: 1; text-align: center; white-space: nowrap; } .octl span:first-child { text-align: left; } .octl span:last-child { text-align: right; }
+  .octl span.on { color: #7a4b00; font-weight: bold; }
+  .strip .mbtn { width: 100%; font-size: 12px; padding: 9px 0; }
+  .mixc { min-width: 0; display: flex; flex-direction: column; gap: 6px; }
   .mbtn { margin: 0; font-size: 12px; font-weight: bold; padding: 6px 2px; border-radius: 999px; border: 3px solid #bfe3c8; background: #e9f8ee; color: #1f6b3a; cursor: pointer; font-family: inherit; }
   .mbtn:hover:not(:disabled) { background: #e9f8ee; color: #1f6b3a; }
   .mbtn.off, .mbtn.off:hover:not(:disabled) { border-color: #d8d2c2; background: #eee8d8; color: #8a8270; }
   .gtabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 6px 0 8px; }
   .gtab { margin: 0; font-size: 12px; padding: 8px 2px; border-radius: 14px; border: 3px solid #f1dfae; background: #fff; color: #7a4b00; cursor: pointer; font-family: inherit; font-weight: bold; line-height: 1.3; }
   .gtab:hover:not(:disabled) { background: #fff; color: #7a4b00; }
-  .gtab.sel, .gtab.sel:hover:not(:disabled) { border-color: #ff7a3d; background: #ffe3cf; color: #7a4b00; }
+  #gtabs, #gtabs2 { margin-bottom: 0; gap: 4px; }
+  #gtabs .gtab, #gtabs2 .gtab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+  #gtabs .te, #gtabs2 .te { font-size: 26px; line-height: 1; transition: font-size .1s; }
+  #gtabs .tt, #gtabs2 .tt { font-size: 11px; line-height: 1.1; }
+  #gtabs .gtab.sel .te, #gtabs2 .gtab.sel .te { font-size: 40px; }
+  #gtabs .gtab.sel .tt, #gtabs2 .gtab.sel .tt { font-size: 11px; }
+  .gtab[data-g="0"], .rep[data-g="0"] { --pc: #ffd54a; } .gtab[data-g="1"], .rep[data-g="1"] { --pc: #6fcf8c; } .gtab[data-g="2"], .rep[data-g="2"] { --pc: #b79bff; } .gtab[data-g="3"], .rep[data-g="3"] { --pc: #ff9a5c; }
+  #gtabs .gtab, #gtabs2 .gtab { font-size: 13px; padding: 10px 2px 8px; min-height: 64px; border-radius: 14px 14px 0 0; border: 3px solid color-mix(in srgb, var(--pc) 45%, #fff); border-bottom: 0; background: color-mix(in srgb, var(--pc) 14%, #fff); }
+  #gtabs .gtab:hover:not(:disabled), #gtabs2 .gtab:hover:not(:disabled) { background: color-mix(in srgb, var(--pc) 14%, #fff); }
+  #gtabs .gtab.sel, #gtabs .gtab.sel:hover:not(:disabled), #gtabs2 .gtab.sel, #gtabs2 .gtab.sel:hover:not(:disabled) { background: var(--pc); border-color: var(--pc); color: #4a2f00; position: relative; z-index: 2; margin-bottom: -3px; padding-bottom: 11px; font-size: 14px; }
+  .rep { border-color: color-mix(in srgb, var(--pc, #f1dfae) 55%, #fff); border-top-left-radius: 0; border-top-right-radius: 0; background: #fff; }
+  .rep.all { border-color: #f1dfae; background: #fff; border-top-left-radius: 16px; border-top-right-radius: 16px; margin-top: 12px; }
+  .rephead { margin: 0 0 6px; padding: 4px 4px 6px; font-weight: bold; font-size: 13px; color: #8a6a30; border-bottom: 2px dashed color-mix(in srgb, var(--pc, #f1dfae) 55%, #fff); }
   #grid { display: block; width: 100%; touch-action: none; user-select: none; -webkit-user-select: none; cursor: pointer; border-radius: 12px; }
   .sl { display: grid; grid-template-columns: 6.5em 1fr 2.5em; align-items: center; gap: 8px; margin: 8px 0; font-size: 15px; }
   .sl input { width: 100%; accent-color: #ff7a3d; height: 34px; }
   .legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 10px; font-size: 13px; margin: 6px 0; }
   .legend span { display: inline-flex; align-items: center; gap: 4px; }
   .legend i { width: 14px; height: 14px; border-radius: 4px; display: inline-block; }
-  .chars { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
-  .char { background: #fff; border: 4px solid #f1dfae; border-radius: 20px; padding: 6px 2px 4px; margin: 0; cursor: pointer; color: #3a2a12; text-align: center; font-size: 13px; line-height: 1.3; font-family: inherit; }
+  .chars { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .char { background: #fff; border: 2px solid #f1dfae; border-radius: 12px; padding: 3px 2px 3px; margin: 0; cursor: pointer; color: #3a2a12; text-align: center; font-size: 11px; line-height: 1.3; font-family: inherit; }
   .char:hover:not(:disabled) { background: #fff; color: #3a2a12; }
-  .char svg { width: 100%; height: auto; display: block; max-width: 62px; margin: 0 auto; overflow: visible; }
-  .char.sel { border-color: #ff7a3d; background: #fff1e6; transform: scale(1.05); box-shadow: 0 4px 0 #ffb98f; }
+  .char svg { width: 100%; height: auto; display: block; max-width: 34px; margin: 0 auto; overflow: visible; }
+  .char.sel { border-color: #ff7a3d; background: #fff1e6; }
   #saveText { width: 100%; box-sizing: border-box; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 14px; line-height: 1.5; padding: 10px; border: 3px solid #f1dfae; border-radius: 14px; background: #fff; color: #3a2a12; resize: vertical; }
   #tapBtn.pulse { background: #ffe3cf; }
   .tip { font-size: 14px; line-height: 1.7; margin: 8px 0; }
@@ -138,6 +174,7 @@
     <div class="sl tempo"><div id="dancer" aria-hidden="true"></div><span>🐢はやさ🐇</span><input type="range" id="tempo" min="40" max="180" value="100"><span id="tempoOut">100</span><button class="big sm" id="tapBtn" type="button" title="すきな はやさで 4かい タッチ">👆 タップ</button></div>
   </div>
 
+  <div class="sec s1">
   <h2>① ぐるぐる まわる ばん</h2>
   <div class="ringwrap">
     <canvas id="ring" aria-label="おとが まわる まるい ばん"></canvas>
@@ -145,16 +182,22 @@
   </div>
   <div class="legend" id="legend"></div>
   <p class="tip">はりが 1しゅうすると 1くりかえし。マスを タッチして おとを ならべよう。そとから メロディ・ベース・こうかおん・ドラム3つ。そとの 3つの わっかは、タッチするたびに おとが かわるよ(ドレミ や こうかおん)。</p>
+  </div>
 
-  <h2>② ブロックで つくる</h2>
-  <div class="gtabs mutes" id="mutes"></div>
+  <div class="sec s2">
+  <h2>② がっきを えらぼう</h2>
   <div class="gtabs" id="gtabs"></div>
   <div class="rep">
+    <div class="rephead" id="repHead"></div>
     <div id="voiceBox">
         <p class="small" style="margin:4px 0"><b>🎤 メロディの だれの こえ?</b></p>
         <div class="chars" id="chars"></div>
         <div class="row" style="margin:6px 0 2px"><button type="button" class="big sm" id="dlyBtn">🔁 やまびこ: なし</button></div>
         <p class="small" style="margin:2px 0">メロディの おとが、はやさに あわせて 「やまびこ」みたいに くりかえすよ(おとの 3マスぶん おくれて)。</p>
+    </div>
+    <div id="bassBox" hidden>
+      <p class="small" style="margin:4px 0"><b>🎚 ベースの おとの いろ</b> — おすと おとが かわるよ</p>
+      <div id="bkits" class="kitrow"></div>
     </div>
     <div id="padsBox">
       <div class="padhead"><b id="padTitle"></b><button type="button" class="big sm" id="recBtn">⏺ ろくおん</button></div>
@@ -174,18 +217,31 @@
         <div class="dpats" id="drumPats"></div>
       </details>
     </div>
-    <hr style="border:0;border-top:2px dashed #f1dfae;margin:10px 0 6px">
-    <p class="small" style="margin:6px 0 2px"><b>🔁 くりかえし</b> — パートを おすと、「ぜんぶ → まえだけ → うしろだけ」と かわるよ</p>
-    <div class="gtabs" id="rotBtns"></div>
-    <div class="row">
-      <button type="button" class="big sm" id="clearPart">🧹 このタブを けす</button><button type="button" class="big sm" id="undoBtn">↩ もどす</button></div>
-    <div class="row" style="margin:2px 0 0"><button type="button" class="dangerbtn" id="clearBtn">ぜんぶ けす</button></div>
+    <details class="dpdet" id="gridDet"><summary><b>✏️ こまかく なおす</b></summary>
+      <canvas id="grid" aria-label="おとを ならべる しかい ばん"></canvas>
+      <p class="tip">しかくい ばんは、いま えらんでいる がっきの ばん。よこが じかん(左から 右へ)で、8マスずつ 2だんに わけてあるよ。たては おとの たかさ(メロディ・ベース)、こうかおん、ドラムの しゅるい。マスを タッチで ON・OFF。ゆびを すべらせると、まとめて ならべたり、メロディを かいたり できるよ。ここも、①の まるい ばんも、おなじ おとを うごかしているよ。</p>
+    </details>
+    <div class="row"><button type="button" class="big sm" id="clearPart">🧹 このパートを けす</button></div>
+  </div>
   </div>
 
-  <h2>③ しかくい ばんで こまかく なおす</h2>
-  <canvas id="grid" aria-label="おとを ならべる しかい ばん"></canvas>
-  <p class="tip">しかくい ばんは、うえの タブで えらんだ がっきの ばん。よこが じかん(左から 右へ)で、8マスずつ 2だんに わけてあるよ。たては おとの たかさ(メロディ・ベース)、こうかおん、ドラムの しゅるい。マスを タッチで ON・OFF。ゆびを すべらせると、まとめて ならべたり、メロディを かいたり できるよ。ここも、①の まるい ばんも、おなじ おとを うごかしているよ。</p>
+  <div class="sec s3">
+  <h2>③ ミキサー・くりかえし</h2>
 
+  <div class="rep all mix">
+    <p class="small" style="margin:6px 0 2px"><b>🎚 ミキサー</b> — つまみを うえに すると おおきい おと、したに すると ちいさい おと。したの ボタンで だす・けす</p>
+    <div id="mixer"></div>
+  </div>
+
+  <div class="rep all">
+    <p class="small" style="margin:6px 0 2px"><b>🔁 くりかえし・おとの たかさ</b> — パートを おすと、「ぜんぶ → まえだけ → うしろだけ」と かわるよ。メロディと ベースは、したの スライダーで おとの たかさ(オクターブ)も かえられるよ。ベースの「ぴょん」は、ふつう → たかい → ふつう → たかい… と かわりばんこに なるよ</p>
+    <div class="gtabs" id="rotBtns"></div>
+    <div class="row">
+      <button type="button" class="big sm" id="undoBtn">↩ もどす</button><button type="button" class="dangerbtn" id="clearBtn">ぜんぶ けす</button></div>
+  </div>
+  </div>
+
+  <div class="sec s4">
   <h2>④ テキストで ほぞん・よみこみ</h2>
   <p class="tip">つくった リズムを、もじに して、コピーできるよ。メモに はったり、ともだちに おくったり。もじを はって「よみこむ」と、もとに もどるよ。</p>
   <textarea id="saveText" rows="8" spellcheck="false" placeholder="ここに もじが でるよ。よみこむ ときは、ここに はりつけて ね。"></textarea>
@@ -194,6 +250,7 @@
     <button class="big sm" id="loadBtn">📥 よみこむ</button>
   </div>
   <p class="tip" id="saveMsg" aria-live="polite"></p>
+  </div>
 </section>
 
 <section>
@@ -201,7 +258,7 @@
   <ul class="adult">
     <li><b>シーケンサー</b>: 時間を等しい「マス(ステップ)」に区切り、マスごとに「鳴らす/鳴らさない」を並べて、順番に再生する仕組み。ここでは1周=1小節=16マス(4拍×4分割)。</li>
     <li><b>四角い盤(グリッド)</b>: 音を足し引きするときの、定番の見せ方。指で押しやすいよう、楽器ごとのタブで切り替え、1マスを大きくしている。横=時間(8マスずつ前半・後半の2段=16マス)、縦=音の高さ(メロディ・ベース)と、こうかおん・ドラムの種類。円と同じデータを編集する。</li>
-    <li><b>パートごとの操作</b>: メロディ・ベース・こうかおん・ドラムの「パート」ごとに、ミュート(盤の上のボタン)、くりかえし(盤の下の4つのボタン。パートを押すたびに ぜんぶ→前半→後半)、コピー・けす(盤の下。いま開いているタブが対象)ができる。くりかえしは、選んだ半分(8マス)だけを2回くり返す。並べた音は消えず、「ぜんぶ」に戻すと元どおり。別々のパートで違う範囲をくり返せる(例: ドラムはぜんぶ、メロディは前半だけ)。選ばなかった半分は、円と盤で薄く表示される。くりかえし・ミュートの設定は、テキスト保存には入らない。</li>
+    <li><b>パートごとの操作</b>: メロディ・ベース・こうかおん・ドラムの「パート」ごとに、ミュート(③の各パートのカードの下のボタン)、けす(②の中の「このパートを けす」。いま選んでいるパートが対象)、くりかえし(③の下の4つのボタン。パートを押すたびに ぜんぶ→前半→後半)ができる。くりかえしは、選んだ半分(8マス)だけを2回くり返す。並べた音は消えず、「ぜんぶ」に戻すと元どおり。別々のパートで違う範囲をくり返せる(例: ドラムはぜんぶ、メロディは前半だけ)。選ばなかった半分は、円と盤で薄く表示される。くりかえし・ミュートの設定は、テキスト保存には入らない。</li>
     <li><b>ひいて ろくおん</b>: メロディ・ベースは6つの鍵盤、こうかおんは4つのマーク、ドラムは4つのパッドをタップして鳴らせる。「⏺ ろくおん」を押して再生しながら叩くと、その時の一番近いマス(16分音符の格子に合わせる=クオンタイズ)に音が入る。再生を止めると録音も終わる。「もどす」で、録音の直前に戻せる。くりかえし設定のあるパートは、その範囲の中に入る。</li>
     <li><b>ドラムの音色</b>: キック(ふつう・ずしん=808風・ばちっ・ぽこ)、スネア(スネア・クラップ・カッ=リム・タム)、ハイハット(ふつう・キラッ=金属・シャカ)から選べる。押すと試し聴きができる。テキスト保存にも入る。</li>
     <li><b>ドラムのパターン</b>: ドラムのタブで、電子音楽のパターンをボタンで選べる。ハウス・テクノ・ミニマル・ブレイクビーツ・エレクトロ・ダブステップ・トラップ・ドラムンベース・ガバ・ドンだけ(数字は、そのジャンルに合うテンポ)。押すとドラム全体(ハイハット・クラップ・キック)とテンポが入れ替わり、「もどす」でドラムを戻せる(テンポは戻らない)。選んだあとに、盤で足し引きして好みに変えられる。</li>
