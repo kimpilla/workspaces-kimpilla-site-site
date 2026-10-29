@@ -92,6 +92,13 @@
   .pedal .pk { margin-top: 8px; }
   .pedal .pk input { width: 100%; height: 30px; accent-color: #333; }
   .tip { font-size: 13px; color: #8a6a3a; margin: 4px 0 0; }
+  /* こども向け: スライダーは、太く・つまみを大きく・さわれる範囲を縦に広く */
+  input[type=range] { --tk: 20px; --th: 44px; --thc: #ff7a3d; --tkbg: linear-gradient(90deg, #ffe9b8, #ffc56b); -webkit-appearance: none; appearance: none; background: transparent; height: 56px !important; margin: 0; touch-action: pan-y; cursor: pointer; }
+  input[type=range]::-webkit-slider-runnable-track { box-sizing: border-box; height: var(--tk); border-radius: 10px; background: var(--tkbg); border: 2px solid #f1dfae; }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; box-sizing: border-box; width: var(--th); height: var(--th); margin-top: calc((var(--tk) - var(--th)) / 2); border-radius: 50%; background: var(--thc); border: 4px solid #fff; box-shadow: 0 2px 6px #0005; }
+  input[type=range]::-moz-range-track { box-sizing: border-box; height: var(--tk); border-radius: 10px; background: var(--tkbg); border: 2px solid #f1dfae; }
+  input[type=range]::-moz-range-thumb { box-sizing: border-box; width: var(--th); height: var(--th); border-radius: 50%; background: var(--thc); border: 4px solid #fff; box-shadow: 0 2px 6px #0005; }
+  .pedal .pk input[type=range] { --thc: #333; --tkbg: linear-gradient(90deg, #e6e6e6, #b5b5b5); }
 </style>
 </head>
 <body>

@@ -326,8 +326,8 @@
     if (taps.length < 2) return;
     const iv = (taps[taps.length - 1] - taps[0]) / (taps.length - 1);
     let bpm = Math.round(60000 / iv);
-    if (bpm < 60) { bpm = Math.min(180, bpm * 2); } else if (bpm > 180) { bpm = Math.max(60, Math.round(bpm / 2)); }
-    S.bpm = Math.max(60, Math.min(180, bpm)); $('tempo').value = S.bpm; $('tempoOut').textContent = S.bpm;
+    if (bpm < 40) { bpm = Math.min(180, bpm * 2); } else if (bpm > 180) { bpm = Math.max(40, Math.round(bpm / 2)); }
+    S.bpm = Math.max(40, Math.min(180, bpm)); $('tempo').value = S.bpm; $('tempoOut').textContent = S.bpm;
   });
   let undoSnap = null;
   const snap = () => { undoSnap = JSON.stringify(S.cells); $('undoBtn').disabled = false; };
@@ -421,6 +421,7 @@
     ['トラップ', 'x.x.xxx.x.x.xxxx', '........x.......', 'x.....x...x.....', 140, '#a855f7', '💎'],
     ['ドラムンベース', 'x.x.x.x.x.x.x.x.', '....x.......x...', 'x.........x.....', 170, '#22c55e', '🚀'],
     ['ガバ', '..o...o...o...o.', '....x.......x...', 'x...x...x...x.xx', 180, '#ef4444', '🔥'],
+    ['カメさん', 'x...x...x...x...', '........x.......', 'x.......x.......', 48, '#4caf50', '🐢'],
     ['ドンだけ', '................', '................', 'x...x...x...x...', 0, '#ff7a3d', '🥁'],
   ];
   // 見た目: まるい ばんの ミニ版(そとから ハイハット・スネア・キック)。まんなかに えもじ。はりは、そのジャンルの はやさで まわる
@@ -477,7 +478,7 @@
     if (ki) S.cells.kick = [...ki].map((ch) => (ch === 'x' ? 1 : 0));
     { const dl = get('やまびこ'); S.dly = !!dl && dl.trim().startsWith('あり'); buildDly(); }
     { const kl = get('おとの いろ'); if (kl) { const m = (k) => { const r = kl.match(new RegExp(k + '=(\\d)')); return r && +r[1] < KITN[{ 'ドン': 'kick', 'パン': 'snare', 'チッ': 'hat' }[k]].length ? +r[1] : null; }; [['ドン', 'kick'], ['パン', 'snare'], ['チッ', 'hat']].forEach(([n, k]) => { const v = m(n); if (v != null) S.kit[k] = v; }); renderKits(); } }
-    const bpm = get('はやさ'); if (bpm && +bpm >= 60 && +bpm <= 180) { S.bpm = +bpm; $('tempo').value = S.bpm; $('tempoOut').textContent = S.bpm; }
+    const bpm = get('はやさ'); if (bpm && +bpm >= 40 && +bpm <= 180) { S.bpm = +bpm; $('tempo').value = S.bpm; $('tempoOut').textContent = S.bpm; }
     const vo = get('こえ'); const c = vo && CHARS.find((x) => vo.trim().startsWith(x.name)); if (c) { S.char = c.id; buildChars(); }
     return null;
   }

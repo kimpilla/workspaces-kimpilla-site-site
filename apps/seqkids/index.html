@@ -31,7 +31,15 @@
   .transport { position: sticky; top: 0; z-index: 5; background: #fff7e0; padding: 4px 0 2px; margin: -4px 0 4px; border-bottom: 2px dashed #ffd36b; }
   .transport .row { margin: 4px 0; gap: 6px; flex-wrap: nowrap; }
   .transport button.big { font-size: 15px; padding: 6px 11px; border-width: 3px; white-space: nowrap; }
-  .sl.tempo { grid-template-columns: auto auto 1fr 2em auto; gap: 6px; font-size: 13px; }
+  /* こども向け: スライダーは、太く・つまみを大きく・さわれる範囲を縦に広く */
+  input[type=range] { --tk: 20px; --th: 44px; --thc: #ff7a3d; --tkbg: linear-gradient(90deg, #ffe9b8, #ffc56b); -webkit-appearance: none; appearance: none; background: transparent; height: 56px !important; margin: 0; touch-action: pan-y; cursor: pointer; }
+  input[type=range]::-webkit-slider-runnable-track { box-sizing: border-box; height: var(--tk); border-radius: 10px; background: var(--tkbg); border: 2px solid #f1dfae; }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; box-sizing: border-box; width: var(--th); height: var(--th); margin-top: calc((var(--tk) - var(--th)) / 2); border-radius: 50%; background: var(--thc); border: 4px solid #fff; box-shadow: 0 2px 6px #0005; }
+  input[type=range]::-moz-range-track { box-sizing: border-box; height: var(--tk); border-radius: 10px; background: var(--tkbg); border: 2px solid #f1dfae; }
+  input[type=range]::-moz-range-thumb { box-sizing: border-box; width: var(--th); height: var(--th); border-radius: 50%; background: var(--thc); border: 4px solid #fff; box-shadow: 0 2px 6px #0005; }
+  .pedal .pk input[type=range] { --thc: #333; --tkbg: linear-gradient(90deg, #e6e6e6, #b5b5b5); }
+  .sl.tempo { grid-template-columns: auto auto 1fr auto; grid-template-areas: "d l o t" "s s s s"; gap: 2px 8px; font-size: 13px; align-items: center; }
+  .sl.tempo > :nth-child(1) { grid-area: d; } .sl.tempo > :nth-child(2) { grid-area: l; } .sl.tempo > :nth-child(3) { grid-area: s; } .sl.tempo > :nth-child(4) { grid-area: o; font-size: 18px; font-weight: bold; } .sl.tempo > :nth-child(5) { grid-area: t; }
   .transport .sl { margin: 4px 0; }
   .rep { background: #fff; border: 3px solid #f1dfae; border-radius: 16px; padding: 4px 8px; margin: 8px 0; }
   .rep .row { margin: 6px 0; gap: 6px; }
@@ -127,7 +135,7 @@
       <button class="big" id="playBtn">▶ はじめる</button>
       <button class="big sm" id="randBtn">🎲 おまかせ</button>
     </div>
-    <div class="sl tempo"><div id="dancer" aria-hidden="true"></div><span>🐢はやさ🐇</span><input type="range" id="tempo" min="60" max="180" value="100"><span id="tempoOut">100</span><button class="big sm" id="tapBtn" type="button" title="すきな はやさで 4かい タッチ">👆 タップ</button></div>
+    <div class="sl tempo"><div id="dancer" aria-hidden="true"></div><span>🐢はやさ🐇</span><input type="range" id="tempo" min="40" max="180" value="100"><span id="tempoOut">100</span><button class="big sm" id="tapBtn" type="button" title="すきな はやさで 4かい タッチ">👆 タップ</button></div>
   </div>
 
   <h2>① ぐるぐる まわる ばん</h2>
@@ -201,7 +209,7 @@
     <li><b>円</b>: 最後のマスの次は最初に戻る(ループ)。円にすると、くり返しが見える。</li>
     <li><b>わっか</b>: トラック(楽器ごとの列)。外側から、メロディ・ベース(低い音)・こうかおん(ぴこ/ぼよん/きらきら/ぶー)・ハイハット(チッ=とじた/チー=あいた。あいた音は、次のとじた音で止まる)・スネア(パン)・バスドラム(ドン)。</li>
     <li><b>テキスト保存</b>: リズムを1行ずつの文字列にする。メロ・ベース=0〜5(ド・レ・ミ・ソ・ラ・高いド)、こうか=0〜3(ぴこ・ぼよん・きらきら・ぶー)、ハイハット=x(とじた)・o(あいた)・.(休み)、ほかのドラム=x(鳴らす)と.(休み)。16文字=16マス。そのままメモ帳などに貼って保管でき、貼り直して読み込める。</li>
-    <li><b>はやさ</b>: テンポ(BPM)。60〜180。「タップ」を好きな速さで4回以上タッチすると、その間隔(1回=1拍)の平均から決まる。2秒あくと数え直し。</li>
+    <li><b>はやさ</b>: テンポ(BPM)。40〜180。「タップ」を好きな速さで4回以上タッチすると、その間隔(1回=1拍)の平均から決まる。2秒あくと数え直し。</li>
     <li><b>メロディの声</b>: おとあそびシンセと同じ、キャラクター=波の形(サイン・ノコギリ・矩形・三角)。音階はドレミソラ+高いド(ペンタトニック)なので、どう並べてもぶつかりにくい。</li>
   </ul>
 </section>
