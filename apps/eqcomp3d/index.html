@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>EQとコンプの立体 | kimpilla</title>
+<link rel="stylesheet" href="../../style.css">
+<style>
+  [hidden] { display: none !important; }
+  #stage { position: sticky; top: 0; z-index: 10; background: var(--bg); padding: 4px 0 2px; border-bottom: 1px solid var(--line); }
+  #stage .chips { margin: 3px 0; }
+  #stage .chips button.big { padding: 4px 12px; font-size: 13px; margin-left: auto; }
+  #c3 { width: 100%; height: min(280px, 34vh); display: block; border: 1px solid var(--line); touch-action: none; cursor: grab; }
+  #c3:active { cursor: grabbing; }
+  .chips { display: flex; flex-wrap: wrap; gap: 4px; margin: 8px 0; align-items: center; }
+  .chips button { margin: 0; padding: 4px 10px; font-size: 13px; }
+  .chips button.on, .chips button.on:hover:not(:disabled) { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .chips .lab { font-size: 13px; color: var(--muted); margin-right: 2px; }
+  #geq { width: 100%; height: 210px; border: 1px solid var(--line); display: block; touch-action: none; cursor: ns-resize; margin: 6px 0; }
+  #cComp { width: 100%; height: 250px; border: 1px solid var(--line); display: block; touch-action: none; margin: 6px 0; }
+  .grp { border: 1px solid var(--line); padding: 6px 10px 8px; margin: 10px 0; }
+  .grp h3 { margin: 4px 0; font-size: 15px; }
+  .rw { display: grid; grid-template-columns: 5.2em 1fr 4.6em; gap: 6px; align-items: center; font-size: 13px; margin: 3px 0; }
+  .rw input { width: 100%; }
+  .rw output { text-align: right; font-variant-numeric: tabular-nums; }
+  .band { border-top: 1px dashed var(--line); margin-top: 6px; padding-top: 4px; }
+  .band:first-of-type { border-top: 0; margin-top: 0; }
+  .band b { font-size: 13px; }
+  .meter { height: 10px; border: 1px solid var(--line); position: relative; margin: 4px 0; }
+  .meter i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--accent); width: 0; }
+  .big { padding: 8px 18px; font-size: 15px; }
+  .muted { color: var(--muted); }
+  .legend { font-size: 12px; color: var(--muted); margin: 4px 0; }
+  .legend i { display: inline-block; width: 12px; height: 12px; vertical-align: -1px; margin-right: 3px; }
+</style>
+</head>
+<body>
+<header>
+  <a class="home" href="../../index.html">kimpilla</a>
+  <nav><a href="../../music.html">音楽</a> <a href="../../apps.html">アプリ</a> <a href="../../memo.html">メモ</a></nav>
+</header>
+<main>
+<h1>EQとコンプの立体</h1>
+<p class="muted">イコライザーを「平面」(周波数)、コンプレッサーを「奥行き」(音の大きさ)にして、ふたつが音にどうかかるかを、ひとつの立体で見る。実際に音を鳴らしながら動かせる。</p>
+
+<div id="stage">
+<div class="chips" id="modeChips"><span class="lab">表示</span></div>
+<canvas id="c3" aria-label="EQとコンプの立体グラフ"></canvas>
+<div class="chips" id="views"><span class="lab">向き</span><button type="button" id="playBtn2" class="big">▶ なる</button></div>
+</div>
+<div class="legend" id="lgSurf"><i style="background:#2a6df4"></i>音が小さくなる(−) <i style="background:#999"></i>変わらない <i style="background:#e0283c"></i>音が大きくなる(+)　／　横=周波数、奥=入力の大きさ(奥ほど大きい音)、高さ=かかるゲイン(dB)</div>
+<div class="legend" id="lgSurf2">太い線=いまの音の大きさでの周波数特性(音に合わせて奥行き方向に動く)。サイン波のときは、点がいまの音。</div>
+
+<div class="legend" id="lgWave" hidden>横=時間(約20ミリ秒ぶんの波形、1枚)、奥=過去(手前が最新)、高さ=音の振幅。波形の平面が、奥に向かって伸びていく。左の壁の線は、各瞬間のピーク(サスティーンの形)。「入力」は、EQ・コンプを通る前の音。「出力」は通ったあと。両方を見比べると、コンプがサスティーンを伸ばしたり、頭を抑えたりしているのが分かる。</div>
+
+
+<div class="grp">
+  <h3>音を鳴らす</h3>
+  <div class="chips" id="srcChips"><span class="lab">音</span></div>
+  <div class="chips" id="fileRow" hidden><input type="file" id="fileIn" accept="audio/*"><span class="muted" style="font-size:12px" id="fileName">(手元の音を読み込んで、くり返し鳴らす)</span></div>
+  <div class="rw"><label for="lvl">入力の大きさ</label><input type="range" id="lvl" min="-48" max="0" step="0.5" value="-14"><output id="lvlo"></output></div>
+  <div class="rw" id="rwF"><label for="sf">サインの高さ</label><input type="range" id="sf" min="0" max="1000" value="400"><output id="sfo"></output></div>
+  <div class="rw" id="rwStep" hidden><label for="wstep">奥の長さ</label><input type="range" id="wstep" min="20" max="200" step="5" value="60"><output id="wso"></output></div>
+  <div class="chips"><button type="button" class="big" id="playBtn">▶ なる</button><span class="muted" style="font-size:12px" id="audioNote"></span></div>
+  <div class="chips" id="ordChips"><span class="lab">順番</span></div>
+</div>
+
+<div class="grp">
+  <h3>グラフィックEQ(平面)</h3>
+  <div class="chips" id="eqPre"><span class="lab">プリセット</span></div>
+  <canvas id="geq" aria-label="グラフィックイコライザー"></canvas>
+  <div class="muted" style="font-size:12px">縦のフェーダーを、指でなぞって上げ下げ(1オクターブごとの10本、±12dB)。赤い線が、合計の周波数特性。</div>
+</div>
+
+<div class="grp">
+  <h3>コンプ(奥行き)</h3>
+  <div class="chips" id="cPre"><span class="lab">プリセット</span></div>
+  <canvas id="cComp" aria-label="コンプの入出力カーブ"></canvas>
+  <div class="muted" style="font-size:12px">丸をドラッグ: スレッショルド(左右)、ニー(左右)、レシオ(右端の丸を上下)、メイクアップ(左端の丸を上下)。赤くぬった所が、圧縮で下がっている分。</div>
+  <div id="cRows"></div>
+  <div class="rw"><label>いまの圧縮</label><div class="meter"><i id="grBar"></i></div><output id="grO">0 dB</output></div>
+</div>
+
+<h2>見かた</h2>
+<ul class="small">
+  <li><b>EQは平面</b>: 正面(奥行きを正面から)に近い向きで見ると、EQの周波数特性そのものの形に見える。音の大きさにかかわらず、周波数ごとに同じだけ上げ下げする。</li>
+  <li><b>コンプは奥行き</b>: 真横から見ると、コンプの入出力カーブの形になる。小さい音(手前)はそのまま、スレッショルドを超えた大きい音(奥)ほど、ゲインが下がる。</li>
+  <li>ふたつを合わせると、立体の高さ=EQ+コンプのゲインになる。EQで持ち上げた帯域は、その帯域だけ先にスレッショルドを超えるので、奥の方で谷が手前に寄ってくる(順番を「EQ→コンプ」にしたとき)。「コンプ→EQ」では、谷はどの周波数でも同じ奥行きにできて、そこにEQが乗るだけ。</li>
+  <li>表示は、1つのサイン波が、その周波数・その大きさで入ったときの定常状態のゲイン。音楽のような複雑な音では、全体の大きさでコンプが動くので、太い線が「いまの音の大きさ」での特性を表す。</li>
+  <li>鳴る音のコンプは、この画面のカーブと同じ式(ソフトニー、アタック・リリース付き)で作った。ブラウザ内蔵のコンプではない。</li>
+</ul>
+</main>
+<footer>kimpilla</footer>
+<script src="eqcomp3d.js"></script>
+</body>
+</html>
