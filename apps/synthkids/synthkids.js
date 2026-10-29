@@ -35,7 +35,10 @@
   }
   CHARS[1].body = starBody(50, 54, 44, 34, 11, '#ffc93c');
   function charSvg(c, bodyOnly) {
-    if (bodyOnly) return '<svg viewBox="-20 -20 140 140" aria-hidden="true">' + c.body + '</svg>';   // 分身は、顔なし(黒い点が目立たないように)
+    if (bodyOnly) {                                                  // 分身は、顔なし(黒い点が目立たないように)。ぼかしは、SVGの中のフィルターで(スマホで、枠が四角く見えないように)
+      const body = c.body.replace(/(fill|stroke)="#[0-9a-fA-F]{6}"/g, '$1="currentColor"');
+      return '<svg viewBox="-20 -20 140 140" aria-hidden="true"><defs><filter id="gb' + bodyOnly + '" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="0"/></filter></defs><g filter="url(#gb' + bodyOnly + ')" style="color:' + c.color + '">' + body + '</g></svg>';
+    }
     return '<svg viewBox="0 0 100 100" aria-hidden="true">' + c.body +
       '<circle cx="' + (50 - c.ex) + '" cy="' + c.ey + '" r="6.5" fill="#fff"/><circle cx="' + (50 + c.ex) + '" cy="' + c.ey + '" r="6.5" fill="#fff"/>' +
       '<circle cx="' + (50 - c.ex) + '" cy="' + (c.ey + 1) + '" r="3" fill="#2b2150"/><circle cx="' + (50 + c.ex) + '" cy="' + (c.ey + 1) + '" r="3" fill="#2b2150"/>' +
@@ -115,7 +118,7 @@
     delay = ctx.createDelay(2); fb = ctx.createGain();
     master = ctx.createGain(); analyser = ctx.createAnalyser(); analyser.fftSize = 2048;
     const comp = ctx.createDynamicsCompressor();
-    delay.delayTime.value = 0.32; fb.gain.value = 0.4;
+    delay.delayTime.value = 0.32; fb.gain.value = 0.5;
     // エフェクター(ふむ): 声 → ひずみ → コーラス → やまびこ → 音量
     dist = fxBlock(); const ws = ctx.createWaveShaper(), pre = ctx.createGain(), post = ctx.createGain(), curve = new Float32Array(2048);
     for (let i = 0; i < 2048; i++) { const x = i / 1024 - 1; curve[i] = Math.tanh(3 * x); }
@@ -136,8 +139,8 @@
     if (!ctx) return;
     const t = ctx.currentTime;
     master.gain.setTargetAtTime(p.volume, t, 0.02);
-    const ew = p.fx.echo ? p.echo : 0;
-    dry.gain.setTargetAtTime(1 - ew * 0.5, t, 0.02); wet.gain.setTargetAtTime(ew, t, 0.02);
+    const ew = p.fx.echo ? Math.min(1, p.echo * 1.8) : 0;
+    dry.gain.setTargetAtTime(1 - ew * 0.3, t, 0.02); wet.gain.setTargetAtTime(ew, t, 0.02);
     dist.dry.gain.setTargetAtTime(p.fx.dist ? 0 : 1, t, 0.01); dist.wet.gain.setTargetAtTime(p.fx.dist ? 1 : 0, t, 0.01);
     dist.pre.gain.setTargetAtTime(1 + p.distAmt * 20, t, 0.02); dist.post.gain.setTargetAtTime(0.5 / (1 + p.distAmt * 1.5), t, 0.02);
     cho.wet.gain.setTargetAtTime(p.fx.chorus ? 0.85 : 0, t, 0.02); cho.lgs.forEach(([lg, k]) => lg.gain.setTargetAtTime((0.0012 + p.chAmt * 0.0035) * k, t, 0.02)); cho.lfos.forEach(([lf, fr]) => lf.frequency.setTargetAtTime(fr * (0.6 + p.chAmt * 0.8), t, 0.05));
@@ -149,11 +152,17 @@
     }
   }
   // 波の形で、音の大きさ(実効値=RMS)がちがう(四角い波は大きく、のこぎり・三角は小さい)。同じ大きさに聞こえるよう、波ごとに、ゲインを決める
+  // 音量そろえ: 人の耳は、高い倍音(ギザギザ・しかくい波に多い)を大きく感じる。そこで、耳の感じ方(A特性)で重みをつけた大きさで、そろえる
+  const aw = (f) => { const f2 = f * f; return 12194 * 12194 * f2 * f2 / ((f2 + 20.6 * 20.6) * Math.sqrt((f2 + 107.7 * 107.7) * (f2 + 737.9 * 737.9)) * (f2 + 12194 * 12194)); };
   let tableRms = null;
   function waveGain() {
     if (!table) { table = waveTable(); tableRms = null; }
-    if (tableRms == null) { let s = 0; for (let i = 0; i < table.length; i++) s += table[i] * table[i]; tableRms = Math.sqrt(s / table.length); }
-    return Math.max(0.4, Math.min(2, 0.62 / Math.max(0.1, tableRms)));       // 目標のRMS = 0.62(サイン波の0.707より、少し小さめ)
+    if (tableRms == null) {
+      const N = table.length, F0 = 262; let s = 0;
+      for (let n = 1; n <= HARM; n++) { let re = 0, im = 0; for (let i = 0; i < N; i++) { const a = 2 * Math.PI * n * i / N; re += table[i] * Math.cos(a); im += table[i] * Math.sin(a); } const amp = 2 / N * Math.hypot(re, im); s += amp * amp / 2 * Math.pow(aw(n * F0), 2); }
+      tableRms = Math.sqrt(s) / (aw(F0) / Math.SQRT2);           // サイン波(振幅1)を1としたときの、耳で感じる大きさ
+    }
+    return Math.max(0.3, Math.min(2, 0.877 / Math.max(0.1, tableRms)));       // サイン波の基準の大きさ(0.877)に、そろえる
   }
   const mixGains = () => { const s = 1 + p.osc2 + p.sub, wg = waveGain(); return [wg / s, p.osc2 * wg / s, p.sub / s]; };   // 重ねても、全体の大きさが変わらないように
 
@@ -342,6 +351,16 @@
   $('face').addEventListener('pointerdown', (e) => { e.preventDefault(); $('face').setPointerCapture(e.pointerId); $('face').dragging = true; faceMove(e); });
   $('face').addEventListener('pointermove', (e) => { if ($('face').dragging) faceMove(e); });
   const faceUp = () => { $('face').dragging = false; };
+  // ダブルタップ拡大・ピンチ拡大を止める(鍵盤まわり。ボタンやスライダーは、ふつうに使える)
+  {
+    let lastEnd = 0;
+    document.addEventListener('touchend', (e) => {
+      if (!e.target.closest || !e.target.closest('#dock')) return;
+      const now = Date.now(); if (now - lastEnd < 450 && !e.target.closest('button, input, label')) e.preventDefault(); lastEnd = now;
+    }, { passive: false });
+    ['gesturestart', 'gesturechange', 'gestureend'].forEach((ev) => document.addEventListener(ev, (e) => e.preventDefault(), { passive: false }));
+    document.addEventListener('dblclick', (e) => { if (e.target.closest && e.target.closest('#dock')) e.preventDefault(); });
+  }
   $('face').addEventListener('pointerup', faceUp); $('face').addEventListener('pointercancel', faceUp);
 
   // ---- つまみ(0〜1000のスライダー。対数にするものは、耳の感じ方に合わせる) ----
@@ -382,15 +401,21 @@
       const beat = 0.88 + 0.12 * Math.sin(2 * Math.PI * tt * (0.4 + d * 2.5));             // ずれが大きいほど、はやく うすくなったり こくなったり(うなり)
       cl.style.opacity = ((0.4 + 0.45 * p.osc2) * beat).toFixed(3);
       cl.style.transform = 'translateX(' + (7 + d * 15).toFixed(1) + 'px) scale(' + (1 + 0.25 * level).toFixed(3) + ')';
-      cl.style.filter = 'blur(' + (d * 2.6).toFixed(1) + 'px) hue-rotate(' + (d * 70).toFixed(0) + 'deg) saturate(' + (1 + d * 0.8).toFixed(2) + ')';
+      const g = cl.querySelector('g'), fb = cl.querySelector('feGaussianBlur'); if (g) g.style.color = hueShift(ghostBase, d * 70); if (fb) fb.setAttribute('stdDeviation', (d * 4.3).toFixed(2));
     }
     if (p.sub < 0.02) bg.style.opacity = 0;
-    else { bg.style.opacity = (0.16 + 0.34 * p.sub).toFixed(3); bg.style.transform = 'scale(' + (1.6 + 0.12 * level).toFixed(3) + ')'; }
+    else { bg.style.opacity = (0.16 + 0.34 * p.sub).toFixed(3); bg.style.transform = 'scale(' + (1.3 + 0.1 * level).toFixed(3) + ')'; }
     // ゆらゆら(ビブラート): 声がふるえている間、キャラが ぷるぷる 揺れる
     if (p.vib > 2 && level > 0.05) el.style.transform += ' rotate(' + (Math.sin(2 * Math.PI * Math.min(p.vibRate, 10) * tt) * (p.vib / 100 * 14)).toFixed(1) + 'deg)';   // ゆらゆら: ぷるぷる震える(速すぎる時は、見えるぎりぎりの速さまで)
     const mc = cl.querySelector('.mouth'), mb = bg.querySelector('.mouth'); if (mc) mc.style.transform = ms; if (mb) mb.style.transform = ms;
   }
-  function buildSinger() { const s = charSvg(faceChar()); $('singer').innerHTML = s; const gs = charSvg(faceChar(), true); $('singerClone').innerHTML = gs; $('singerBig').innerHTML = gs; }
+  let ghostBase = '#ff8fb1';
+  const hueShift = (c, deg) => {                              // 色の色相を、degだけ回す
+    let [r, g, b] = hex(c).map((x) => x / 255); const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2, d = mx - mn;
+    let hh = 0, s = 0; if (d) { s = d / (1 - Math.abs(2 * l - 1)); hh = mx === r ? ((g - b) / d + 6) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; hh *= 60; }
+    return 'hsl(' + ((hh + deg) % 360).toFixed(0) + ',' + Math.min(100, s * 100 * 1.15).toFixed(0) + '%,' + (l * 100).toFixed(0) + '%)';
+  };
+  function buildSinger() { const s = charSvg(faceChar()); $('singer').innerHTML = s; ghostBase = faceChar().color; $('singerClone').innerHTML = charSvg(faceChar(), 'C'); $('singerBig').innerHTML = charSvg(faceChar(), 'B'); const bb = $('singerBig').querySelector('feGaussianBlur'); if (bb) bb.setAttribute('stdDeviation', '5'); }
   function singerTo(n) {                                   // キャラクターは、いちばん さいごに ならした キーの うえで うたう
     const k = document.querySelector('.key[data-note="' + n + '"]'), s = $('singer'); if (!k) return;
     const x = (k.offsetLeft + k.offsetWidth / 2 - s.offsetWidth / 2) + 'px';
