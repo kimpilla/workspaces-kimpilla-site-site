@@ -58,8 +58,9 @@
   <h3>音を鳴らす</h3>
   <div class="chips" id="srcChips"><span class="lab">音</span></div>
   <div class="chips" id="fileRow" hidden><input type="file" id="fileIn" accept="audio/*"><span class="muted" style="font-size:12px" id="fileName">(手元の音を読み込んで、くり返し鳴らす)</span></div>
+  <div id="fileRange" hidden><canvas id="frC" style="width:100%;height:64px;display:block;touch-action:none;cursor:ew-resize"></canvas><div class="chips"><span class="muted" style="font-size:12px" id="frT">ファイルを読み込んだら、赤い持ち手をドラッグして、使う区間をえらぶ</span><button id="frAll" type="button">ぜんぶ</button></div></div>
   <div class="rw"><label for="lvl">入力の大きさ</label><input type="range" id="lvl" min="-48" max="0" step="0.5" value="-14"><output id="lvlo"></output></div>
-  <div class="rw" id="rwF"><label for="sf">サインの高さ</label><input type="range" id="sf" min="0" max="1000" value="400"><output id="sfo"></output></div>
+  <div class="rw" id="rwBg"><label for="bg">いっしょに鳴る低音(80Hz)</label><input type="range" id="bg" min="-60" max="0" step="1" value="-60"><output id="bgo"></output></div>
   <div class="rw" id="rwStep" hidden><label for="wstep">奥の長さ</label><input type="range" id="wstep" min="20" max="200" step="5" value="60"><output id="wso"></output></div>
   <div class="chips"><button type="button" class="big" id="playBtn">▶ なる</button><span class="muted" style="font-size:12px" id="audioNote"></span></div>
   <div class="chips" id="ordChips"><span class="lab">順番</span></div>
@@ -74,9 +75,12 @@
 
 <div class="grp">
   <h3>コンプ(奥行き)</h3>
+  <div class="chips" id="mbChips"><span class="lab">かたち</span></div>
   <div class="chips" id="cPre"><span class="lab">プリセット</span></div>
+  <div class="chips" id="bandTabs" hidden><span class="lab">いじる帯域</span></div>
+  <div id="xoRows" hidden></div>
   <canvas id="cComp" aria-label="コンプの入出力カーブ"></canvas>
-  <div class="muted" style="font-size:12px">丸をドラッグ: スレッショルド(左右)、ニー(左右)、レシオ(右端の丸を上下)、メイクアップ(左端の丸を上下)。赤くぬった所が、圧縮で下がっている分。</div>
+  <div class="muted" style="font-size:12px">(マルチバンドのときは、えらんだ帯域のカーブ) 丸をドラッグ: スレッショルド(左右)、ニー(左右)、レシオ(右端の丸を上下)、メイクアップ(左端の丸を上下)。赤くぬった所が、圧縮で下がっている分。</div>
   <div id="cRows"></div>
   <div class="rw"><label>いまの圧縮</label><div class="meter"><i id="grBar"></i></div><output id="grO">0 dB</output></div>
 </div>
@@ -87,18 +91,13 @@
   <li><b>コンプは奥行き</b>: 真横から見ると、コンプの入出力カーブの形になる。小さい音(手前)はそのまま、スレッショルドを超えた大きい音(奥)ほど、ゲインが下がる。</li>
   <li>ふたつを合わせると、立体の高さ=EQ+コンプのゲインになる。EQで持ち上げた帯域は、その帯域だけ先にスレッショルドを超えるので、奥の方で谷が手前に寄ってくる(順番を「EQ→コンプ」にしたとき)。「コンプ→EQ」では、谷はどの周波数でも同じ奥行きにできて、そこにEQが乗るだけ。</li>
   <li>表示は、1つのサイン波が、その周波数・その大きさで入ったときの定常状態のゲイン。音楽のような複雑な音では、全体の大きさでコンプが動くので、太い線が「いまの音の大きさ」での特性を表す。</li>
+  <li><b>シングルとマルチの差</b>: ひとつのサイン波だけなら、ふたつはほとんど同じ。差が出るのは、いろんな高さの音が同時に鳴るとき。「いっしょに鳴る低音」を上げると、立体は「低音が大きく鳴っている間の、ほかの周波数の音が受けるゲイン」になる。シングルは低音の大きさにつられて、中高域まで全体が下がる。マルチは低音の帯域だけが下がる。</li>
   <li>鳴る音のコンプは、この画面のカーブと同じ式(ソフトニー、アタック・リリース付き)で作った。ブラウザ内蔵のコンプではない。</li>
 </ul>
-
-<h2>テストに使える無料音源</h2>
-<p class="small">「ファイル」から読み込める。著作権は曲ごと・録音ごとに違うので、ダウンロード前にライセンス表記を確認すること(ビートルズなど市販の録音は使えない)。</p>
-<ul class="small">
-  <li><a href="https://musopen.org/" rel="noopener">Musopen</a>: パブリックドメインのクラシック曲を、フリーライセンスで録音した演奏集。オーケストラ(ティンパニ・シンバル・弦)は帯域が広いのでEQの幅を見やすい。オルガンやチェロの持続音はコンプのリリース、ピアノやティンパニの減衰音はアタックの効きを見やすい。</li>
-  <li><a href="https://archive.org/" rel="noopener">Internet Archive</a> / <a href="https://commons.wikimedia.org/" rel="noopener">Wikimedia Commons</a>: パブリックドメインやCC0の録音が混ざっている。権利の状況は1本ずつ違う。古いSP盤は法的な扱いが争われている。</li>
-  <li><a href="https://freesound.org/" rel="noopener">Freesound</a>: ライセンスをCC0で絞ると、ドラムやベースのループが見つかる。</li>
-</ul>
+<p class="small">生ドラムの音は、<a href="https://github.com/sgossner/VCSL" rel="noopener">VCSL(Versilian Community Sample Library)</a>の録音(CC0)。1発ずつの音を、このページでパターンに並べている。</p>
 </main>
 <footer>kimpilla</footer>
+<script src="drums.js"></script>
 <script src="eqcomp3d.js"></script>
 </body>
 </html>
