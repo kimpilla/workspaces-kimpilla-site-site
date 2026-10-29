@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>シャッフルと裏拍 | kimpilla</title>
+<link rel="stylesheet" href="../../style.css">
+<style>
+  [hidden] { display: none !important; }
+  .tabs { display: flex; gap: 0; margin: 10px 0 14px; border: 2px solid var(--fg); }
+  .tabs button { flex: 1; margin: 0; border: 0; border-right: 2px solid var(--fg); padding: 8px 2px; font-size: 13px; }
+  .tabs button:last-child { border-right: 0; }
+  .tabs button.on, .tabs button.on:hover:not(:disabled) { background: var(--accent); color: #fff; }
+  .row { display: grid; grid-template-columns: 6.5em 1fr 4.6em; gap: 6px 8px; align-items: center; margin: 8px 0; font-size: 14px; }
+  .row input[type=range] { width: 100%; }
+  .row output { text-align: right; font-variant-numeric: tabular-nums; }
+  .seg { display: flex; flex-wrap: wrap; gap: 4px; grid-column: 2 / 4; }
+  .seg button, .chips button { margin: 0; padding: 4px 10px; font-size: 13px; }
+  .seg button.on, .chips button.on, .seg button.on:hover:not(:disabled), .chips button.on:hover:not(:disabled) { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .chips { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0; }
+  .lane { margin: 10px 0 2px; font-size: 13px; }
+  .lane .bar { position: relative; height: 34px; border: 1px solid var(--line); margin-top: 3px; }
+  .lane .tick { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--line); }
+  .lane .dot { position: absolute; top: 50%; width: 18px; height: 18px; margin: -9px 0 0 -9px; border-radius: 50%; border: 2px solid var(--fg); background: var(--bg); transition: transform .08s; }
+  .lane .dot.off { background: var(--accent); border-color: var(--accent); }
+  .lane .dot.fl { transform: scale(1.5); }
+  .lane .lbl { position: absolute; bottom: -16px; font-size: 10px; color: var(--muted); transform: translateX(-50%); white-space: nowrap; }
+  .gap { margin: 22px 0 6px; padding: 8px 12px; border: 1px solid var(--line); font-size: 14px; }
+  .gap b { font-variant-numeric: tabular-nums; }
+  .big { padding: 10px 22px; font-size: 16px; }
+  .big.on, .big.on:hover:not(:disabled) { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .muted { color: var(--muted); }
+  #pad { position: relative; height: 34vh; min-height: 210px; max-height: 340px; border: 3px solid var(--fg); display: flex; flex-direction: column; align-items: center; justify-content: center; user-select: none; -webkit-user-select: none; touch-action: none; cursor: pointer; margin: 12px 0; -webkit-tap-highlight-color: transparent; }
+  #pad.click { border-color: var(--accent); }
+  #pad.hush { border-style: dashed; }
+  #pad.hit { background: color-mix(in srgb, var(--accent) 18%, transparent); }
+  #pad .bigt { font-size: 26px; font-weight: bold; }
+  #pad .sub { color: var(--muted); font-size: 14px; margin-top: 6px; text-align: center; padding: 0 10px; }
+  #beats { display: flex; gap: 8px; margin-top: 12px; height: 16px; }
+  #beats i { width: 16px; height: 16px; border: 2px solid var(--muted); border-radius: 50%; }
+  #beats i.on { background: var(--accent); border-color: var(--accent); }
+  #pbar { position: absolute; left: 0; bottom: 0; height: 6px; background: var(--accent); width: 0; }
+  body.running .cfgt { display: none; }
+  .res { border: 1px solid var(--line); padding: 8px 12px; margin: 10px 0; }
+  .res .rank { font-size: 32px; font-weight: bold; color: var(--accent); line-height: 1.2; }
+  .kv { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; font-size: 14px; }
+  .kv b { font-variant-numeric: tabular-nums; }
+  #chart { width: 100%; height: 190px; display: block; }
+  .guess { border: 1px solid var(--line); padding: 8px 12px; margin: 10px 0; font-size: 14px; }
+</style>
+</head>
+<body>
+<header>
+  <a class="home" href="../../index.html">kimpilla</a>
+  <nav><a href="../../music.html">音楽</a> <a href="../../apps.html">アプリ</a> <a href="../../memo.html">メモ</a></nav>
+</header>
+<main>
+<h1>シャッフルと裏拍</h1>
+<p class="muted">ベースとドラムの「ハネ具合」を、別々に動かして聴く。当てっこと、裏拍をたたく練習もできる。</p>
+<div class="tabs" id="tabs"><button type="button" data-t="play" class="on">ハネを聴く</button><button type="button" data-t="guess">当てっこ</button><button type="button" data-t="tap">裏拍をたたく</button></div>
+
+<!-- ===== ハネを聴く / 当てっこ(共通の演奏部) ===== -->
+<section id="tPlay">
+  <div class="row"><label for="bpm">テンポ</label><input type="range" id="bpm" min="60" max="180" value="100"><output id="bpmOut">100</output></div>
+  <div id="swingRows">
+    <div class="row" id="rowB"><label for="swB">ベースのウラ</label><input type="range" id="swB" min="50" max="75" step="0.5" value="50"><output id="swBo">50%</output></div>
+    <div class="row" id="rowD"><label for="swD">ドラムのウラ</label><input type="range" id="swD" min="50" max="75" step="0.5" value="50"><output id="swDo">50%</output></div>
+  </div>
+  <div class="chips" id="chipsPlay"></div>
+  <div class="chips"><button type="button" id="linkBtn">🔗 ふたつを同じにする: なし</button><button type="button" id="muteB">ベース: なる</button><button type="button" id="muteD">ドラム: なる</button></div>
+  <div class="lane"><span>ドラム(ハットとキックのウラ)</span><div class="bar" id="laneD"></div></div>
+  <div class="lane"><span>ベース(ウラの音)</span><div class="bar" id="laneB"></div></div>
+  <div class="gap" id="gapBox"></div>
+  <p><button type="button" class="big" id="playBtn">▶ なる</button></p>
+</section>
+
+<section id="tGuess" hidden>
+  <div class="guess" id="gHelp">ウラの位置を当てる。ひとつ聴いて、スライダーで予想して、答え合わせ。「もんだい」と「あなたの予想」を聴き比べられる。</div>
+  <div class="chips" id="gPart"></div>
+  <div class="row"><label for="gSw">あなたの予想</label><input type="range" id="gSw" min="50" max="75" step="0.5" value="62"><output id="gSwo">62%</output></div>
+  <div class="chips"><button type="button" id="gA">▶ もんだいを聴く</button><button type="button" id="gB">▶ 予想を聴く</button><button type="button" id="gStop">■ とめる</button><button type="button" class="big" id="gAns">こたえあわせ</button><button type="button" id="gNext">つぎのもんだい</button></div>
+  <div class="guess" id="gRes" hidden></div>
+  <div class="muted" id="gStat" style="font-size:13px"></div>
+</section>
+
+<!-- ===== 裏拍をたたく ===== -->
+<section id="tTap" hidden>
+  <div class="cfgt">
+    <div class="row"><label for="tbpm">テンポ</label><input type="range" id="tbpm" min="50" max="180" value="100"><output id="tbpmOut">100</output></div>
+    <div class="row"><label>練習</label><div class="seg" id="tMode"></div></div>
+    <div class="row" id="tSwRow"><label>ウラの位置</label><div class="seg" id="tSw"></div></div>
+    <div class="row"><label>クリックあり</label><div class="seg" id="tLead"></div></div>
+    <div class="row"><label>クリックなし</label><div class="seg" id="tHush"></div></div>
+  </div>
+  <div id="pad" role="button" aria-label="ここをたたく"><div class="bigt" id="pMain">タップではじめる</div><div class="sub" id="pSub"></div><div id="beats"><i></i><i></i><i></i><i></i></div><div id="pbar"></div></div>
+  <p style="margin:0"><button type="button" id="stopBtn" hidden>やめる</button></p>
+  <div id="tRes" hidden>
+    <div class="res"><div class="rank" id="rank"></div><div id="verdict"></div><div class="kv" id="kv"></div></div>
+    <svg id="chart" viewBox="0 0 600 190" preserveAspectRatio="none" aria-label="タップごとのズレ"></svg>
+    <p class="muted" style="margin:2px 0 10px;font-size:12px">縦軸は、狙った位置からのズレ(ms)。上=走り(はやい、−)、下=もたり(おそい、+)。<span style="color:var(--accent)">●</span>はクリックなしの部分、○はクリックありの部分。</p>
+  </div>
+</section>
+
+<h2>つかいかた</h2>
+<ul class="small">
+  <li><b>ウラの位置</b>は、1拍(表から次の表まで)のどのあたりでウラの8分音符を弾くか。50%=まっすぐ(ストレート)、約67%=3連のハネ(シャッフル)、75%=付点のハネ(強め)。</li>
+  <li>「ハネを聴く」では、ベースとドラムのウラを別々に動かせる。差があると、ウラの音が揃わずに「もたる」「つんのめる」感じが出る。下のズレ(ms)は、そのときのテンポでの時間差。</li>
+  <li>「当てっこ」は、ベースかドラムのウラの位置をランダムに決めて、それを当てる。聴き比べながら、自分の予想を合わせにいく。</li>
+  <li>「裏拍をたたく」は、表のクリックだけを聴きながら、そのあいだの位置(ウラ)をたたく。バックビート(2と4だけたたく)もある。終わると、たたいた位置を%で出す。「ウラの位置」を3連にして、ちゃんと67%近くをたたけるか試せる。</li>
+</ul>
+</main>
+<footer>kimpilla</footer>
+<script src="swinglab.js"></script>
+</body>
+</html>

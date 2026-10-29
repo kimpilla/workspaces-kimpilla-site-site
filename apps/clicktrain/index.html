@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>体内クリック | kimpilla</title>
+<link rel="stylesheet" href="../../style.css">
+<style>
+  [hidden] { display: none !important; }
+  body.running .cfg { display: none; }
+  .cfg { display: grid; grid-template-columns: 7.5em 1fr 3.2em; gap: 6px 8px; align-items: center; margin: 10px 0; font-size: 14px; }
+  .cfg input[type=range] { width: 100%; }
+  .seg { display: flex; flex-wrap: wrap; gap: 4px; grid-column: 2 / 4; }
+  .seg button { margin: 0; padding: 4px 10px; font-size: 13px; }
+  .seg button.on, .seg button.on:hover:not(:disabled) { background: var(--accent); border-color: var(--accent); color: #fff; }
+  #pad { position: relative; height: 38vh; min-height: 230px; max-height: 360px; border: 3px solid var(--fg); display: flex; flex-direction: column; align-items: center; justify-content: center; user-select: none; -webkit-user-select: none; touch-action: none; cursor: pointer; margin: 12px 0; -webkit-tap-highlight-color: transparent; }
+  #pad.click { border-color: var(--accent); }
+  #pad.hush { border-style: dashed; }
+  #pad.hit { background: color-mix(in srgb, var(--accent) 18%, transparent); }
+  #pad .big { font-size: 28px; font-weight: bold; }
+  #pad .sub { color: var(--muted); font-size: 14px; margin-top: 6px; }
+  #beats { display: flex; gap: 8px; margin-top: 12px; height: 16px; }
+  #beats i { width: 16px; height: 16px; border: 2px solid var(--muted); border-radius: 50%; }
+  #beats i.on { background: var(--accent); border-color: var(--accent); }
+  #bar { position: absolute; left: 0; bottom: 0; height: 6px; background: var(--accent); width: 0; }
+  .res { border: 1px solid var(--line); padding: 8px 12px; margin: 10px 0; }
+  .res .rank { font-size: 34px; font-weight: bold; color: var(--accent); line-height: 1.2; }
+  .kv { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; font-size: 14px; }
+  .kv b { font-variant-numeric: tabular-nums; }
+  #chart { width: 100%; height: 200px; display: block; }
+  table.hist { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.hist td, table.hist th { border-bottom: 1px solid var(--line); padding: 3px 4px; text-align: right; }
+  table.hist th:first-child, table.hist td:first-child { text-align: left; }
+  .muted { color: var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <a class="home" href="../../index.html">kimpilla</a>
+  <nav><a href="../../music.html">音楽</a> <a href="../../apps.html">アプリ</a> <a href="../../memo.html">メモ</a></nav>
+</header>
+<main>
+<h1>体内クリック</h1>
+<p class="muted">クリックが途中で消える。消えたあとも、同じテンポで画面をたたき続けて、ズレを測る練習。</p>
+
+<div class="cfg">
+  <label for="bpm">テンポ</label><input type="range" id="bpm" min="50" max="240" value="120"><span id="bpmOut">120</span>
+  <label>たたく細かさ</label><div class="seg" id="subSeg"></div>
+  <label>クリックあり</label><div class="seg" id="leadSeg"></div>
+  <label>クリックなし</label><div class="seg" id="hushSeg"></div>
+  <label>音</label><div class="seg" id="optSeg"></div>
+</div>
+
+<div id="pad" role="button" aria-label="ここをたたく">
+  <div class="big" id="padMain">タップではじめる</div>
+  <div class="sub" id="padSub">クリックに合わせてたたき始める</div>
+  <div id="beats"></div>
+  <div id="bar"></div>
+</div>
+<p style="margin:0"><button type="button" id="stopBtn" hidden>やめる</button></p>
+
+<div id="result" hidden>
+  <div class="res">
+    <div class="rank" id="rank"></div>
+    <div id="verdict"></div>
+    <div class="kv" id="kv"></div>
+  </div>
+  <svg id="chart" viewBox="0 0 600 200" preserveAspectRatio="none" aria-label="タップごとのズレ"></svg>
+  <p class="muted" style="margin:2px 0 10px;font-size:12px">縦軸は、拍の位置からのズレ(ms)。上=走り(はやい、−)、下=もたり(おそい、+)。<span style="color:var(--accent)">●</span>はクリックなしの部分、<span class="muted">○</span>はクリックありの部分。</p>
+</div>
+
+<h2>きろく</h2>
+<div id="hist" class="muted">まだありません。</div>
+<p><button type="button" id="clrHist" style="font-size:12px">きろくを消す</button></p>
+
+<h2>つかいかた</h2>
+<ul class="small">
+  <li>まず「クリックあり」の小節で、クリックに合わせてたたく。このときのズレから、端末の遅れ(音が鳴ってから触れるまでの癖)を測って、あとの結果から自動で引く。</li>
+  <li>そのあと、クリックが消える。画面にはクリックの代わりになるものは出ない。同じテンポでたたき続ける。</li>
+  <li>終わると、ズレのばらつき(標準偏差)、走り・もたり(平均)、テンポのドリフト(だんだん速く・遅く)を出す。</li>
+  <li>「たたく細かさ」は、1拍に何回たたくか。4分=1拍に1回、8分=2回、3連=3回、16分=4回。</li>
+  <li>点数は、ばらつきが小さいほど高い。テンポがドリフトしたり、たたき忘れたりすると下がる。</li>
+</ul>
+</main>
+<footer>kimpilla</footer>
+<script src="clicktrain.js"></script>
+</body>
+</html>

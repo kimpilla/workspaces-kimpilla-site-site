@@ -11,6 +11,12 @@
   .play h2 { font-size: 17px; margin: 14px 0 8px; color: #7a4b00; }
   .ringwrap { position: relative; width: min(100%, 380px); margin: 6px auto; aspect-ratio: 1; }
   #ring { display: block; width: 100%; height: 100%; touch-action: none; user-select: none; -webkit-user-select: none; cursor: pointer; }
+  .dangerbtn { margin: 0; font-size: 12px; padding: 4px 12px; border: 2px solid #d8d2c2; border-radius: 999px; background: #f6f1e2; color: #8a8270; cursor: pointer; font-family: inherit; }
+  .dangerbtn:hover:not(:disabled) { background: #f6f1e2; color: #8a8270; }
+  #dancer { width: 46px; flex: none; }
+  #dancer svg { width: 100%; height: auto; display: block; overflow: visible; transform-origin: 50% 90%; }
+  #dancer .mouth { transform-box: fill-box; transform-origin: center; transition: transform .06s; }
+  #dlyBtn.on, #dlyBtn.on:hover:not(:disabled) { background: #ffe3cf; border-color: #ff7a3d; color: #7a4b00; }
   #center { position: absolute; left: 50%; top: 50%; width: 26%; transform: translate(-50%, -50%); pointer-events: none; }
   #center svg { width: 100%; height: auto; display: block; overflow: visible; }
   #center .mouth, .char .mouth { transform-box: fill-box; transform-origin: center; transition: transform .06s; }
@@ -25,7 +31,7 @@
   .transport { position: sticky; top: 0; z-index: 5; background: #fff7e0; padding: 4px 0 2px; margin: -4px 0 4px; border-bottom: 2px dashed #ffd36b; }
   .transport .row { margin: 4px 0; gap: 6px; flex-wrap: nowrap; }
   .transport button.big { font-size: 15px; padding: 6px 11px; border-width: 3px; white-space: nowrap; }
-  .sl.tempo { grid-template-columns: auto 1fr 2.2em auto; }
+  .sl.tempo { grid-template-columns: auto auto 1fr 2em auto; gap: 6px; font-size: 13px; }
   .transport .sl { margin: 4px 0; }
   .rep { background: #fff; border: 3px solid #f1dfae; border-radius: 16px; padding: 4px 8px; margin: 8px 0; }
   .rep .row { margin: 6px 0; gap: 6px; }
@@ -120,9 +126,8 @@
     <div class="row">
       <button class="big" id="playBtn">▶ はじめる</button>
       <button class="big sm" id="randBtn">🎲 おまかせ</button>
-      <button class="big sm" id="clearBtn">🧹 けす</button>
     </div>
-    <div class="sl tempo"><span>🐢はやさ🐇</span><input type="range" id="tempo" min="60" max="180" value="100"><span id="tempoOut">100</span><button class="big sm" id="tapBtn" type="button" title="すきな はやさで 4かい タッチ">👆 タップ</button></div>
+    <div class="sl tempo"><div id="dancer" aria-hidden="true"></div><span>🐢はやさ🐇</span><input type="range" id="tempo" min="60" max="180" value="100"><span id="tempoOut">100</span><button class="big sm" id="tapBtn" type="button" title="すきな はやさで 4かい タッチ">👆 タップ</button></div>
   </div>
 
   <h2>① ぐるぐる まわる ばん</h2>
@@ -140,6 +145,8 @@
     <div id="voiceBox">
         <p class="small" style="margin:4px 0"><b>🎤 メロディの だれの こえ?</b></p>
         <div class="chars" id="chars"></div>
+        <div class="row" style="margin:6px 0 2px"><button type="button" class="big sm" id="dlyBtn">🔁 やまびこ: なし</button></div>
+        <p class="small" style="margin:2px 0">メロディの おとが、はやさに あわせて 「やまびこ」みたいに くりかえすよ(おとの 3マスぶん おくれて)。</p>
     </div>
     <div id="padsBox">
       <div class="padhead"><b id="padTitle"></b><button type="button" class="big sm" id="recBtn">⏺ ろくおん</button></div>
@@ -164,6 +171,7 @@
     <div class="gtabs" id="rotBtns"></div>
     <div class="row">
       <button type="button" class="big sm" id="clearPart">🧹 このタブを けす</button><button type="button" class="big sm" id="undoBtn">↩ もどす</button></div>
+    <div class="row" style="margin:2px 0 0"><button type="button" class="dangerbtn" id="clearBtn">ぜんぶ けす</button></div>
   </div>
 
   <h2>③ しかくい ばんで こまかく なおす</h2>

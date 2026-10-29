@@ -49,12 +49,16 @@
     '<g transform="translate(30 ' + c.wy + ')"><path d="' + WAVEPATH[c.wave] + '" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" transform="scale(1 0.9)"/></g></svg>';
 
   // ---- 音 ----
-  let ctx = null, master = null, noiseBuf = null;
+  let ctx = null, master = null, noiseBuf = null, dSend = null, dNode = null;
+  S.dly = false;
   function ensureAudio() {
     if (ctx) { if (ctx.state === 'suspended') ctx.resume(); return; }
     ctx = new (window.AudioContext || window.webkitAudioContext)();
     const comp = ctx.createDynamicsCompressor(); master = ctx.createGain(); master.gain.value = 0.8;
     master.connect(comp); comp.connect(ctx.destination);
+    dSend = ctx.createGain(); dSend.gain.value = S.dly ? 0.55 : 0;                       // やまびこ(BPMに あわせた ディレイ): メロディだけ
+    dNode = ctx.createDelay(2); const fb = ctx.createGain(), lp = ctx.createBiquadFilter(); fb.gain.value = 0.38; lp.type = 'lowpass'; lp.frequency.value = 2600;
+    dSend.connect(dNode); dNode.connect(lp); lp.connect(fb); fb.connect(dNode); lp.connect(master);
     noiseBuf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
     const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
   }
@@ -100,7 +104,7 @@
     o.type = c.wave; o.frequency.value = 440 * Math.pow(2, (BASE + PITCHES[deg] - 69) / 12);
     f.type = 'lowpass'; f.frequency.value = 3800; f.Q.value = 0.8;
     g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(c.gain, t + 0.008); g.gain.exponentialRampToValueAtTime(0.0008, t + dur);
-    o.connect(f); f.connect(g); g.connect(master); o.start(t); o.stop(t + dur + 0.02);
+    o.connect(f); f.connect(g); g.connect(master); g.connect(dSend); dNode.delayTime.setValueAtTime(stepDur() * 3, t); o.start(t); o.stop(t + dur + 0.02);   // 3マス = 付点8ぶおんぷ
   }
   function bass(t, deg) {
     const dur = Math.max(0.2, stepDur() * 2.6), f = 440 * Math.pow(2, (36 + PITCHES[deg] - 69) / 12);
@@ -164,6 +168,7 @@
         if (q.tick !== curTick) {
           curTick = q.tick;
           RINGS.forEach((r) => { const g = GROUP[r.id], st = stepOf(g, curTick); if (!S.mute[g] && isOn(r.id, S.cells[r.id][st])) flash[r.id + st] = now; });
+          dance(curTick);
           if (!S.mute[0] && S.cells.mel[stepOf(0, curTick)] >= 0) { const ce = $('center'); ce.classList.add('hit'); const m = ce.querySelector('.mouth'); if (m) m.style.transform = 'scaleY(3)'; clearTimeout(ce._t); ce._t = setTimeout(() => { ce.classList.remove('hit'); if (m) m.style.transform = ''; }, Math.max(120, stepDur() * 1500)); }
         }
       }
@@ -440,8 +445,8 @@
     const now = S.playing && curTick >= 0 && !S.mute[gGroup] ? Math.floor(stepOf(gGroup, curTick) / BL) : -1;
     $('slots').querySelectorAll('.slot').forEach((el, s) => el.classList.toggle('now', s === now));
   }
-  $('clearPart').onclick = () => { snap(); partIds().forEach((id) => S.cells[id].fill(kindOf(id) === 'drum' ? 0 : -1)); };
-  $('clearBtn').onclick = () => { snap(); RINGS.forEach((r) => S.cells[r.id].fill(r.kind === 'drum' ? 0 : -1)); };
+  $('clearPart').onclick = () => { if (!confirm('このタブの おとを ぜんぶ けすよ。いい?\n(「もどす」で もどせるよ)')) return; snap(); partIds().forEach((id) => S.cells[id].fill(kindOf(id) === 'drum' ? 0 : -1)); };
+  $('clearBtn').onclick = () => { if (!confirm('ぜんぶの タブの おとを けすよ。ほんとに いい?\n(「もどす」で もどせるよ)')) return; snap(); RINGS.forEach((r) => S.cells[r.id].fill(r.kind === 'drum' ? 0 : -1)); };
   $('randBtn').onclick = () => {
     snap();
     const pick = (p) => Math.random() < p ? 1 : 0;
@@ -456,7 +461,7 @@
   // ---- テキストで ほぞん・よみこみ ----
   function toText() {
     const mel = S.cells.mel.map((v) => (v < 0 ? '.' : String(v))).join(''), dr = (id) => S.cells[id].map((v) => (v ? 'x' : '.')).join('');
-    return ['おとならべ', 'はやさ: ' + S.bpm, 'こえ: ' + byId(S.char).name, 'メロ: ' + mel + '   (0=ド 1=レ 2=ミ 3=ソ 4=ラ 5=高いド)', 'ベース: ' + S.cells.bass.map((v) => (v < 0 ? '.' : String(v))).join(''), 'こうか: ' + S.cells.fx.map((v) => (v < 0 ? '.' : String(v))).join('') + '   (0=ぴこ 1=ぼよん 2=きらきら 3=ぶー)', 'チッ: ' + S.cells.hat.map((v) => (v < 0 ? '.' : v ? 'o' : 'x')).join('') + '   (x=とじた o=あいた)', 'パン: ' + dr('snare'), 'ドン: ' + dr('kick') + '\nおとの いろ: ドン=' + S.kit.kick + ' パン=' + S.kit.snare + ' チッ=' + S.kit.hat].join('\n');
+    return ['おとならべ', 'はやさ: ' + S.bpm, 'こえ: ' + byId(S.char).name, 'メロ: ' + mel + '   (0=ド 1=レ 2=ミ 3=ソ 4=ラ 5=高いド)', 'ベース: ' + S.cells.bass.map((v) => (v < 0 ? '.' : String(v))).join(''), 'こうか: ' + S.cells.fx.map((v) => (v < 0 ? '.' : String(v))).join('') + '   (0=ぴこ 1=ぼよん 2=きらきら 3=ぶー)', 'チッ: ' + S.cells.hat.map((v) => (v < 0 ? '.' : v ? 'o' : 'x')).join('') + '   (x=とじた o=あいた)', 'パン: ' + dr('snare'), 'ドン: ' + dr('kick') + '\nやまびこ: ' + (S.dly ? 'あり' : 'なし') + '\nおとの いろ: ドン=' + S.kit.kick + ' パン=' + S.kit.snare + ' チッ=' + S.kit.hat].join('\n');
   }
   function fromText(txt) {
     const get = (key) => { const m = txt.match(new RegExp('^\\s*' + key + '\\s*[:：]\\s*(.*)$', 'm')); return m ? m[1] : null; };
@@ -470,6 +475,7 @@
     if (hat) S.cells.hat = [...hat].map((ch) => (ch === 'x' ? 0 : ch === 'o' ? 1 : -1));
     if (sn) S.cells.snare = [...sn].map((ch) => (ch === 'x' ? 1 : 0));
     if (ki) S.cells.kick = [...ki].map((ch) => (ch === 'x' ? 1 : 0));
+    { const dl = get('やまびこ'); S.dly = !!dl && dl.trim().startsWith('あり'); buildDly(); }
     { const kl = get('おとの いろ'); if (kl) { const m = (k) => { const r = kl.match(new RegExp(k + '=(\\d)')); return r && +r[1] < KITN[{ 'ドン': 'kick', 'パン': 'snare', 'チッ': 'hat' }[k]].length ? +r[1] : null; }; [['ドン', 'kick'], ['パン', 'snare'], ['チッ', 'hat']].forEach(([n, k]) => { const v = m(n); if (v != null) S.kit[k] = v; }); renderKits(); } }
     const bpm = get('はやさ'); if (bpm && +bpm >= 60 && +bpm <= 180) { S.bpm = +bpm; $('tempo').value = S.bpm; $('tempoOut').textContent = S.bpm; }
     const vo = get('こえ'); const c = vo && CHARS.find((x) => vo.trim().startsWith(x.name)); if (c) { S.char = c.id; buildChars(); }
@@ -482,9 +488,22 @@
     else { $('saveText').select(); $('saveMsg').textContent = '👆 もじを えらんだよ。コピーして ね'; }
   };
   $('loadBtn').onclick = () => { snap(); const err = fromText($('saveText').value); $('saveMsg').textContent = err ? '⚠️ ' + err : '✅ よみこんだよ!'; };
+  const buildDly = () => { const b = $('dlyBtn'); b.textContent = S.dly ? '🔁 やまびこ: あり' : '🔁 やまびこ: なし'; b.classList.toggle('on', S.dly); if (dSend) dSend.gain.setTargetAtTime(S.dly ? 0.55 : 0, ctx.currentTime, 0.02); };
+  let dDir = 1;                                                // おどるキャラ: ドンで ジャンプ、パンで かたむく、チッで ちいさく ゆれる、メロディで おくちが あく
+  function dance(tk) {
+    const el = $('dancer'), svg = el.firstElementChild; if (!svg || !svg.animate) return;
+    const on = (id) => { const g = GROUP[id]; return !S.mute[g] && isOn(id, S.cells[id][stepOf(g, tk)]); };
+    const d = Math.max(140, stepDur() * 1800);
+    if (on('kick')) svg.animate([{ transform: 'translateY(0) scale(1.12,.86)' }, { transform: 'translateY(-9px) scale(.94,1.08)', offset: .4 }, { transform: 'translateY(0) scale(1)' }], { duration: d, easing: 'ease-out' });
+    else if (on('snare')) { dDir = -dDir; svg.animate([{ transform: 'rotate(' + 16 * dDir + 'deg)' }, { transform: 'rotate(0)' }], { duration: d, easing: 'ease-out' }); }
+    else if (on('hat')) svg.animate([{ transform: 'translateX(' + 3 * dDir + 'px) rotate(' + 5 * dDir + 'deg)' }, { transform: 'none' }], { duration: d * .8, easing: 'ease-out' });
+    const m = svg.querySelector('.mouth');
+    if (m && !S.mute[0] && S.cells.mel[stepOf(0, tk)] >= 0) { m.style.transform = 'scaleY(3)'; clearTimeout(el._t); el._t = setTimeout(() => { m.style.transform = ''; }, Math.max(120, stepDur() * 1500)); }
+  }
+  $('dlyBtn').onclick = () => { S.dly = !S.dly; ensureAudio(); buildDly(); if (S.dly) melody(ctx.currentTime + 0.01, 2); };
   function buildChars() {
     $('chars').innerHTML = CHARS.map((c) => '<button type="button" class="char' + (c.id === S.char ? ' sel' : '') + '" data-id="' + c.id + '">' + charSvg(c) + '<div>' + c.name + '</div></button>').join('');
-    $('center').innerHTML = charSvg(byId(S.char));
+    $('center').innerHTML = charSvg(byId(S.char)); $('dancer').innerHTML = charSvg(byId(S.char));
     $('chars').querySelectorAll('.char').forEach((el) => el.onclick = () => { S.char = el.dataset.id; buildChars(); ensureAudio(); melody(ctx.currentTime + 0.01, 0); });
   }
   $('legend').innerHTML = RINGS.map((r, i) => '<span><i style="background:' + (r.kind === 'drum' ? r.color : 'linear-gradient(90deg,' + r.pal.slice(0, 5).join(',') + ')') + '"></i>' + r.name + (i === 0 ? '(いちばん そと)' : '') + '</span>').join('');
