@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>フィルターの ひみつ | kimpilla</title>
+<link rel="stylesheet" href="../../style.css">
+<style>
+  .play { background: #fff7e0; color: #3a2a12; border-radius: 22px; padding: 14px 14px 18px; margin: 14px 0; border: 3px solid #ffd36b; font-family: "Hiragino Maru Gothic ProN", "Yu Gothic", system-ui, sans-serif; }
+  .play h2 { font-size: 17px; margin: 18px 0 6px; color: #7a4b00; }
+  .play h2:first-child { margin-top: 4px; }
+  .chars { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; }
+  .char { background: #fff; border: 3px solid #f1dfae; border-radius: 16px; padding: 4px 1px 3px; margin: 0; cursor: pointer; color: #3a2a12; text-align: center; font-size: 11px; line-height: 1.25; font-family: inherit; font-weight: bold; }
+  .char:hover:not(:disabled) { background: #fff; color: #3a2a12; }
+  .char svg { width: 100%; height: auto; display: block; max-width: 56px; margin: 0 auto; overflow: visible; }
+  .char small { display: block; font-size: 9px; font-weight: normal; color: #8a6a3a; }
+  .char.sel { border-color: #ff7a3d; background: #fff1e6; }
+  .stage { display: flex; align-items: center; justify-content: center; gap: 14px; margin: 8px 0; }
+  .stageface { width: 130px; transform-origin: center bottom; }
+  .stageface svg { width: 100%; height: auto; display: block; overflow: visible; }
+  .stageface .mouth { transform-box: fill-box; transform-origin: center; transition: transform .06s; }
+  .stageface.sing svg { animation: bob .22s ease-in-out infinite alternate; }
+  @keyframes bob { from { transform: translateY(0) rotate(-3deg); } to { transform: translateY(-6px) rotate(3deg); } }
+  @media (prefers-reduced-motion: reduce) { .stageface.sing svg { animation: none; } }
+  .stagename { font-size: 13px; color: #7a4b00; line-height: 1.6; } .stagename b { font-size: 17px; } .stagename span { font-size: 12px; color: #8a6a3a; }
+  #profile { margin: 8px 0; }
+  .prof { display: grid; grid-template-columns: 56px 1fr; gap: 4px 10px; align-items: center; background: #fff; border: 3px solid #f1dfae; border-radius: 16px; padding: 8px 10px; text-align: left; font-family: inherit; color: #3a2a12; margin: 0; width: 100%; }
+  .prof .pav svg { width: 56px; height: auto; display: block; overflow: visible; }
+  .prof .pn { font-size: 15px; font-weight: bold; } .prof .pn small { font-size: 11px; font-weight: normal; color: #8a6a3a; margin-left: 6px; }
+  .prof .pd { font-size: 12px; color: #6b5328; line-height: 1.5; }
+  .prof .pb { grid-column: 1 / -1; }
+  .prof .pb svg { width: 100%; height: 54px; display: block; }
+  .prof .ph { grid-column: 1 / -1; font-size: 11px; color: #8a6a3a; margin-top: -2px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+  .chip { margin: 0; font-size: 15px; padding: 9px 12px; border-radius: 999px; border: 3px solid #f1dfae; background: #fff; color: #7a4b00; cursor: pointer; font-family: inherit; font-weight: bold; }
+  .chip:hover:not(:disabled) { background: #fff; color: #7a4b00; }
+  .chip.sel, .chip.sel:hover:not(:disabled) { border-color: #ff7a3d; background: #ffe3cf; color: #7a4b00; }
+  .play button.big { font-size: 17px; padding: 12px 20px; border-radius: 999px; border: 3px solid #ffb347; background: #fff; color: #7a4b00; margin: 0; }
+  .play button.big:hover:not(:disabled) { background: #ffe9bf; color: #7a4b00; }
+  .play button.big.sel { background: #ff7a3d; border-color: #ff7a3d; color: #fff; }
+  .sl { display: grid; grid-template-columns: 6.5em 1fr 5.5em; gap: 8px; align-items: center; margin: 8px 0; font-size: 16px; }
+  .sl output { font-size: 13px; color: #8a6a3a; text-align: right; }
+  .sl input[type=range] { --tk: 20px; --th: 44px; -webkit-appearance: none; appearance: none; background: transparent; height: 52px; margin: 0; width: 100%; touch-action: pan-y; cursor: pointer; }
+  .sl input[type=range]::-webkit-slider-runnable-track { height: var(--tk); border-radius: 10px; background: linear-gradient(90deg, #ffe9b8, #ffc56b); border: 2px solid #f1dfae; box-sizing: border-box; }
+  .sl input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: var(--th); height: var(--th); margin-top: calc((var(--tk) - var(--th)) / 2); border-radius: 50%; background: #ff7a3d; border: 4px solid #fff; box-shadow: 0 2px 6px #0005; box-sizing: border-box; }
+  .sl input[type=range]::-moz-range-track { height: var(--tk); border-radius: 10px; background: linear-gradient(90deg, #ffe9b8, #ffc56b); border: 2px solid #f1dfae; box-sizing: border-box; }
+  .sl input[type=range]::-moz-range-thumb { width: var(--th); height: var(--th); border-radius: 50%; background: #ff7a3d; border: 4px solid #fff; box-shadow: 0 2px 6px #0005; box-sizing: border-box; }
+  canvas.cv { display: block; width: 100%; background: #fff; border: 3px solid #f1dfae; border-radius: 14px; }
+  #cvCurve { height: 190px; } #cvWave { height: 150px; } #cvBars { height: 150px; }
+  .tip { font-size: 13px; color: #6b5328; line-height: 1.6; margin: 6px 0; }
+  .legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: #6b5328; margin: 4px 0; }
+  .legend i { display: inline-block; width: 18px; height: 0; border-top: 4px solid; vertical-align: middle; margin-right: 4px; border-radius: 2px; }
+  .gh { font-size: 15px; margin: 16px 0 6px; color: #5a3a10; }
+  .ctl { position: sticky; top: 0; z-index: 5; background: #fff7e0; border-bottom: 3px solid #ffd36b; margin: 0 -14px; padding: 6px 14px 4px; box-shadow: 0 4px 8px #0002; }
+  .ctlrow { display: flex; align-items: center; gap: 8px; }
+  .ctl .stageface { width: 64px; flex: none; }
+  .ctlmain { flex: 1; min-width: 0; }
+  .ctl .stagename { font-size: 11px; line-height: 1.3; } .ctl .stagename b { font-size: 14px; } .ctl .stagename span { font-size: 10px; }
+  .chips.sm { margin: 4px 0 0; gap: 4px; } .chips.sm .chip { font-size: 12px; padding: 4px 9px; border-width: 2px; }
+  .ctl .big { font-size: 15px; padding: 10px 14px; flex: none; }
+  .ctl .sl { margin: 0; grid-template-columns: 6.6em 1fr 3.8em; font-size: 12px; white-space: nowrap; gap: 6px; }
+  .ctl .sl input[type=range] { --th: 34px; height: 38px; }
+  .ctl .sl output { font-size: 11px; }
+  .cnote { display: flex; gap: 10px; align-items: center; background: #fff; border: 3px solid #f1dfae; border-radius: 14px; padding: 8px 10px; margin: 8px 0; }
+  .cnote .cav { width: 52px; flex: none; } .cnote .cav svg { width: 100%; height: auto; display: block; overflow: visible; }
+  .cnote .ct { flex: 1; min-width: 0; font-size: 13px; line-height: 1.5; color: #5a3a10; }
+  .cnote .ct b { font-size: 14px; }
+  .hdots { display: grid; grid-template-columns: repeat(24, 1fr); gap: 1px; margin: 5px 0; }
+  .hdots i { height: 14px; border-radius: 4px; background: #e8dcc0; }
+  .hdots i.on { background: #ff7a3d; } .hdots i.no { background: #efe6d0; outline: 1px dashed #c9b88a; outline-offset: -1px; }
+  .hdots i.na { background: transparent; }
+  .cnote .cav.morph { animation: pop .5s ease-out; }
+  @keyframes pop { 0% { transform: scale(.6) rotate(-12deg); } 60% { transform: scale(1.2) rotate(6deg); } 100% { transform: scale(1); } }
+  @media (prefers-reduced-motion: reduce) { .cnote .cav.morph { animation: none; } }
+  .wsteps { margin: 8px 0 0; padding-left: 1.4em; font-size: 14px; line-height: 1.7; color: #5a3a10; }
+</style>
+</head>
+<body>
+<header>
+  <a class="home" href="../../index.html">kimpilla</a>
+  <nav><a href="../../music.html">音楽</a> <a href="../../apps.html">アプリ</a> <a href="../../memo.html">メモ</a></nav>
+</header>
+<main>
+<h1>フィルターの ひみつ</h1>
+<p class="small">シンセの「フィルター」が、音のどこを削っているのかを、見て、聞いて確かめるページ。声(波)を選んで、あかるさを動かすと、3つのグラフが一緒に変わる。</p>
+
+<div class="play">
+  <h2>① だれの こえに する?(おして みよう)</h2>
+  <div class="chars" id="waves"></div>
+  <div id="profile"></div>
+  <p class="tip">ぼうの たかさは、その こえに ふくまれる おとの つよさ。ぼうの したの すうじは、もとの おとの なんばいの おとか(1ばい = もとの おと)。みぎに ある ぼうほど、たかい おと(倍音)。ぼうが ない ところは、その おとが ふくまれていない ということ。</p>
+
+  <h2>② あかるさと とがりを うごかそう</h2>
+  <div class="ch2">
+  <div class="ctl">
+    <div class="ctlrow">
+      <div class="stageface" id="stageFace"></div>
+      <div class="ctlmain">
+        <div class="stagename"><b id="stageName"></b> <span>くち=あかるさ / め=とがり</span></div>
+        <div class="chips sm" id="pitches"></div>
+      </div>
+      <button type="button" class="big playb" id="playBtn">▶</button>
+    </div>
+    <div class="sl"><span>☀️ あかるさ</span><input type="range" id="cut" min="0" max="1000" value="700"><output id="cutOut"></output></div>
+    <div class="sl"><span>🔔 とがり</span><input type="range" id="res" min="0" max="1000" value="0"><output id="resOut"></output></div>
+  </div>
+  <p class="tip">スライダーを うごかすと、したの グラフが いっしょに かわるよ。</p>
+  <h3 class="gh">📈 フィルターの カーブ(どの たかさの おとを とおすか)</h3>
+  <canvas class="cv" id="cvCurve"></canvas>
+  <p class="tip">よこ = おとの たかさ、たて = とおる おおきさ。🟠 = いまの こえの おとの いち。</p>
+  <div class="cnote" id="cnote"></div>
+
+  <h3 class="gh">〰️ なみの かたち(まえ → あと)</h3>
+  <canvas class="cv" id="cvWave"></canvas>
+  <div class="legend"><span><i style="border-color:#5b8def"></i>フィルターの まえ</span><span><i style="border-color:#ff7a3d"></i>フィルターの あと</span></div>
+  <p class="tip">たかい おとが けずられると、なみの かどが まるくなる。ギザギザが なめらかな なみに ちかづく。</p>
+
+  <h3 class="gh">📊 たかい おとの ぼう(まえ → あと)</h3>
+  <canvas class="cv" id="cvBars"></canvas>
+  <div class="legend"><span><i style="border-color:#8a6a3a"></i>わく = もとの おと</span><span><i style="border-color:#ff7a3d"></i>オレンジ = フィルターを とおった おと</span></div>
+  <p class="tip">ひとつの こえは、いろんな たかさの おと(ぼう)の あつまり。みぎの たかい ぼうが ふえるほど、「あかるい・ギザギザ」な おとに なる。サイン波は、いちばん ひだりの 1ぼんだけ。だから、フィルターを うごかしても、けずる ものが なくて ほとんど かわらない。</p>
+
+  </div>
+
+  <h2>③ じどう ワウワウ</h2>
+  <p class="tip">あかるさを じどうで ゆらゆら うごかす しかけ。くちが ひらいたり とじたり、「ワウワウ」と きこえるよ。うえの かおも いっしょに うごくよ。</p>
+  <canvas class="cv" id="cvCurve2"></canvas>
+  <p class="tip">ワウワウ中は、カーブの おれる ばしょが ゆらゆら ひだりみぎに うごく。</p>
+  <div class="chips">
+    <button type="button" class="big playb" id="playBtn2">▶ ならす</button>
+    <button type="button" class="chip" id="wahBtn">🤖 じどう ワウワウ</button>
+  </div>
+
+  <h3 class="gh">🔍 ワウワウで なにが おきてるの?</h3>
+  <canvas class="cv" id="cvWah" style="height:150px"></canvas>
+  <ol class="wsteps">
+    <li>あかるさ(おれる ばしょ)が、じどうで <b>たかい ↔ ひくい</b>を くりかえす。(1びょうに 1.2かい くらい)</li>
+    <li>たかい とき = くちが ひらいて <b>あかるい おと</b>、ひくい とき = くちが とじて <b>こもった おと</b>。</li>
+    <li>あかるい・こもる・あかるい…が つづくから、「<b>ワウ ワウ</b>」と きこえる。</li>
+      <li><b>たかい おとが すくない こえ</b>は、けずる ものが ないから ワウワウが きこえにくい。</li>
+  </ol>
+  <div class="cnote" id="wnote"></div>
+
+</div>
+
+<h2>おとなの人へ(なにが起きているか)</h2>
+<ul class="small">
+<li><b>フィルター</b>: ここでは「ローパス」(低い音を通して、高い音を削る)。カットオフ(あかるさ)より上の音を、1オクターブごとに約12dB(2次)ずつ弱める。「とがり」(レゾナンス、Q)を上げると、カットオフ付近だけが持ち上がる。</li>
+<li><b>カーブ</b>: Web Audio の BiquadFilterNode の周波数応答(getFrequencyResponse)を、そのまま描いている。軸は、横が対数の周波数、縦がデシベル。</li>
+<li><b>波形の前後</b>: 波を、倍音(1倍、2倍、3倍…の音)の足し算として、倍音ごとに、フィルターの振幅と位相のずれを掛けて描き直している。位相が変わるので、削る前と後で、山の位置も少しずれる。</li>
+<li><b>棒グラフ</b>: 倍音の強さ。小さい倍音も見えるよう、高さは平方根で描いている。ノイズは、すべての高さの音が同じ強さで混ざっているので、棒は同じ高さになり、フィルターが削る様子が、そのまま見える。</li>
+<li><b>じどう ワウワウ</b>: カットオフを、約1.2回/秒でゆっくり上下させる。グラフの折れ目が、音と同じ動きをする。</li>
+</ul>
+</main>
+<footer>kimpilla</footer>
+<script src="filterlab.js"></script>
+</body>
+</html>
