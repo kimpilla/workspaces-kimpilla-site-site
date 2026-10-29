@@ -28,6 +28,7 @@
   .play button.big.sel { background: #ffb347; color: #fff; }
   .sl { display: grid; grid-template-columns: 7.5em 1fr; gap: 6px 10px; align-items: center; margin: 10px 0; font-size: 16px; }
   .sl input[type=range] { width: 100%; height: 34px; accent-color: #ff7a3d; }
+  .pinkrow input[type=range] { --thc: #ff6bb5; --tkbg: linear-gradient(90deg, #ffe0f0, #ff9fcf); accent-color: #ff6bb5; }
   .mixrow { display: flex; align-items: center; justify-content: center; gap: 4px; margin: 10px 0; }
   .mixitem { flex: 1; max-width: 100px; text-align: center; font-size: 12px; line-height: 1.3; }
   #mixA, #mixB { flex: 0 1 64px; font-size: 11px; }
@@ -36,7 +37,18 @@
   .mixchar.sing .mouth { transform: scaleY(3); }
   .mixchar.sing svg { animation: bob .22s ease-in-out infinite alternate; }
   .mixop { font-size: 22px; font-weight: bold; color: #7a4b00; }
-  .face { width: min(60%, 220px); margin: 8px auto; touch-action: none; user-select: none; -webkit-user-select: none; cursor: ns-resize; background: #fff; border: 4px solid #f1dfae; border-radius: 24px; padding: 8px; }
+  .wahpad { position: relative; width: min(100%, 300px); height: 110px; margin: 6px auto; touch-action: none; user-select: none; -webkit-user-select: none; cursor: grab; border: 4px solid #f3b6c9; border-radius: 22px; background: linear-gradient(#fff4f8, #ffe3ee); background-image: radial-gradient(circle, #f5c6d6 1.5px, transparent 2px), linear-gradient(#fff4f8, #ffe3ee); background-size: 20px 20px, auto; }
+  .wahpad .wl { position: absolute; font-size: 11px; font-weight: bold; color: #c0577f; pointer-events: none; }
+  .wahpad .wl.t { top: 3px; left: 50%; transform: translateX(-50%); } .wahpad .wl.b { bottom: 3px; left: 50%; transform: translateX(-50%); }
+  .wahpad .wl.l { left: 8px; top: 50%; transform: translateY(-50%); } .wahpad .wl.r { right: 8px; top: 50%; transform: translateY(-50%); }
+  .wball { position: absolute; width: 36px; height: 50px; left: 0; top: 0; pointer-events: none; filter: drop-shadow(0 3px 3px rgba(0,0,0,.25)); }
+  .wball > span { display: block; width: 100%; height: 100%; transform-origin: 50% 40%; }
+  .wball svg { width: 100%; height: 100%; display: block; }
+  .facewrap { display: flex; align-items: stretch; justify-content: center; gap: 4px; margin: 8px 0; --ey: 50%; --my: 70%; }
+  .fcol { position: relative; width: 50px; flex: none; }
+  .fcol .fa { position: absolute; left: 0; right: 0; display: flex; flex-direction: column; align-items: center; gap: 2px; transform: translateY(-50%); font-size: 11px; line-height: 1.25; text-align: center; color: #7a4b00; font-weight: bold; pointer-events: none; }
+  .fl .fe { top: var(--ey); } .fr .fa { top: var(--my); }
+  .face { flex: 1; min-width: 0; max-width: 280px; margin: 0; touch-action: none; user-select: none; -webkit-user-select: none; cursor: ns-resize; background: #fff; border: 4px solid #f1dfae; border-radius: 24px; padding: 8px; }
   .face svg { width: 100%; height: auto; display: block; overflow: visible; }
   .char.selA::before, .char.selB::before { position: absolute; top: 2px; left: 4px; font-size: 18px; }
   .char.selA::before { content: '①'; } .char.selB::before { content: '②'; }
@@ -56,8 +68,9 @@
   .dockvol input { flex: 1; min-width: 0; height: 30px; accent-color: #ff7a3d; }
   .dock .key { height: 68px; font-size: 18px; padding-bottom: 4px; }
   .dock #keys { margin: 4px 0; gap: 4px; }
-  .dockrow { margin: 4px 0 0; justify-content: center; flex-wrap: nowrap; }
-  .dock button.big { font-size: 15px; padding: 6px 14px; white-space: nowrap; border-radius: 999px; border: 3px solid #ffb347; background: #fff; color: #7a4b00; margin: 0; }
+  .dockrow { margin: 4px 0 0; justify-content: center; flex-wrap: nowrap; gap: 4px; }
+  .dockrow #low, .dockrow #high { padding: 6px 10px; }
+  .dock button.big { font-size: 12px; padding: 6px 7px; white-space: nowrap; border-radius: 999px; border: 3px solid #ffb347; background: #fff; color: #7a4b00; margin: 0; }
   .dock button.big:hover:not(:disabled) { background: #ffe9bf; color: #7a4b00; }
   .dock button.big.sel { background: #ffb347; color: #fff; }
   .keywrap { position: relative; padding-top: 86px; }
@@ -83,6 +96,10 @@
   .pedals { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin: 10px 0; }
   .pedal { position: relative; background: var(--pc); color: var(--pt); border-radius: 12px; border: 3px solid rgba(0,0,0,.28); box-shadow: 0 6px 0 rgba(0,0,0,.28); padding: 22px 8px 10px; text-align: center; }
   .pedal .pname { background: rgba(255,255,255,.88); color: #222; border-radius: 6px; font-weight: bold; font-size: 15px; padding: 2px 0; margin-bottom: 10px; }
+  .pedal .picrow { display: flex; align-items: flex-end; justify-content: center; gap: 4px; margin: -2px 0 8px; }
+  .pedal .picrow { color: var(--ink, currentColor); }
+  .pedal .pic { display: block; width: 56px; height: 40px; }
+  .pedal .chara { display: block; width: 48px; height: 48px; }
   .pedal .led { position: absolute; top: 7px; left: 50%; margin-left: -6px; width: 12px; height: 12px; border-radius: 50%; background: #5a1a1a; border: 2px solid rgba(0,0,0,.4); }
   .pedal.on .led { background: #ff2a2a; box-shadow: 0 0 10px 3px #ff4d4d; }
   .pedal .stomp { display: block; width: 64px; height: 64px; border-radius: 50%; margin: 0 auto 6px; padding: 0; border: 3px solid #666; background: radial-gradient(circle at 35% 30%, #fff, #bbb 60%, #888); box-shadow: 0 5px 0 #555; cursor: pointer; }
@@ -138,25 +155,40 @@
   </div>
 
   <h2>④ おくちを ドラッグして ワウワウ</h2>
-  <div class="face" id="face" aria-label="おくちを うえに ひっぱると ひらく"></div>
-  <p class="tip">キャラクターの かおを、ゆびで うえにスライドすると おくちが ひらいて、あかるい おとに。したにスライドすると、こもった おとに。おとを ならしながら やってみよう。</p>
+  <div class="facewrap">
+    <div class="fcol fl" id="arrEye"><div class="fa fe"><svg viewBox="0 0 44 30" width="34" height="24" aria-hidden="true" fill="none" stroke="#ff7a3d" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15 H40 M4 15 L12 7 M4 15 L12 23 M40 15 L32 7 M40 15 L32 23"/></svg><span>とがり</span></div></div>
+    <div class="face" id="face" aria-label="おくちを うえに ひっぱると ひらく。めを ひっぱると とがる"></div>
+    <div class="fcol fr" id="arrMouth"><div class="fa"><svg viewBox="0 0 30 80" width="26" height="62" aria-hidden="true" fill="none" stroke="#3b82f6" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4 V76 M15 4 L6 14 M15 4 L24 14 M15 76 L6 66 M15 76 L24 66"/></svg><span>あかるさ</span></div></div>
+  </div>
+  <div class="wahpad" id="wahPad" aria-label="ふうせん。よこに うごかすと はやさ、うえに うごかすと ふかさ">
+    <span class="wl t">ふかい</span><span class="wl b">あさい</span><span class="wl l">ゆっくり</span><span class="wl r">はやい</span>
+    <div class="wball" id="wahBall"><span><svg viewBox="0 0 40 56" aria-hidden="true"><path d="M20 53 C14 47 24 44 19 38" fill="none" stroke="#b86a86" stroke-width="1.8" stroke-linecap="round"/><path d="M20 36 L16 41 H24 Z" fill="#e0457b"/><path d="M20 2 C31 2 38 11 38 20 C38 30 29 37 20 37 C11 37 2 30 2 20 C2 11 9 2 20 2 Z" fill="#ff5d8f" fill-opacity=".85"/><ellipse cx="13" cy="12" rx="4.5" ry="6.5" fill="#fff" fill-opacity=".55" transform="rotate(25 13 12)"/></svg></span></div>
+  </div>
+  <p class="tip" style="margin-top:4px;text-align:center">🎈 ふうせんを うごかそう(じどう ワウワウ): よこ = はやさ、うえ = ふかさ</p>
+  <p class="tip">キャラクターの かおを、ゆびで うえにスライドすると おくちが ひらいて、あかるい おとに。したにスライドすると、こもった おとに。おとを ならしながら やってみよう。 かおの どこでも、<b>よこ</b>に ひっぱると「とがり」(みぎで ツリ目、ひだりで ふつうの め)も かわるよ。 ワウワウに あわせて、ほっぺが ぷくぷく ふくらむよ。したの ふうせんを うごかすと、ワウワウの はやさと ふかさが かわる。</p>
+  <div hidden>
   <div class="sl"><span>☀️ あかるさ</span><input type="range" id="cutoff" min="0" max="1000"></div>
+  <div class="sl"><span>🔔 とがり</span><input type="range" id="reso" min="0" max="1000"></div>
+  <div class="sl"><span>🤖 じどう ワウワウ</span><input type="range" id="wah" min="0" max="1000"></div>
+  <div class="sl"><span>⏩ ワウワウの はやさ</span><input type="range" id="wahRate" min="0" max="1000"></div>
+    </div>
 
   <h2>⑤ ぶんしんと ゆらゆら</h2>
   <canvas id="beat"></canvas>
-  <div class="sl"><span>👯 ぶんしん</span><input type="range" id="osc2" min="0" max="1000"></div>
-  <div class="sl"><span>↔️ ずれ</span><input type="range" id="detune" min="0" max="1000"></div>
-  <div class="sl"><span>🐘 おおきな おにいさん</span><input type="range" id="sub" min="0" max="1000"></div>
-  <div class="sl"><span>〰️ ゆらゆら</span><input type="range" id="vib" min="0" max="1000"></div>
+  <div class="sl pinkrow"><span>👯 ぶんしん</span><input type="range" id="osc2" min="0" max="1000"></div>
+  <div class="sl pinkrow"><span>↔️ ずれ</span><input type="range" id="detune" min="0" max="1000"></div>
+  <div class="sl"><span>🐘 ひくい おと</span><input type="range" id="sub" min="0" max="1000"></div>
+  <div class="sl"><span>👻 ゆらゆら</span><input type="range" id="vib" min="0" max="1000"></div>
   <div class="sl"><span>⏩ ゆらゆらの はやさ</span><input type="range" id="vibRate" min="0" max="1000"></div>
   <p class="tip">「ゆらゆら」を あげると、おとの たかさが ゆらゆら ゆれる(ビブラート)。「はやさ」を はやくしていくと、ゆれが ぜんぶ くっついて、ちがう おとの いろ(おとの ひびき)に かわっていく。ためしてみて!</p>
-  <p class="tip">「ぶんしん」を あげると、おなじ こえが もう1つ かさなる。「ずれ」を あげると、ほんの すこし おとが ずれて、たいらな ところと でこぼこの ところが ゆっくり いれかわる。それが「うなり」。おとが あつく なる ひみつ。「おおきな おにいさん」は、1オクターブ ひくい おとを たす。</p>
+  <p class="tip">「ぶんしん」を あげると、おなじ こえが もう1つ かさなる。「ずれ」を あげると、ほんの すこし おとが ずれて、たいらな ところと でこぼこの ところが ゆっくり いれかわる。それが「うなり」。おとが あつく なる ひみつ。「ひくい おと」は、1オクターブ ひくい おとを たす。</p>
 
   <h2>⑥ エフェクターを ふもう</h2>
   <div class="pedals" id="pedals">
-    <div class="pedal" data-fx="dist" style="--pc:#f08a1c;--pt:#fff"><div class="led"></div><div class="pname">ひずみ</div><button type="button" class="stomp" aria-pressed="false" aria-label="ひずみ"></button><button type="button" class="gear" aria-label="つまみを ひらく">⚙</button><div class="pk" hidden><input type="range" id="distAmt" min="0" max="1000" aria-label="ひずみの つよさ"></div></div>
-    <div class="pedal" data-fx="chorus" style="--pc:#6ec6f0;--pt:#fff"><div class="led"></div><div class="pname">ゆれゆれ</div><button type="button" class="stomp" aria-pressed="false" aria-label="ゆれゆれ(コーラス)"></button><button type="button" class="gear" aria-label="つまみを ひらく">⚙</button><div class="pk" hidden><input type="range" id="chAmt" min="0" max="1000" aria-label="ゆれゆれの つよさ"></div></div>
-    <div class="pedal" data-fx="echo" style="--pc:#f2f0e6;--pt:#333"><div class="led"></div><div class="pname">やまびこ</div><button type="button" class="stomp" aria-pressed="false" aria-label="やまびこ(ディレイ)"></button><button type="button" class="gear" aria-label="つまみを ひらく">⚙</button><div class="pk" hidden><input type="range" id="echo" min="0" max="1000" aria-label="やまびこの おおきさ"></div></div>
+    <div class="pedal" data-fx="dist" style="--pc:#f08a1c;--pt:#fff;--ink:#4a2200"><div class="led"></div><div class="pname">ひずみ</div><div class="picrow"><svg class="pic" viewBox="0 0 80 48" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 36 L18 12 L18 36 L30 12 L30 36 L42 12 L42 36"/><path d="M58 4 L48 26 H58 L52 44 L72 18 H61 L67 4 Z" fill="#ffe14d" stroke="#fff" stroke-width="2.5"/></svg><svg class="chara" viewBox="0 0 48 48" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M24 4 L29 14 L40 10 L36 21 L46 26 L36 31 L40 42 L29 38 L24 46 L19 38 L8 42 L12 31 L2 26 L12 21 L8 10 L19 14 Z" fill="#ffe14d"/><circle cx="19" cy="24" r="2.2" fill="currentColor" stroke="none"/><circle cx="29" cy="24" r="2.2" fill="currentColor" stroke="none"/><path d="M16 19 L22 22 M32 19 L26 22" stroke-width="2.5"/><path d="M18 32 L21 29 L24 33 L27 29 L30 32" stroke-width="2.5"/></svg></div><button type="button" class="stomp" aria-pressed="false" aria-label="ひずみ"></button><button type="button" class="gear" aria-label="つまみを ひらく">⚙</button><div class="pk" hidden><input type="range" id="distAmt" min="0" max="1000" aria-label="ひずみの つよさ"></div></div>
+    <div class="pedal" data-fx="chorus" style="--pc:#6ec6f0;--pt:#fff;--ink:#0b3d66"><div class="led"></div><div class="pname">ゆれゆれ</div><div class="picrow"><svg class="pic" viewBox="0 0 80 48" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 24 C14 8 24 8 34 24 S54 40 64 24 S74 12 77 18"/><path d="M4 30 C14 14 24 14 34 30 S54 46 64 30 S74 18 77 24" opacity=".7"/><path d="M4 18 C14 2 24 2 34 18 S54 34 64 18 S74 6 77 12" opacity=".7"/></svg><svg class="chara" viewBox="0 0 48 48" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M7 26 C7 6 41 6 41 26 Z" fill="#fff" fill-opacity=".85"/><circle cx="19" cy="19" r="2.2" fill="currentColor" stroke="none"/><circle cx="29" cy="19" r="2.2" fill="currentColor" stroke="none"/><path d="M21 23 C23 25 25 25 27 23" stroke-width="2.2"/><path d="M12 28 C9 33 15 35 12 41 M20 28 C17 33 23 35 20 43 M28 28 C25 33 31 35 28 43 M36 28 C33 33 39 35 36 41" stroke-width="2.6"/></svg></div><button type="button" class="stomp" aria-pressed="false" aria-label="ゆれゆれ(コーラス)"></button><button type="button" class="gear" aria-label="つまみを ひらく">⚙</button><div class="pk" hidden><input type="range" id="chAmt" min="0" max="1000" aria-label="ゆれゆれの つよさ"></div></div>
+    <div class="pedal" data-fx="rev" style="--pc:#7fd6b0;--pt:#fff;--ink:#0b4a36"><div class="led"></div><div class="pname">おふろ</div><div class="picrow"><svg class="pic" viewBox="0 0 80 48" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 24 H72 V28 C72 38 64 44 54 44 H26 C16 44 8 38 8 28 Z" fill="rgba(255,255,255,.8)"/><path d="M16 44 L14 47 M64 44 L66 47"/><circle cx="26" cy="12" r="5"/><circle cx="40" cy="7" r="3.5"/><circle cx="52" cy="14" r="4.5"/><circle cx="62" cy="5" r="2.5"/></svg><svg class="chara" viewBox="0 0 48 48" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 34 C6 24 16 22 24 26 C30 28 36 26 38 20 C42 22 44 30 40 38 C36 44 12 44 6 34 Z" fill="#ffe14d"/><circle cx="33" cy="14" r="9" fill="#ffe14d"/><path d="M40 14 L47 16 L40 19 Z" fill="#ff9a3c" stroke-width="2"/><circle cx="31" cy="12" r="2.2" fill="currentColor" stroke="none"/><path d="M14 33 C18 38 24 38 27 33" stroke-width="2.5"/></svg></div><button type="button" class="stomp" aria-pressed="false" aria-label="おふろ(リバーブ)"></button><button type="button" class="gear" aria-label="つまみを ひらく">⚙</button><div class="pk" hidden><input type="range" id="revAmt" min="0" max="1000" aria-label="おふろの ひびきの つよさ"></div></div>
+    <div class="pedal" data-fx="echo" style="--pc:#f2f0e6;--pt:#333;--ink:#333"><div class="led"></div><div class="pname">やまびこ</div><div class="picrow"><svg class="pic" viewBox="0 0 80 48" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 44 L24 14 L34 28 L42 20 L58 44 Z" fill="rgba(0,0,0,.12)"/><path d="M24 14 L28 20" /><path d="M54 8 C58 12 58 20 54 24 M61 4 C67 10 67 22 61 28 M68 0 C76 8 76 24 68 32" stroke-width="3"/></svg><svg class="chara" viewBox="0 0 48 48" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22 L12 26 L5 31 L13 33" stroke-width="2.6"/><path d="M8 30 C8 20 18 18 26 22 C32 24 36 28 34 36 C32 43 12 44 8 30 Z" fill="#7ecbff"/><circle cx="31" cy="15" r="9" fill="#7ecbff"/><path d="M29 6 C28 2 32 1 31 -1" stroke-width="2.4"/><path d="M38 12 L47 9 L40 15 Z M40 16 L47 20 L38 19 Z" fill="#ff9a3c" stroke-width="2"/><circle cx="30" cy="13" r="2.2" fill="currentColor" stroke="none"/><path d="M13 30 C18 36 25 35 28 29" fill="#bfe6ff" stroke-width="2.6"/><path d="M18 42 L18 47 M26 42 L26 47" stroke-width="2.6"/></svg></div><button type="button" class="stomp" aria-pressed="false" aria-label="やまびこ(ディレイ)"></button><button type="button" class="gear" aria-label="つまみを ひらく">⚙</button><div class="pk" hidden><input type="range" id="echo" min="0" max="1000" aria-label="やまびこの おおきさ"></div></div>
   </div>
   <p class="tip">まるい ボタンを ふむと、エフェクターが ON(あかい ランプが つく)。もういちど ふむと OFF。⚙で、つよさを かえられる。</p>
   <p><button class="big" id="reset" style="font-size:15px;padding:8px 14px;border-radius:999px;border:3px solid #ffb347;background:#fff;color:#7a4b00;margin:0">↺ もとに もどす</button></p>
@@ -172,10 +204,10 @@
 <li><b>ロボット(アルペジエーター)</b>: ボタンを押すと、ド・ミ・ソを選んだ状態で、ロボットが1つずつ順番に鳴らし始める(のぼって、くだる)。キーをタッチすると、選ぶ・はずすが切り替わり、指を離しても続く。鍵盤の上を、ロボットが跳ねて移動する。3つ以上押さえると、折り返す。「はやさ」は、1分あたりの拍の数(BPM)で、8分音符で鳴らす。もう一度押すと、自分で弾く形に戻る。</li>
 <li><b>きらきら</b>: ド・レ・ミ・ソ・ラの5音だけを並べた音階(メジャーペンタトニック)。どの順で弾いても、ぶつかりにくい。<b>ドレミ</b>は、ドレミファソラシド(メジャースケール)。きらきらは、メジャースケールから、ぶつかりやすいファとシを抜いたもの。</li>
 <li><b>おとの おおきさのコース</b>: 音の大きさの形(ADSR)。①=立ち上がり(アタック)、②の横=減っていく時間(ディケイ)と縦=押している間の大きさ(サスティン)、③=離してから消えるまで(リリース)。ガムの顔は、実際の音と同じ計算で、いまの大きさに合わせてふくらむ。</li>
-<li><b>キャラクターのぶんしん</b>: 鍵盤の上のキャラクターに、うすい分身が出る。「ぶんしん」を上げると、少しずれた位置に、うすく出る。「ずれ」を上げると、ぼやけて、色がずれ、うすくなったり濃くなったりする速さも上がる(うなりの見える化)。「おおきな おにいさん」を上げると、後ろに、大きなやさしい色のぼかしが出てくる。</li>
+<li><b>キャラクターのぶんしん</b>: 鍵盤の上のキャラクターに、うすい分身が出る。「ぶんしん」を上げると、少しずれた位置に、うすく出る。「ずれ」を上げると、ぼやけて、色がずれ、うすくなったり濃くなったりする速さも上がる(うなりの見える化)。「ひくい おと」を上げると、後ろに、大きなやさしい色のぼかしが出てくる。</li>
 <li><b>ぶんしん</b>: 同じ波を、もう1つ重ねる。「ずれ」で、ほんの少しだけ音程をずらす(デチューン)と、2つの波の山と谷が、ゆっくり重なったり打ち消し合ったりして、音が厚くなる(うなり)。図は、ずれを大きく見せるため、ゆっくり動かしている。「おおきなおにいさん」は、1オクターブ下のサイン波(サブ)。</li>
 <li><b>あかるさ</b>=フィルター(高い成分を削る)。</li>
-<li><b>エフェクターを踏む</b>: ボタンで入り・切り。<b>ひずみ</b>=ディストーション(波をつぶして、ギザギザにする)、<b>ゆれゆれ</b>=コーラス(少し遅らせた音を、ゆらして重ねる)、<b>やまびこ</b>=ディレイ(エコー)。順番は、ひずみ → ゆれゆれ → やまびこ。色は、ギターの足元に並べるエフェクターのイメージ。</li>
+<li><b>エフェクターを踏む</b>: ボタンで入り・切り。<b>ひずみ</b>=ディストーション(波をつぶして、ギザギザにする)、<b>ゆれゆれ</b>=コーラス(少し遅らせた音を、ゆらして重ねる)、<b>おふろ</b>=リバーブ(お風呂やホールのように、音のひびきが後ろに残る)、<b>やまびこ</b>=ディレイ(エコー)。順番は、ひずみ → ゆれゆれ → おふろ → やまびこ。色は、ギターの足元に並べるエフェクターのイメージ。</li>
 <li>キャラクターは、このサイト用のオリジナル。</li>
 </ul>
 </section>
@@ -187,6 +219,7 @@
 <button class="big" id="high" aria-label="たかく">⬆</button>
 <button class="big" id="modeBtn"></button>
 <button class="big" id="arpBtn">🤖 ロボット</button>
+<button class="big" id="glideBtn" aria-pressed="false">😗 すべる</button>
 </div></div><label class="dockvol"><span aria-hidden="true">🔊</span><input type="range" id="volume" min="0" max="1000" aria-label="おおきさ"></label></div>
 <footer>kimpilla</footer>
 <script src="synthkids.js"></script>

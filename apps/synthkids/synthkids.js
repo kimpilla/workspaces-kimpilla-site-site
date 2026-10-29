@@ -3,9 +3,9 @@
   'use strict';
   const $ = (id) => document.getElementById(id);
 
-  const DEFAULTS = { char: 'furarin', volume: 0.35, cutoff: 4500, echo: 0.35, vib: 0, vibRate: 6, distAmt: 0.5, chAmt: 0.5, attack: 0.03, decay: 0.5, sustain: 0.7, release: 0.5, osc2: 0, detune: 8, sub: 0 };
+  const DEFAULTS = { char: 'furarin', volume: 0.35, cutoff: 4500, echo: 0.35, vib: 0, vibRate: 6, distAmt: 0.5, chAmt: 0.5, revAmt: 0.65, glide: 0, reso: 1, wah: 0, wahRate: 2, attack: 0.03, decay: 0.5, sustain: 0.7, release: 0.5, osc2: 0, detune: 8, sub: 0 };
   const p = Object.assign({}, DEFAULTS);
-  p.fx = { dist: false, chorus: false, echo: false };      // エフェクターの、入り・切り
+  p.fx = { dist: false, chorus: false, rev: false, echo: false };      // エフェクターの、入り・切り
   let mode = 'safe', base = 60;                       // base = 一番左のド(MIDI 60 = 真ん中のド)
 
   // ---- キャラクター(このサイトのオリジナル)。波の形 → 見た目 ----
@@ -41,7 +41,8 @@
     }
     return '<svg viewBox="0 0 100 100" aria-hidden="true">' + c.body +
       '<circle cx="' + (50 - c.ex) + '" cy="' + c.ey + '" r="6.5" fill="#fff"/><circle cx="' + (50 + c.ex) + '" cy="' + c.ey + '" r="6.5" fill="#fff"/>' +
-      '<circle cx="' + (50 - c.ex) + '" cy="' + (c.ey + 1) + '" r="3" fill="#2b2150"/><circle cx="' + (50 + c.ex) + '" cy="' + (c.ey + 1) + '" r="3" fill="#2b2150"/>' +
+      '<circle class="pupil" cx="' + (50 - c.ex) + '" cy="' + (c.ey + 1) + '" r="3" fill="#2b2150"/><circle class="pupil" cx="' + (50 + c.ex) + '" cy="' + (c.ey + 1) + '" r="3" fill="#2b2150"/>' +
+      '<polygon class="lid" data-s="l" data-x="' + (50 - c.ex) + '" data-y="' + c.ey + '" points="0,0 0,0 0,0" fill="' + (c.color || '#555') + '"/><polygon class="lid" data-s="r" data-x="' + (50 + c.ex) + '" data-y="' + c.ey + '" points="0,0 0,0 0,0" fill="' + (c.color || '#555') + '"/>' +
       '<ellipse class="mouth" cx="50" cy="' + c.my + '" rx="6" ry="2.6" fill="#7a2b3b"/>' +
       '<g transform="translate(30 ' + c.wy + ')"><path d="' + (c.wavePath || WAVEPATH[c.wave]) + '" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" transform="scale(1 0.9)"/></g>' +
       '</svg>';
@@ -105,7 +106,8 @@
   const faceChar = () => mixOn ? mixChar() : cur();
 
   // ---- 音の経路: 声 → 出口 → [そのまま / やまびこ] → 音量 → スピーカー ----
-  let ctx = null, out, dry, wet, delay, fb, master, analyser, dist, cho;
+  let wahWas = false, mouthB = 0.5;
+  let ctx = null, out, dry, wet, delay, fb, master, analyser, dist, cho, rev, wahLfo, wahGain, wahAn, lastHz = 0, lastT = -9;
   function fxBlock() {                                    // 1つのエフェクターの箱: そのまま(dry)と、かけた音(wet)を、入り・切りで切り替える
     const b = { in: ctx.createGain(), out: ctx.createGain(), dry: ctx.createGain(), wet: ctx.createGain() };
     b.in.connect(b.dry); b.dry.connect(b.out); b.wet.connect(b.out);
@@ -119,7 +121,8 @@
     master = ctx.createGain(); analyser = ctx.createAnalyser(); analyser.fftSize = 2048;
     const comp = ctx.createDynamicsCompressor();
     delay.delayTime.value = 0.32; fb.gain.value = 0.5;
-    // エフェクター(ふむ): 声 → ひずみ → コーラス → やまびこ → 音量
+    wahLfo = ctx.createOscillator(); wahGain = ctx.createGain(); wahGain.gain.value = 0; wahLfo.frequency.value = p.wahRate; wahLfo.connect(wahGain); wahLfo.start(); wahAn = ctx.createAnalyser(); wahAn.fftSize = 32; wahLfo.connect(wahAn);   // じどう ワウワウ: フィルターを、じどうで ゆらす
+    // エフェクター(ふむ): 声 → ひずみ → ゆれゆれ → おふろ → やまびこ → 音量
     dist = fxBlock(); const ws = ctx.createWaveShaper(), pre = ctx.createGain(), post = ctx.createGain(), curve = new Float32Array(2048);
     for (let i = 0; i < 2048; i++) { const x = i / 1024 - 1; curve[i] = Math.tanh(3 * x); }
     ws.curve = curve; ws.oversample = '2x'; dist.pre = pre; dist.post = post;
@@ -130,7 +133,11 @@
       cd.delayTime.value = base; lf.frequency.value = fr; lf.connect(lg); lg.connect(cd.delayTime); lf.start();
       cho.in.connect(cd); cd.connect(cho.wet); cho.lfos.push([lf, fr]); cho.lgs.push([lg, k]);
     });
-    out.connect(dist.in); dist.out.connect(cho.in); cho.out.connect(dry); cho.out.connect(delay); delay.connect(fb); fb.connect(delay); delay.connect(wet);
+    rev = fxBlock();                                      // おふろ(リバーブ): ひびきが のこる へや。ノイズが だんだん ちいさくなる「ひびきの かたち」を つくって、コンボルバーに わたす
+    { const len = Math.floor(ctx.sampleRate * 3.4), ir = ctx.createBuffer(2, len, ctx.sampleRate);
+      for (let c = 0; c < 2; c++) { const d = ir.getChannelData(c); let lp = 0; for (let i = 0; i < len; i++) { const x = i / len; lp += ((Math.random() * 2 - 1) - lp) * (0.55 - 0.4 * x); d[i] = lp * Math.pow(1 - x, 1.9) * Math.min(1, i / (0.012 * ctx.sampleRate)); } }   // ながい ひびき。だんだん こもって きえる
+      const cv = ctx.createConvolver(); cv.buffer = ir; rev.cv = cv; rev.in.connect(cv); cv.connect(rev.wet); }
+    out.connect(dist.in); dist.out.connect(cho.in); cho.out.connect(rev.in); rev.out.connect(dry); rev.out.connect(delay); cho.out.connect(delay); delay.connect(fb); fb.connect(delay); delay.connect(wet);
     dry.connect(master); wet.connect(master); master.connect(comp); comp.connect(analyser); analyser.connect(ctx.destination);
     applyGlobal();
   }
@@ -143,9 +150,11 @@
     dry.gain.setTargetAtTime(1 - ew * 0.3, t, 0.02); wet.gain.setTargetAtTime(ew, t, 0.02);
     dist.dry.gain.setTargetAtTime(p.fx.dist ? 0 : 1, t, 0.01); dist.wet.gain.setTargetAtTime(p.fx.dist ? 1 : 0, t, 0.01);
     dist.pre.gain.setTargetAtTime(1 + p.distAmt * 20, t, 0.02); dist.post.gain.setTargetAtTime(0.5 / (1 + p.distAmt * 1.5), t, 0.02);
+    wahGain.gain.setTargetAtTime(p.wah * 3000, t, 0.05); wahLfo.frequency.setTargetAtTime(p.wahRate, t, 0.05);
+    rev.dry.gain.setTargetAtTime(p.fx.rev ? 1 - p.revAmt * 0.5 : 1, t, 0.02); rev.wet.gain.setTargetAtTime(p.fx.rev ? 0.9 + p.revAmt * 3.2 : 0, t, 0.05);
     cho.wet.gain.setTargetAtTime(p.fx.chorus ? 0.85 : 0, t, 0.02); cho.lgs.forEach(([lg, k]) => lg.gain.setTargetAtTime((0.0012 + p.chAmt * 0.0035) * k, t, 0.02)); cho.lfos.forEach(([lf, fr]) => lf.frequency.setTargetAtTime(fr * (0.6 + p.chAmt * 0.8), t, 0.05));
     for (const v of voices.values()) {
-      v.filter.frequency.setTargetAtTime(p.cutoff, t, 0.02);
+      v.filter.frequency.setTargetAtTime(p.cutoff, t, 0.02); v.filter.Q.setTargetAtTime(p.reso, t, 0.02);
       v.vibGain.gain.setTargetAtTime(p.vib, t, 0.05); v.lfo.frequency.setTargetAtTime(p.vibRate, t, 0.05);
       setOscWave(v.osc); setOscWave(v.osc2); v.osc2.detune.setTargetAtTime(p.detune, t, 0.02);
       const g = mixGains(); v.g1.gain.setTargetAtTime(g[0], t, 0.02); v.g2.gain.setTargetAtTime(g[1], t, 0.02); v.gs.gain.setTargetAtTime(g[2], t, 0.02);
@@ -184,12 +193,18 @@
     const osc2 = ctx.createOscillator(), sub = ctx.createOscillator(), g1 = ctx.createGain(), g2 = ctx.createGain(), gs = ctx.createGain();
     const lfo = ctx.createOscillator(), vibGain = ctx.createGain();   // ゆらゆら(ビブラート): 音の高さを、cent単位で揺らす
     setOscWave(osc); osc.frequency.value = midiToHz(n);
-    setOscWave(osc2); osc2.frequency.value = midiToHz(n); osc2.detune.value = p.detune;      // ぶんしん: 少しずらして重ねる
-    sub.type = 'sine'; sub.frequency.value = midiToHz(n) / 2;                                // おおきなおにいさん: 1オクターブ下
+    setOscWave(osc2); osc2.frequency.value = midiToHz(n); osc2.detune.value = p.detune;
+    const hz = midiToHz(n);
+    if (p.glide > 0.005 && lastHz && t - lastT < 3) {                                          // すべる: まえの おとから、すーっと つながる
+      const gt = p.glide;
+      [[osc, 1], [osc2, 1], [sub, 0.5]].forEach(([o, k]) => { o.frequency.setValueAtTime(lastHz * k, t); o.frequency.exponentialRampToValueAtTime(hz * k, t + gt); });
+    }
+    lastHz = hz; lastT = t;      // ぶんしん: 少しずらして重ねる
+    sub.type = 'sine'; sub.frequency.value = midiToHz(n) / 2;                                // ひくいおと: 1オクターブ下
     const mg = mixGains(); g1.gain.value = mg[0]; g2.gain.value = mg[1]; gs.gain.value = mg[2];
     lfo.frequency.value = p.vibRate; vibGain.gain.value = p.vib;
     lfo.connect(vibGain); vibGain.connect(osc.detune);
-    filter.type = 'lowpass'; filter.frequency.value = p.cutoff; filter.Q.value = 1;
+    filter.type = 'lowpass'; filter.frequency.value = p.cutoff; filter.Q.value = p.reso; wahGain.connect(filter.detune);
     amp.gain.setValueAtTime(0, t); amp.gain.linearRampToValueAtTime(0.25, t + p.attack);                 // 0 → さいだい(アタック)
     amp.gain.setTargetAtTime(0.25 * p.sustain, t + p.attack, p.decay / 3);                               // → サスティン(ディケイ)
     osc.connect(g1); osc2.connect(g2); sub.connect(gs); g1.connect(filter); g2.connect(filter); gs.connect(filter);
@@ -208,6 +223,7 @@
     v.amp.gain.setValueAtTime(v.amp.gain.value, t);
     v.amp.gain.linearRampToValueAtTime(0, t + p.release);
     v.osc.stop(t + p.release + 0.05); v.osc2.stop(t + p.release + 0.05); v.sub.stop(t + p.release + 0.05); v.lfo.stop(t + p.release + 0.05);
+    setTimeout(() => { try { wahGain.disconnect(v.filter.detune); } catch (e) { /* もう きれている */ } }, (p.release + 0.2) * 1000);
     keyEl(n, false); sing();
   }
   function sing() {                                      // 鳴っているあいだ、キャラクターが歌う
@@ -272,6 +288,10 @@
     r.classList.remove('hop'); void r.offsetWidth; r.classList.add('hop');
   }
   $('arpBtn').onclick = () => arpSet(!arpOn);
+  const GLIDE_T = 0.14;                                                      // すべる: ボタンで 入り・切り(はやさは きまっている)
+  const syncGlide = () => { const on = p.glide > 0; $('glideBtn').classList.toggle('sel', on); $('glideBtn').setAttribute('aria-pressed', on); $('glideBtn').textContent = on ? '😗 すべる✓' : '😗 すべる'; };
+  $('glideBtn').onclick = () => { p.glide = p.glide > 0 ? 0 : GLIDE_T; syncGlide(); };
+  syncGlide();
   $('arpSpeed').oninput = () => { arpBpm = 60 + Math.round($('arpSpeed').value / 1000 * 180); $('arpSpeedOut').textContent = arpBpm; if (arpOn) { clearInterval(arpTimer); arpTimer = setInterval(arpStep, 60000 / arpBpm / 2); } };
   const pointerNote = new Map();
   $('keys').addEventListener('pointerdown', (e) => {
@@ -340,17 +360,40 @@
   $('mixBtn').onclick = () => { mixOn = !mixOn; mixSlot = 0; mixWave = null; buildChars(); applyGlobal(); };
   $('mixAmt').oninput = () => { mixAmt = $('mixAmt').value / 1000; mixWave = null; buildMix(); buildFace(); applyGlobal(); };
   // ---- おくち: ドラッグで あかるさ(フィルター)を動かす。口が大きく開くほど、明るい ----
-  function updateMouth() {
-    const m = $('face').querySelector('.mouth'); if (m) m.style.transform = 'scaleY(' + (1 + 3.5 * toS('cutoff', p.cutoff)).toFixed(2) + ')';
+  function updateMouth(extra) {                                              // extra: じどう ワウワウの ぶん(口が じどうで うごく)
+    const sc = 'scaleY(' + (1 + 3.5 * Math.max(0, Math.min(1, toS('cutoff', p.cutoff) + (extra || 0)))).toFixed(2) + ')';
+    const faces = [$('face'), $('singer')].filter(Boolean);                      // ページの おおきな かお と、したの ドックの ちいさな かお(ひきながら みえる)の りょうほう
+    mouthB = Math.max(0, Math.min(1, toS('cutoff', p.cutoff) + (extra || 0)));
+    { const m = $('face').querySelector('.mouth'); if (m) m.style.transform = sc; }              // したの ちいさな かおは、おとの おおきさと いっしょに うごくので、scopeFrame で きめる
+    // とがり: 目が おこりめ(ツリ目)に なる。とがりが つよいほど、まぶたが ななめに おりて、ひとみも ちいさく
+    const s = Math.max(0, Math.min(1, toS('reso', p.reso)));
+    faces.forEach((f) => f.querySelectorAll('.lid').forEach((l) => {
+      const x = +l.dataset.x, y = +l.dataset.y, L = l.dataset.s === 'l', top = y - 9, inner = top + 8 * s, outer = top + 1 * s;
+      l.setAttribute('points', (x - 9) + ',' + (top - 1) + ' ' + (x + 9) + ',' + (top - 1) + ' ' + (L ? (x + 9) + ',' + inner + ' ' + (x - 9) + ',' + outer : (x + 9) + ',' + outer + ' ' + (x - 9) + ',' + inner));
+      l.style.opacity = s < 0.04 ? 0 : 1;
+    }));
   }
-  function buildFace() { $('face').innerHTML = charSvg(faceChar()); updateMouth(); }
+  function buildFace() {
+    const c = faceChar(); $('face').innerHTML = charSvg(c);
+    { const sv = $('face').querySelector('svg'), cy = c.my + 2;                              // ほっぺ: じどう ワウワウの おおきさ・はやさを うごかす (音に あわせて ぷくぷく ふくらむ)
+      sv.insertAdjacentHTML('beforeend', [-1, 1].map((d) => '<circle class="cheek" cx="' + (50 + d * 27) + '" cy="' + cy + '" r="6.5" fill="#ff5d8f" fill-opacity=".5"/>').join('')); }
+    updateMouth();
+    const w = document.querySelector('.facewrap'); if (w) { w.style.setProperty('--ey', 'calc(8px + ' + c.ey + ' * (100% - 16px) / 100)'); w.style.setProperty('--my', 'calc(8px + ' + (c.my - 6) + ' * (100% - 16px) / 100)'); }   // やじるしの たかさを、目・口の いちに あわせる
+  }
+  // かお ぜんたいが さわる ところ: たてに うごかすと「あかるさ」(口)、よこに うごかすと「とがり」(目: みぎで ツリ目)。ななめなら りょうほう
+  let faceStart = null;
   const faceMove = (e) => {
     const r = $('face').getBoundingClientRect(), s = Math.max(0, Math.min(1, 1 - (e.clientY - r.top) / r.height));
-    p.cutoff = fromS('cutoff', s); syncSliders(); applyGlobal();
+    p.cutoff = fromS('cutoff', s);
+    if (faceStart) p.reso = fromS('reso', Math.max(0, Math.min(1, faceStart.s + ((e.clientX - faceStart.x) / r.width) * 2)));
+    syncSliders(); applyGlobal();
   };
-  $('face').addEventListener('pointerdown', (e) => { e.preventDefault(); $('face').setPointerCapture(e.pointerId); $('face').dragging = true; faceMove(e); });
+  $('face').addEventListener('pointerdown', (e) => {
+    e.preventDefault(); $('face').setPointerCapture(e.pointerId); $('face').dragging = true;
+    faceStart = { x: e.clientX, s: toS('reso', p.reso) }; faceMove(e);
+  });
   $('face').addEventListener('pointermove', (e) => { if ($('face').dragging) faceMove(e); });
-  const faceUp = () => { $('face').dragging = false; };
+  const faceUp = () => { $('face').dragging = false; faceStart = null; };
   // ダブルタップ拡大・ピンチ拡大を止める(鍵盤まわり。ボタンやスライダーは、ふつうに使える)
   {
     let lastEnd = 0;
@@ -365,13 +408,31 @@
 
   // ---- つまみ(0〜1000のスライダー。対数にするものは、耳の感じ方に合わせる) ----
   const MAP = {
-    volume: { lin: [0, 1] }, cutoff: { log: [300, 12000] }, echo: { lin: [0, 0.7] }, vib: { lin: [0, 100] }, vibRate: { log: [1, 80] }, distAmt: { lin: [0, 1] }, chAmt: { lin: [0, 1] }, osc2: { lin: [0, 1] }, detune: { lin: [0, 40] }, sub: { lin: [0, 1] },
+    volume: { lin: [0, 1] }, cutoff: { log: [300, 12000] }, echo: { lin: [0, 0.7] }, vib: { lin: [0, 100] }, vibRate: { log: [1, 80] }, distAmt: { lin: [0, 1] }, chAmt: { lin: [0, 1] }, revAmt: { lin: [0, 1] }, reso: { lin: [0.7, 18] }, wah: { lin: [0, 1] }, wahRate: { log: [0.2, 12] }, osc2: { lin: [0, 1] }, detune: { lin: [0, 40] }, sub: { lin: [0, 1] },
   };
   const toS = (k, v) => { const m = MAP[k]; if (m.log) return Math.log(v / m.log[0]) / Math.log(m.log[1] / m.log[0]); return (v - m.lin[0]) / (m.lin[1] - m.lin[0]); };
   const fromS = (k, s) => { const m = MAP[k]; if (m.log) return m.log[0] * Math.pow(m.log[1] / m.log[0], s); return m.lin[0] + s * (m.lin[1] - m.lin[0]); };
-  function syncSliders() { for (const k of Object.keys(MAP)) $(k).value = Math.round(toS(k, p[k]) * 1000); updateMouth(); }
+  function syncSliders() { for (const k of Object.keys(MAP)) $(k).value = Math.round(toS(k, p[k]) * 1000); updateMouth(); syncPad(); }
+  // ---- ほっぺボール: ワウワウの「はやさ(よこ)」と「ふかさ(うえ)」を、ボール1つで うごかす ----
+  function syncPad() {
+    const pad = $('wahPad'), b = $('wahBall'); if (!pad || !b) return;
+    const w = pad.clientWidth - b.offsetWidth, h = pad.clientHeight - b.offsetHeight;
+    b.style.left = (toS('wahRate', p.wahRate) * w).toFixed(1) + 'px'; b.style.top = ((1 - toS('wah', p.wah)) * h).toFixed(1) + 'px';
+  }
+  (function () {
+    const pad = $('wahPad'), b = $('wahBall'); let on = false;
+    const mv = (e) => {
+      const r = pad.getBoundingClientRect(), bw = b.offsetWidth, bh = b.offsetHeight;
+      const sx = Math.max(0, Math.min(1, (e.clientX - r.left - bw / 2) / (r.width - bw))), sy = Math.max(0, Math.min(1, (e.clientY - r.top - bh / 2) / (r.height - bh)));
+      p.wahRate = fromS('wahRate', sx); p.wah = fromS('wah', 1 - sy); syncSliders(); applyGlobal();
+    };
+    pad.addEventListener('pointerdown', (e) => { e.preventDefault(); pad.setPointerCapture(e.pointerId); on = true; ensureAudio(); mv(e); });
+    pad.addEventListener('pointermove', (e) => { if (on) mv(e); });
+    ['pointerup', 'pointercancel'].forEach((n) => pad.addEventListener(n, () => { on = false; }));
+    window.addEventListener('resize', syncPad);
+  })();
   for (const k of Object.keys(MAP)) $(k).oninput = () => { p[k] = fromS(k, $(k).value / 1000); updateMouth(); applyGlobal(); };
-  $('reset').onclick = () => { Object.assign(p, DEFAULTS); p.fx = { dist: false, chorus: false, echo: false }; mixOn = false; setMode('safe'); syncSliders(); syncPedals(); buildChars(); applyGlobal(); };
+  $('reset').onclick = () => { Object.assign(p, DEFAULTS); p.fx = { dist: false, chorus: false, rev: false, echo: false }; mixOn = false; setMode('safe'); syncSliders(); syncPedals(); syncGlide(); buildChars(); applyGlobal(); };
 
   // ---- 波の表示(虹色)と、波の上で歌うキャラクター ----
   const FLAT = new Uint8Array(2048).fill(128);
@@ -392,8 +453,8 @@
     let pk = 0; for (let i = 0; i < buf.length; i += 4) pk = Math.max(pk, Math.abs(buf[i] - 128));
     const level = Math.min(1, pk / 70), el = $('singer');
     el.style.transform = 'scale(' + (1 + 0.25 * level).toFixed(3) + ')';
-    const m = el.querySelector('.mouth'); if (m) m.style.transform = 'scaleY(' + (1 + 3 * level).toFixed(2) + ')';
-    // ぶんしん・おおきなおにいさんに合わせて、うすい もう1人ずつ が出る
+    const m = el.querySelector('.mouth'); if (m) m.style.transform = 'scaleY(' + (1 + 3.5 * mouthB * Math.min(1, level * 2)).toFixed(2) + ')';   // おとが なっている あいだ、あかるさ(ワウワウ)で 口が ひらく
+    // ぶんしん・ひくいおとに合わせて、うすい もう1人ずつ が出る
     const cl = $('singerClone'), bg = $('singerBig'), ms = 'scaleY(' + (1 + 3 * level).toFixed(2) + ')', tt = performance.now() / 1000;
     const d = Math.min(1, p.detune / 40);                                                   // ずれ(0〜1)
     if (p.osc2 < 0.02) cl.style.opacity = 0;
@@ -415,7 +476,7 @@
     let hh = 0, s = 0; if (d) { s = d / (1 - Math.abs(2 * l - 1)); hh = mx === r ? ((g - b) / d + 6) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; hh *= 60; }
     return 'hsl(' + ((hh + deg) % 360).toFixed(0) + ',' + Math.min(100, s * 100 * 1.15).toFixed(0) + '%,' + (l * 100).toFixed(0) + '%)';
   };
-  function buildSinger() { const s = charSvg(faceChar()); $('singer').innerHTML = s; ghostBase = faceChar().color; $('singerClone').innerHTML = charSvg(faceChar(), 'C'); $('singerBig').innerHTML = charSvg(faceChar(), 'B'); const bb = $('singerBig').querySelector('feGaussianBlur'); if (bb) bb.setAttribute('stdDeviation', '5'); }
+  function buildSinger() { const s = charSvg(faceChar()); $('singer').innerHTML = s; updateMouth(); ghostBase = faceChar().color; $('singerClone').innerHTML = charSvg(faceChar(), 'C'); $('singerBig').innerHTML = charSvg(faceChar(), 'B'); const bb = $('singerBig').querySelector('feGaussianBlur'); if (bb) bb.setAttribute('stdDeviation', '5'); }
   function singerTo(n) {                                   // キャラクターは、いちばん さいごに ならした キーの うえで うたう
     const k = document.querySelector('.key[data-note="' + n + '"]'), s = $('singer'); if (!k) return;
     const x = (k.offsetLeft + k.offsetWidth / 2 - s.offsetWidth / 2) + 'px';
@@ -491,6 +552,12 @@
     return t;
   }
   const wv = (tb, x) => { const N = tb.length, f = ((x % 1) + 1) % 1 * N, i = Math.floor(f), a = f - i; return tb[i % N] * (1 - a) + tb[(i + 1) % N] * a; };
+  let beatHi = false, beatHiT = null;
+  ['osc2', 'detune'].forEach((id) => {                                       // ぶんしん・ずれの スライダーを さわると、うえの ピンクの なみが ひかる
+    const el = $(id), on = () => { clearTimeout(beatHiT); beatHi = true; }, off = () => { clearTimeout(beatHiT); beatHiT = setTimeout(() => { beatHi = false; }, 900); };
+    el.addEventListener('pointerdown', on); el.addEventListener('input', on); el.addEventListener('focus', on);
+    ['pointerup', 'pointercancel', 'blur', 'change'].forEach((n) => el.addEventListener(n, off));
+  });
   function drawBeat() {
     const c = $('beat'), g = c.getContext('2d'), dpr = devicePixelRatio || 1, W = c.clientWidth, H = c.clientHeight;
     if (c.width !== W * dpr || c.height !== H * dpr) { c.width = W * dpr; c.height = H * dpr; }
@@ -501,14 +568,16 @@
     for (let r = 0; r < rows; r++) {
       const cy = rh * (r + 0.5), amp = rh * 0.36;
       g.strokeStyle = 'rgba(122,75,0,.15)'; g.lineWidth = 1; g.beginPath(); g.moveTo(0, cy); g.lineTo(W, cy); g.stroke();
-      g.strokeStyle = ['#5b8def', '#ff6bb5', '#ff7a3d'][r]; g.lineWidth = r === 2 ? 4 : 3; g.lineJoin = 'round'; g.beginPath();
+      const hi = beatHi && r === 1, dim = beatHi && r !== 1;                      // ぶんしん・ずれを さわっている あいだは、ピンクの なみを めだたせる
+      g.strokeStyle = ['#5b8def', '#ff6bb5', '#ff7a3d'][r]; g.lineWidth = hi ? 6 : r === 2 ? 4 : 3; g.lineJoin = 'round'; g.beginPath();
+      if (hi) { g.shadowColor = '#ff6bb5'; g.shadowBlur = 12; }
       for (let x = 0; x <= W; x += 2) {
         const ph = x / W * cyc, a = wv(table, ph), b = wv(table, ph + drift) * (p.osc2 || 0);
         const v = r === 0 ? a : r === 1 ? wv(table, ph + drift) : (a + b) / (1 + (p.osc2 || 0));
         const y = cy - v * amp; x ? g.lineTo(x, y) : g.moveTo(x, y);
       }
-      g.globalAlpha = r === 1 && p.osc2 < 0.02 ? 0.35 : 1; g.stroke(); g.globalAlpha = 1;
-      g.fillStyle = '#8a6a3a'; g.font = '11px sans-serif'; g.textAlign = 'left'; g.textBaseline = 'top'; g.fillText(names[r], 4, rh * r + 2);
+      g.globalAlpha = dim ? 0.3 : r === 1 && p.osc2 < 0.02 && !hi ? 0.35 : 1; g.stroke(); g.globalAlpha = 1; g.shadowBlur = 0;
+      g.fillStyle = hi ? '#d6338f' : '#8a6a3a'; g.font = (hi ? 'bold 12px' : '11px') + ' sans-serif'; g.textAlign = 'left'; g.textBaseline = 'top'; g.fillText(names[r], 4, rh * r + 2);
     }
   }
   // ---- エフェクター(ふむ): ボタンを押すたびに、入り・切りが かわる ----
@@ -522,6 +591,12 @@
     el.querySelector('.stomp').onclick = () => { p.fx[el.dataset.fx] = !p.fx[el.dataset.fx]; ensureAudio(); syncPedals(); applyGlobal(); };
     el.querySelector('.gear').onclick = () => { const k = el.querySelector('.pk'); k.hidden = !k.hidden; };
   });
-  (function anim() { drawCoaster(); updateGum(); drawBeat(); scopeFrame(); requestAnimationFrame(anim); })();
+  const wahBuf = new Float32Array(32);
+  function updateCheeks(lv) {                                                  // lv: ワウワウの ゆれ(-1〜1)。-1 = ふくらんでいない
+    const sc = 1 + p.wah * 1.0 * (lv + 1) / 2 + 0.12 * p.wah;
+    const pb = $('wahBall'); if (pb) { const bi = pb.firstChild; if (bi) bi.style.transform = 'scale(' + (0.9 + 0.5 * p.wah * (lv + 1) / 2 + 0.08 * p.wah).toFixed(2) + ')'; }
+    document.querySelectorAll('#face .cheek').forEach((c) => { c.style.transformBox = 'fill-box'; c.style.transformOrigin = 'center'; c.style.transform = 'scale(' + sc.toFixed(2) + ')'; c.setAttribute('fill-opacity', (0.35 + 0.35 * Math.min(1, p.wah * 1.5)).toFixed(2)); });
+  }
+  (function anim() { let lv = -1; if (wahAn && p.wah > 0.01) { wahAn.getFloatTimeDomainData(wahBuf); lv = wahBuf[31]; updateMouth(p.wah * 0.47 * lv); } else if (wahAn && wahWas) updateMouth(); wahWas = !!(wahAn && p.wah > 0.01); updateCheeks(lv); drawCoaster(); updateGum(); drawBeat(); scopeFrame(); requestAnimationFrame(anim); })();
   setMode('safe'); buildChars(); syncSliders(); syncPedals(); buildKeys(); buildGum(); buildSinger();
 })();
