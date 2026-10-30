@@ -18,7 +18,7 @@
     const carSum = c.createGain(), oscG = c.createGain(), noiseG = c.createGain();
     oscG.gain.value = 1; noiseG.gain.value = 0.12;                 // すこし ノイズを まぜると、「か」「さ」なども ききとりやすい
     osc.connect(oscG); oscG.connect(carSum); noise.connect(noiseG); noiseG.connect(carSum);
-    const rect = new Float32Array(1024); for (let i = 0; i < 1024; i++) rect[i] = Math.abs(i / 511.5 - 1);   // ぜったいち(ぜんぶ プラスに)
+    const rect = new Float32Array(1025); for (let i = 0; i < 1025; i++) rect[i] = Math.abs(i / 512 - 1);   // ぜったいち(ぜんぶ プラスに。まんなか=0 が ちょうど 0 に なるよう、かずは きすう)
     const N = 18, lo = 140, hi = 7000;
     for (let k = 0; k < N; k++) {
       const f = lo * Math.pow(hi / lo, k / (N - 1));
@@ -37,7 +37,7 @@
     const comp = c.createDynamicsCompressor(); comp.threshold.value = -10; comp.ratio.value = 8; comp.attack.value = 0.003;
     out.connect(comp); comp.connect(dest);
     osc.start(); noise.start();
-    return { modIn, osc };
+    return { modIn, osc, out };
   }
 
   let ac = null, voc = null, plainOut = null;
@@ -45,7 +45,7 @@
   function ensure() {
     if (!ac) {
       ac = new (window.AudioContext || window.webkitAudioContext)();
-      voc = buildVocoder(ac, ac.destination);
+      voc = buildVocoder(ac, ac.destination); voc.out.gain.value = 0;   // こえが ないときは だまる
       plainOut = ac.createGain(); plainOut.gain.value = 0.9; plainOut.connect(ac.destination);
     }
     if (ac.state === 'suspended') ac.resume();
@@ -63,6 +63,11 @@
     const b = await load(i);
     const s = ac.createBufferSource(); s.buffer = b;
     s.connect(robot ? voc.modIn : plainOut); s.start();
+    if (robot) {                                                   // こえが なっている あいだだけ ロボットの おとを だす
+      const g = voc.out.gain, t = ac.currentTime;
+      g.cancelScheduledValues(t); g.setValueAtTime(g.value, t); g.linearRampToValueAtTime(1.2, t + 0.01);
+      g.setTargetAtTime(0, t + b.duration + 0.03, 0.04);
+    }
     const bot = $('bot'); bot.classList.remove('sing'); void bot.offsetWidth; bot.classList.add('sing');
   }
 
