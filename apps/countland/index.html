@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>かずの くに | kimpilla</title>
+<link rel="stylesheet" href="../../style.css">
+<style>
+  .play { background: #fff7e0; color: #3a2a12; border-radius: 22px; padding: 14px 14px 18px; margin: 14px 0; border: 3px solid #ffd36b; font-family: "Hiragino Maru Gothic ProN", "Yu Gothic", system-ui, sans-serif; }
+  .play h2 { font-size: 17px; margin: 18px 0 6px; color: #7a4b00; }
+  .play h2:first-child { margin-top: 4px; }
+  .tip { font-size: 13px; color: #6b5328; line-height: 1.6; margin: 6px 0; }
+  /* 上の そうさ(スクロールしても 見える) */
+  .ctl { position: sticky; top: 0; z-index: 5; background: #fff7e0; border-bottom: 3px solid #ffd36b; margin: 0 -14px; padding: 8px 14px 6px; box-shadow: 0 4px 8px #0002; }
+  .ctlrow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .count { font-size: 15px; color: #7a4b00; flex: 1; min-width: 7em; }
+  .count b { font-size: 30px; font-variant-numeric: tabular-nums; }
+  .play button.big { font-size: 19px; padding: 12px 22px; border-radius: 999px; border: 3px solid #ffb347; background: #fff; color: #7a4b00; margin: 0; font-family: inherit; font-weight: bold; touch-action: manipulation; }
+  .play button.big:hover:not(:disabled) { background: #ffe9bf; color: #7a4b00; }
+  .play button.plus { background: #ff7a3d; border-color: #ff7a3d; color: #fff; font-size: 22px; padding: 12px 26px; }
+  .play button.plus:hover:not(:disabled) { background: #ff8f5a; color: #fff; }
+  .play button.big.sel { background: #ffe3cf; border-color: #ff7a3d; }
+  .chip { margin: 0; font-size: 14px; padding: 7px 12px; border-radius: 999px; border: 3px solid #f1dfae; background: #fff; color: #7a4b00; cursor: pointer; font-family: inherit; font-weight: bold; }
+  .chip:hover:not(:disabled) { background: #fff; color: #7a4b00; }
+  /* くにの カード */
+  .lands { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 10px; margin: 10px 0; }
+  .land { background: #fff; border: 3px solid #f1dfae; border-radius: 18px; padding: 8px 10px 10px; cursor: pointer; position: relative; text-align: left; font-family: inherit; color: #3a2a12; margin: 0; width: 100%; }
+  .land:hover:not(:disabled) { background: #fff; color: #3a2a12; }
+  .land.sel { border-color: #ff7a3d; background: #fff6ef; box-shadow: 0 0 0 3px #ffd3b8; }
+  .lhead { display: flex; align-items: center; gap: 8px; }
+  .lav { width: 54px; flex: none; transform-origin: 50% 90%; }
+  .lav svg { width: 100%; height: auto; display: block; overflow: visible; }
+  .lav.hop { animation: hop .45s ease-out; }
+  @keyframes hop { 0% { transform: translateY(0); } 35% { transform: translateY(-14px) rotate(-8deg); } 70% { transform: translateY(0) rotate(5deg); } 100% { transform: none; } }
+  .lname { font-size: 16px; font-weight: bold; line-height: 1.3; }
+  .lname small { display: block; font-size: 11px; font-weight: normal; color: #8a6a3a; }
+  /* メーター(すうじの わ) */
+  .meter { display: flex; gap: 4px; justify-content: center; margin: 8px 0 4px; }
+  .wheel { width: 38px; height: 50px; overflow: hidden; border-radius: 10px; background: #3a2a12; box-shadow: inset 0 6px 8px #0007, inset 0 -6px 8px #0007; position: relative; }
+  .wheel .strip { transition: transform .35s cubic-bezier(.3,1.4,.5,1); }
+  .wheel .strip span { display: block; height: 50px; line-height: 50px; text-align: center; font-size: 32px; font-weight: bold; color: #fff7e0; font-variant-numeric: tabular-nums; }
+  .wheel.lamp { background: #555; }
+  .wheel.lamp.on { background: #ffd23c; box-shadow: 0 0 14px #ffd23c, inset 0 -4px 6px #0003; }
+  .wheel.lamp.on .strip span { color: #7a4b00; }
+  .wheel.lamp.off .strip span { color: #bbb; }
+  .wheel.hide { width: 0; margin-left: -4px; opacity: 0; }
+  .wheel { transition: width .25s, opacity .25s, margin .25s; }
+  .wheel.flash { animation: flash .5s; }
+  @keyframes flash { 0%, 100% { outline: 0 solid #ff7a3d; } 30% { outline: 4px solid #ff7a3d; } }
+  .placeword { display: flex; gap: 4px; justify-content: center; font-size: 10px; color: #8a6a3a; }
+  .placeword span { width: 38px; text-align: center; line-height: 1.2; white-space: nowrap; font-size: 9px; letter-spacing: -.5px; }
+  .placeword span.hide { width: 0; margin-left: -4px; overflow: hidden; }
+  .say { font-size: 13px; line-height: 1.5; color: #5a3a10; background: #fff7e0; border-radius: 12px; padding: 6px 9px; margin-top: 6px; min-height: 2.6em; }
+  .say b { color: #d2541a; }
+  .shake { animation: shake .4s; }
+  @keyframes shake { 0%, 100% { transform: none; } 25% { transform: translateX(-4px) rotate(-1deg); } 75% { transform: translateX(4px) rotate(1deg); } }
+  /* ならべた キャラ(えらんだ くにの まとめかた) */
+  .tray { background: #fff; border: 3px solid #f1dfae; border-radius: 16px; padding: 10px; min-height: 90px; display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px; }
+  .grp { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 6px; padding: 4px 6px; border-radius: 12px; border: 2px dashed #e6d3a3; }
+  .grp > .gl { width: 100%; font-size: 11px; color: #8a6a3a; font-weight: bold; }
+  .one { width: 26px; } .one svg { width: 100%; height: auto; display: block; overflow: visible; }
+  .one.new { animation: drop .35s ease-out; }
+  @keyframes drop { 0% { transform: translateY(-30px) scale(.5); opacity: 0; } 70% { transform: translateY(3px) scale(1.1); opacity: 1; } 100% { transform: none; } }
+  .bundle { position: relative; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #fff; text-shadow: 0 1px 2px #0006; }
+  .bundle.l1 { width: 46px; height: 46px; border-radius: 40% 40% 46% 46%; background: #ffb347; font-size: 15px; }
+  .bundle.l1::before { content: ""; position: absolute; top: -7px; left: 15px; width: 16px; height: 9px; border-radius: 5px 5px 0 0; background: #e08a1e; }
+  .bundle.l2 { width: 62px; height: 54px; border-radius: 8px; background: #c98b4a; font-size: 15px; border: 3px solid #a86c32; }
+  .bundle.l3 { width: 78px; height: 62px; border-radius: 10px; background: #6b8fd6; font-size: 15px; border: 3px solid #4d6fb3; }
+  .bundle.l4 { width: 92px; height: 70px; border-radius: 12px; background: #9b6bd6; font-size: 15px; border: 3px solid #7a4db3; }
+  .bundle small { font-size: 10px; margin-left: 1px; }
+  .bundle.new { animation: pop .5s ease-out; }
+  @keyframes pop { 0% { transform: scale(.4) rotate(-14deg); } 60% { transform: scale(1.18) rotate(5deg); } 100% { transform: none; } }
+  .empty { font-size: 13px; color: #8a6a3a; align-self: center; }
+  .compare { font-size: 14px; line-height: 1.7; color: #5a3a10; background: #fff; border: 3px solid #f1dfae; border-radius: 14px; padding: 8px 10px; margin: 8px 0; }
+  .compare b { font-size: 17px; color: #d2541a; font-variant-numeric: tabular-nums; }
+  .quiz { background: #fff; border: 3px solid #f1dfae; border-radius: 14px; padding: 10px; }
+  .quiz .q { font-size: 16px; line-height: 1.6; color: #3a2a12; }
+  .quiz .q b { font-size: 22px; color: #d2541a; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+  .quiz .ans { font-size: 20px; min-width: 3.2em; }
+  .quiz .res { font-size: 14px; min-height: 1.6em; color: #5a3a10; }
+  @media (prefers-reduced-motion: reduce) {
+    .lav.hop, .shake, .one.new, .bundle.new, .wheel.flash { animation: none; }
+    .wheel .strip { transition: none; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <a class="home" href="../../index.html">kimpilla</a>
+  <nav><a href="../../music.html">音楽</a> <a href="../../apps.html">アプリ</a> <a href="../../memo.html">メモ</a></nav>
+</header>
+<main>
+<h1>かずの くに</h1>
+<p>キャラを 1こずつ ふやして、4つの くにの かぞえかたで かぞえてみよう。おなじ かずなのに、くにに よって すうじの かきかたが ちがうよ。「9の つぎは 11」の くにも あるよ。</p>
+<div class="play">
+  <div class="ctl">
+    <div class="ctlrow">
+      <div class="count" aria-live="polite">いま <b id="n">0</b> こ</div>
+      <button type="button" class="big plus" id="plus">＋1</button>
+      <button type="button" class="big" id="minus">−1</button>
+    </div>
+    <div class="ctlrow" style="margin-top:6px">
+      <button type="button" class="chip" id="auto">🪄 じどうで かぞえる</button>
+      <button type="button" class="chip" id="plus10">＋10</button>
+      <button type="button" class="chip" id="reset">さいしょから</button>
+      <button type="button" class="chip" id="mute">🔊 おと あり</button>
+    </div>
+  </div>
+
+  <h2>① 4つの くにの メーター</h2>
+  <p class="tip">くにを タッチすると、その くにの まとめかたで、したの キャラが ふくろや はこに まとまるよ。</p>
+  <div class="lands" id="lands"></div>
+
+  <h2>② えらんだ くにの まとめかた</h2>
+  <div class="tray" id="tray"></div>
+  <div class="compare" id="compare"></div>
+
+  <h2>③ クイズ: ほかの くにの かずを よもう</h2>
+  <div class="quiz">
+    <div class="q" id="qtext"></div>
+    <div class="chips" id="qans"></div>
+    <div class="res" id="qres"></div>
+    <div class="chips"><button type="button" class="chip" id="qnext">つぎの もんだい</button><button type="button" class="chip" id="qshow">メーターで たしかめる</button></div>
+  </div>
+</div>
+
+<h2>おとなの人へ(なにが起きているか)</h2>
+<ul class="small">
+<li><b>位取り</b>: いつもの数え方(十進法)は、10こたまると「袋」に1つまとめて、隣の桁に1を書く。袋が10こたまると「箱」にまとめて、さらに隣の桁へ。メーターの各桁は、ばら・袋・箱…がそれぞれ何こあるかを表している。</li>
+<li><b>タコの くに(八進法)・ロボの くに(二進法)</b>: まとめる数が8や2になっただけで、仕組みは同じ。二進法はコンピューターの中の数え方で、ランプ(電気が流れる・流れない)の2つだけで全部の数を表す。</li>
+<li><b>ゼロの ない くに</b>: 1〜9だけを使い、0を使わない数え方(数学では「全単射的記数法」と呼ばれる)。9の次は11、19の次は21、99の次は111になる。ばらが「0こ」の状態を書けないので、袋にまとめるのを1つ遅らせる(9こになっても、まだまとめない)。いつもの数え方の10は、このくにでは11。表計算ソフトの列の名前(A〜Zの次がAA)も、この仕組み。</li>
+<li>数を覚えはじめた子が「9の次は11」と数えることがある。1から順に数えるあいだ0は一度も出てこないので、次の段も1から始まると考えるのは筋が通っている。0を「数字のひとつ」として使う考え方は、歴史の上でも後から生まれた(ローマ数字に0は無く、漢数字も「十」と書いて「一〇」とは書かなかった)。</li>
+<li>音: 1こ増えるたびに、選んだくにの一番下の桁に合わせた高さの音が鳴り、繰り上がるたびに「ぽこん」と鳴る(上の桁ほど高い)。音は、AIは耳で確かめていない。</li>
+</ul>
+</main>
+<footer>kimpilla</footer>
+<script src="countland.js"></script>
+</body>
+</html>
