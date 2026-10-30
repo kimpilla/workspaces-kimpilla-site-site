@@ -1,0 +1,27 @@
+// 音を鳴らす準備(全ページ共通)
+// - iPhoneのマナーモード(消音スイッチ)でも音が出るように、音の種類を「再生」にする
+// - 画面にさわったときに、止まっている音の部品(AudioContext)を動かしなおす
+(() => {
+  try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) { /* ない たんまつは そのまま */ }
+  const ctxs = [];
+  ['AudioContext', 'webkitAudioContext'].forEach((name) => {
+    const Orig = window[name];
+    if (!Orig || Orig.__wrapped) return;
+    const Wrapped = function (...args) { const c = new Orig(...args); ctxs.push(c); return c; };
+    Wrapped.prototype = Orig.prototype; Wrapped.__wrapped = true;
+    try { Object.setPrototypeOf(Wrapped, Orig); } catch (e) { /* そのまま */ }
+    window[name] = Wrapped;
+  });
+  let silent = null;
+  function unlock() {
+    ctxs.forEach((c) => { if (c.state !== 'running' && c.state !== 'closed') c.resume().catch(() => {}); });
+    // audioSession が ない ふるい iPhone むけ: むおんを ならしつづけると、マナーモードでも 音が でる
+    if (!navigator.audioSession && !silent) {
+      silent = new Audio('data:audio/wav;base64,UklGRrQBAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YZABAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA');
+      silent.loop = true; silent.setAttribute('playsinline', '');
+      silent.play().catch(() => { silent = null; });
+    }
+  }
+  ['pointerdown', 'touchend', 'click', 'keydown'].forEach((ev) => document.addEventListener(ev, unlock, { capture: true, passive: true }));
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) unlock(); });
+})();
