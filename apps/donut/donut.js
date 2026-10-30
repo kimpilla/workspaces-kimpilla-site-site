@@ -182,6 +182,48 @@
   $('shop').addEventListener('click', () => { hitAnim($('shop')); if (!busy) sayWords(cust.name + '。' + cust.size + 'こ ください'); });
   $('reset').onclick = () => { stopHold(); fill = 0; sold = []; busy = false; partyUntil = 0; cust = CUST[0]; showCust(true); render(); };
   $('voice').onclick = () => { voiceOn = !voiceOn; $('voice').textContent = voiceOn ? '🗣 こえ あり' : '🤐 こえ なし'; if (!voiceOn && window.speechSynthesis) speechSynthesis.cancel(); };
+  // ---- おうようへん: 10こ いりの はこが いくつと、ばらが いくつで、いくつ ----
+  let tBox = 0, tOne = 0, tTimer = null;
+  function tRender(fx) {
+    fx = fx || {};
+    $('tBoxes').innerHTML = '';
+    for (let i = 0; i < tBox; i++) { const e = document.createElement('span'); e.className = 'tclosed' + (fx.newBox && i === tBox - 1 ? ' new' : ''); e.innerHTML = '<span>10</span>'; $('tBoxes').appendChild(e); }
+    $('tLoose').innerHTML = '';
+    for (let i = 0; i < tOne; i++) { const e = document.createElement('span'); e.className = 'tdn' + (fx.newOne && i === tOne - 1 ? ' new' : ''); e.innerHTML = donut(i); $('tLoose').appendChild(e); }
+    $('tTens').textContent = tBox; $('tOnes').textContent = tOne;
+    $('tTens').classList.toggle('zero', tBox === 0);
+    const n = tBox * 10 + tOne; $('tYomi').textContent = yomi(n);
+    $('tAddBox').disabled = tBox >= 9;
+  }
+  const bump = (id) => { const e = $(id); e.classList.remove('bump'); void e.offsetWidth; e.classList.add('bump'); };
+  function tSay(t) { $('tSay').textContent = t; }
+  $('tAddBox').onclick = () => {
+    if (tBox >= 9) return;
+    tBox++; tRender({ newBox: true }); bump('tTens');
+    tone(392, 0, 0.15, 'triangle', 0.2); tone(523.3, 0.08, 0.2, 'triangle', 0.2);
+    tSay('10こ いりの はこが ' + tBox + 'つ' + (tOne ? ' と、ばらが ' + tOne + 'こ' : '') + '。ぜんぶで ' + (tBox * 10 + tOne) + 'こ。');
+    speak(tBox * 10 + tOne);
+  };
+  $('tAddOne').onclick = () => {
+    if (tTimer) return;
+    if (tBox >= 9 && tOne >= 9) { tSay('はこは 9つまで。「さいしょから」で やりなおそう'); return; }
+    tOne++; tRender({ newOne: true }); bump('tOnes'); sFinger(tOne);
+    if (tOne === 10) {                                             // 10こ そろったら はこに つめる
+      tSay('ばらが 10こ そろった！ はこに つめよう');
+      document.querySelectorAll('#tLoose .tdn').forEach((e) => e.classList.add('pack'));
+      tTimer = setTimeout(() => {
+        tTimer = null; tOne = 0; tBox++; tRender({ newBox: true }); bump('tTens'); bump('tOnes'); sParty();
+        tSay('はこが ' + tBox + 'つに なった。ばらは 0こ。だから ' + (tBox * 10) + '。'); speak(tBox * 10);
+      }, 550);
+      return;
+    }
+    tSay((tBox ? '10こ いりの はこが ' + tBox + 'つ と、' : '') + 'ばらが ' + tOne + 'こ。ぜんぶで ' + (tBox * 10 + tOne) + 'こ。');
+    speak(tBox * 10 + tOne);
+  };
+  $('tReset').onclick = () => { clearTimeout(tTimer); tTimer = null; tBox = 0; tOne = 0; tRender(); tSay('はこを おすと 10こ ふえるよ。ドーナツを おすと 1こ ふえるよ。'); };
+  $('tOneIcon').innerHTML = donut(0);
+  tRender();
+
   if (window.speechSynthesis) speechSynthesis.getVoices();
   showCust(true);
   render();

@@ -76,7 +76,34 @@
   .chip.sel, .chip.sel:hover:not(:disabled) { border-color: #ff7a3d; background: #ffe3cf; }
   .chick { position: absolute; font-size: 30px; z-index: 6; pointer-events: none; animation: run 2.2s linear forwards; }
   @keyframes run { 0% { transform: translateX(0) translateY(0); } 25% { transform: translateX(25vw) translateY(-14px); } 50% { transform: translateX(50vw) translateY(0); } 75% { transform: translateX(75vw) translateY(-14px); } 100% { transform: translateX(110vw) translateY(0); } }
+  /* おうようへん */
+  .ohead { font-size: 16px; margin: 22px 0 0; }
+  .ten .tenrow { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .tcol { background: #fff; border: 3px solid #ffe3c6; border-radius: 16px; padding: 6px; display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 0; }
+  .tlab { font-size: 12px; color: #9a5a2a; font-weight: bold; }
+  .tboxes, .tloose { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; align-content: flex-start; min-height: 72px; width: 100%; }
+  .tclosed { width: 34px; height: 26px; border-radius: 6px; background: #ffd1e4; border: 2px solid #f7a8c9; position: relative; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; color: #c2416f; }
+  .tclosed::before { content: ""; position: absolute; left: -2px; right: -2px; top: 6px; height: 2px; background: #f7a8c9; }
+  .tclosed.big { width: 52px; height: 40px; font-size: 16px; }
+  .tclosed.big::before { top: 9px; }
+  .tclosed.new { animation: tpop .5s ease-out; }
+  @keyframes tpop { 0% { transform: scale(.3) rotate(-10deg); } 60% { transform: scale(1.2) rotate(4deg); } 100% { transform: none; } }
+  .tdn { width: 26px; height: 26px; display: inline-block; } .tdn svg { width: 100%; height: 100%; display: block; }
+  .tdn.new { animation: tpop .4s ease-out; }
+  .tloose .tdn.pack { animation: packaway .5s ease-in forwards; }
+  @keyframes packaway { to { transform: translateX(-120px) scale(.3); opacity: 0; } }
+  .tadd { display: inline-flex; align-items: center; gap: 4px; padding: 6px 10px; border: 2px dashed #ffd7a8; border-radius: 14px; background: #fffaf3; cursor: pointer; }
+  .tadd:hover:not(:disabled) { background: #fffaf3; }
+  .tadd .tdn { width: 40px; height: 40px; }
+  .tadd .plus { font-size: 22px; font-weight: bold; color: #ff8a4c; }
+  .tnum { text-align: center; font-size: 64px; font-weight: bold; line-height: 1.1; margin-top: 6px; font-variant-numeric: tabular-nums; }
+  .tnum .tt { color: #e05a9a; } .tnum .to { color: #ff8a4c; }
+  .tnum .tt.zero { opacity: .25; }
+  .tnum span.bump { display: inline-block; animation: bump .3s; }
+  .tyomi { text-align: center; font-size: 17px; color: #7a4b00; }
+  .tsay { text-align: center; font-size: 13px; color: #9a5a2a; font-weight: bold; min-height: 2.6em; margin-top: 4px; line-height: 1.5; }
   @media (prefers-reduced-motion: reduce) {
+    .tclosed.new, .tdn.new, .tloose .tdn.pack, .tnum span.bump { animation: none; }
     .cust.in, .cust.dance, .cust.out,
     .num.bump, .counter.party svg, .egg.new, .mini.new, .minibox.new, .minitruck.new, .hen.hit svg, .shop.hit svg, .flyegg, .finger { animation: none; }
     .chick { display: none; }
@@ -113,9 +140,30 @@
   <div class="sub"><button type="button" class="chip" id="voice">🗣 こえ あり</button><button type="button" class="chip" id="reset">さいしょから</button></div>
 </div>
 
+<h2 class="ohead">おうようへん: 10こ いりの はこで かぞえる</h2>
+<div class="play ten">
+  <div class="tenrow">
+    <div class="tcol">
+      <div class="tlab">10こ いりの はこ</div>
+      <div class="tboxes" id="tBoxes"></div>
+      <button type="button" class="tadd" id="tAddBox" aria-label="10こ いりの はこを ふやす"><span class="tclosed big"><span>10</span></span><span class="plus">＋</span></button>
+    </div>
+    <div class="tcol">
+      <div class="tlab">ばらの ドーナツ</div>
+      <div class="tloose" id="tLoose"></div>
+      <button type="button" class="tadd" id="tAddOne" aria-label="ドーナツを 1こ ふやす"><span class="tdn" id="tOneIcon"></span><span class="plus">＋</span></button>
+    </div>
+  </div>
+  <div class="tnum" aria-live="polite"><span class="tt" id="tTens">0</span><span class="to" id="tOnes">0</span></div>
+  <div class="tyomi" id="tYomi">ゼロ</div>
+  <div class="tsay" id="tSay">はこを おすと 10こ ふえるよ。ドーナツを おすと 1こ ふえるよ。</div>
+  <div class="sub"><button type="button" class="chip" id="tReset">さいしょから</button></div>
+</div>
+
 <h2>おとなの人へ</h2>
 <ul class="small">
 <li>お店に、お客さんが順番に来る。ほしい箱は、くまさんが10こ入り、うさぎさんが6こ入り、ユニコーンさんが12こ入り(1ダース)。ドーナツの箱は、実際のお店でも6こ入り・12こ入りがよくある。オーブンを押して箱をいっぱいにすると、お客さんが受け取って、次のお客さんが来る。</li>
+<li>下の「おうようへん」では、10こ入りの箱と、ばらのドーナツを足していく。ばらが10こになると箱に詰まる。大きな数字の十の位(ピンク)は箱の数、一の位(オレンジ)はばらの数。たとえば箱2つとばら3こで23。</li>
 <li>ドーナツが1こ入るたびに、指が1本ずつ立つ。人が10ずつまとめて数えるのは、指が10本だからだと言われている。12こ入りでは指が足りなくなり、足の指も使う。</li>
 <li>上の大きな数字は、いま詰めている箱のドーナツの数。箱を渡した直後は、新しい箱が空っぽで0こになる。</li>
 <li>数は、ブラウザの読み上げ(日本語の声がある端末だけ)で読む。音は、AIは耳で確かめていない。</li>
