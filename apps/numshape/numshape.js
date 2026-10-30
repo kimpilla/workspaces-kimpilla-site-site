@@ -64,6 +64,11 @@
   });
   ink.addEventListener('pointermove', (e) => { if (!last) return; const p = pos(e); line(last, p); last = p; });
   const up = () => { if (!last) return; last = null; check(); };
+  // なぞっている あいだ、がめんが うごかない(スクロール・かくだいを しない)ように する。
+  // touch-action だけでは とまらない たんまつ(ふるい iPhone など)が あるので、タッチの イベントでも とめる
+  const stage = $('stage');
+  ['touchstart', 'touchmove', 'touchend'].forEach((t) => stage.addEventListener(t, (e) => { if (e.cancelable) e.preventDefault(); }, { passive: false }));
+  ['gesturestart', 'gesturechange', 'gestureend'].forEach((t) => stage.addEventListener(t, (e) => e.preventDefault(), { passive: false }));
   ink.addEventListener('pointerup', up); ink.addEventListener('pointercancel', up);
 
   function check() {
