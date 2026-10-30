@@ -113,8 +113,13 @@
     b.in.connect(b.dry); b.dry.connect(b.out); b.wet.connect(b.out);
     return b;
   }
+  // おとが でなく なる ことへの そなえ: iPhoneは、でんわ・スリープ・アプリの きりかえで 'interrupted' になる。さいせい できる ように、さわる たびに ひらきなおす。
+  try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) { /* ない たんまつは そのまま */ }   // マナーモードでも ならす
+  const wakeAudio = () => { try { if (ctx && ctx.state !== 'running' && ctx.state !== 'closed') { const p = ctx.resume(); if (p && p.catch) p.catch(() => {}); } } catch (e) { /* つぎの タッチで もういちど */ } };
+  ['pointerdown', 'touchend', 'keydown'].forEach((ev) => document.addEventListener(ev, wakeAudio, { passive: true, capture: true }));
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) wakeAudio(); });
   function ensureAudio() {
-    if (ctx) { if (ctx.state === 'suspended') ctx.resume(); return; }
+    if (ctx) { if (ctx.state !== 'running') ctx.resume(); return; }
     ctx = new (window.AudioContext || window.webkitAudioContext)();
     out = ctx.createGain(); dry = ctx.createGain(); wet = ctx.createGain();
     delay = ctx.createDelay(2); fb = ctx.createGain();

@@ -63,6 +63,11 @@
 
   // ---- おんせい ----
   let ctx = null, out = null;
+  // おとが でなく なる ことへの そなえ: iPhoneは、でんわ・スリープ・アプリの きりかえで 'interrupted' になる。さいせい できる ように、さわる たびに ひらきなおす。
+  try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) { /* ない たんまつは そのまま */ }   // マナーモードでも ならす
+  const wakeAudio = () => { try { if (ctx && ctx.state !== 'running' && ctx.state !== 'closed') { const p = ctx.resume(); if (p && p.catch) p.catch(() => {}); } } catch (e) { /* つぎの タッチで もういちど */ } };
+  ['pointerdown', 'touchend', 'keydown'].forEach((ev) => document.addEventListener(ev, wakeAudio, { passive: true, capture: true }));
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) wakeAudio(); });
   function ensure() { if (ctx) return; ctx = new (window.AudioContext || window.webkitAudioContext)(); out = ctx.createGain(); out.gain.value = 0.2; out.connect(ctx.destination); }
   let s1 = null;                                                    // ① A, B, delay
   function stop1() { if (!s1) return; s1.forEach((o) => { try { o.stop && o.stop(); } catch (e) { /* もう とまっている */ } o.disconnect(); }); s1 = null; }
@@ -72,7 +77,7 @@
     return ctx.createPeriodicWave(re, im, { disableNormalization: true });
   }
   function start1() {
-    ensure(); if (ctx.state === 'suspended') ctx.resume(); stop1();
+    ensure(); if (ctx.state !== 'running') ctx.resume(); stop1();
     const a = ctx.createOscillator(), b = ctx.createOscillator(), g = ctx.createGain();
     a.frequency.value = BASE; b.frequency.value = BASE * st.ratio; b.setPeriodicWave(bWave()); g.gain.value = st.ampB;
     const ga = ctx.createGain(); ga.gain.value = 0.5; const gb = ctx.createGain(); gb.gain.value = 0.5;
@@ -83,7 +88,7 @@
   let s2 = null, lastN = 0, lastT = '';
   function stop2() { if (!s2) return; try { s2.stop(); } catch (e) { /* もう とまっている */ } s2.disconnect(); s2 = null; }
   function start2() {
-    ensure(); if (ctx.state === 'suspended') ctx.resume(); stop2();
+    ensure(); if (ctx.state !== 'running') ctx.resume(); stop2();
     const real = new Float32Array(N + 1), imag = new Float32Array(N + 1);
     for (let k = 1; k <= st.n; k++) imag[k] = coef(st.target, k);
     const o = ctx.createOscillator(); o.setPeriodicWave(ctx.createPeriodicWave(real, imag, { disableNormalization: true }));
@@ -224,7 +229,7 @@
   }
   function wave3() { if (!s3 || s3.thr) return; s3.thr = setTimeout(() => { if (s3) { s3.thr = 0; trig(); } }, 150); }
   function start3() {
-    ensure(); if (ctx.state === 'suspended') ctx.resume(); stop3();
+    ensure(); if (ctx.state !== 'running') ctx.resume(); stop3();
     const nodes = [], os = [], gs = [], os2 = [], gb = [], l = ctx.createOscillator(), lg = ctx.createGain(); l.frequency.value = 5; lg.gain.value = 0; l.connect(lg); l.start(); nodes.push(l, lg);
     for (let k = 1; k <= N; k++) { const o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.value = BASE * k; g.gain.value = 0; lg.connect(o.detune); o.connect(g); g.connect(out); o.start(); os.push(o); gs.push(g); nodes.push(o, g); const o2 = ctx.createOscillator(), b2 = ctx.createGain(); o2.frequency.value = BASE * k; b2.gain.value = 0; lg.connect(o2.detune); o2.connect(b2); b2.connect(g); o2.start(); os2.push(o2); gb.push(b2); nodes.push(o2, b2); }
     const nb = ctx.createBufferSource(); nb.buffer = noiseBuf3(); nb.loop = true; const nf = ctx.createBiquadFilter(), ng = ctx.createGain(); ng.gain.value = 0; nb.connect(nf); nf.connect(ng); ng.connect(out); nb.start(); nodes.push(nb, nf, ng);

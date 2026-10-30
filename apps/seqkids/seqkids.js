@@ -51,8 +51,13 @@
   // ---- 音 ----
   let ctx = null, master = null, partGain = null, curPart = 0, noiseBuf = null, dSend = null, dNode = null;
   S.dly = false;
+  // おとが でなく なる ことへの そなえ: iPhoneは、でんわ・スリープ・アプリの きりかえで 'interrupted' になる。さいせい できる ように、さわる たびに ひらきなおす。
+  try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) { /* ない たんまつは そのまま */ }   // マナーモードでも ならす
+  const wakeAudio = () => { try { if (ctx && ctx.state !== 'running' && ctx.state !== 'closed') { const p = ctx.resume(); if (p && p.catch) p.catch(() => {}); } } catch (e) { /* つぎの タッチで もういちど */ } };
+  ['pointerdown', 'touchend', 'keydown'].forEach((ev) => document.addEventListener(ev, wakeAudio, { passive: true, capture: true }));
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) wakeAudio(); });
   function ensureAudio() {
-    if (ctx) { if (ctx.state === 'suspended') ctx.resume(); return; }
+    if (ctx) { if (ctx.state !== 'running') ctx.resume(); return; }
     ctx = new (window.AudioContext || window.webkitAudioContext)();
     const comp = ctx.createDynamicsCompressor(); master = ctx.createGain(); master.gain.value = 0.8;
     master.connect(comp); comp.connect(ctx.destination);
@@ -184,10 +189,13 @@
       nextT += stepDur(); tick++;
     }
   }
-  function start() { ensureAudio(); S.playing = true; tick = 0; nextT = ctx.currentTime + 0.06; queue.length = 0; schedule(); timer = setInterval(schedule, 25); $('playBtn').textContent = '⏹ とめる'; $('playBtn').classList.add('on'); }
-  function stop() { S.playing = false; clearInterval(timer); queue.length = 0; $('playBtn').textContent = '▶ はじめる'; $('playBtn').classList.remove('on'); curTick = -1; S.rec = false; if (typeof syncRec === 'function') syncRec(); }
+  let wl = null;                                                       // さいせい中は、がめんを スリープさせない(Screen Wake Lock)
+  async function lock() { try { if ('wakeLock' in navigator && !wl) { wl = await navigator.wakeLock.request('screen'); wl.addEventListener('release', () => { wl = null; }); } } catch (e) { wl = null; /* つかえない たんまつ・きょかが ない ときは、そのまま */ } }
+  function unlock() { try { if (wl) { wl.release(); wl = null; } } catch (e) { wl = null; } }
+  function start() { lock(); ensureAudio(); S.playing = true; tick = 0; nextT = ctx.currentTime + 0.06; queue.length = 0; schedule(); timer = setInterval(schedule, 25); $('playBtn').textContent = '⏹ とめる'; $('playBtn').classList.add('on'); }
+  function stop() { unlock(); S.playing = false; clearInterval(timer); queue.length = 0; $('playBtn').textContent = '▶ はじめる'; $('playBtn').classList.remove('on'); curTick = -1; S.rec = false; if (typeof syncRec === 'function') syncRec(); }
   $('playBtn').onclick = () => (S.playing ? stop() : start());
-  document.addEventListener('visibilitychange', () => { if (document.hidden && S.playing) stop(); });
+  document.addEventListener('visibilitychange', () => { if (document.hidden && S.playing) stop(); else if (!document.hidden && S.playing) lock(); });
 
   // ---- 円のばん ----
   const cv = $('ring'), g2 = cv.getContext('2d');
@@ -416,7 +424,8 @@
   const blockPal = () => (gGroup === 1 ? BCOL : PCOL);
   const same = (a, b) => a.length === b.length && a.every((v, i) => v === b[i]);
   const mini = (vals) => { const pal = blockPal(); return '<svg viewBox="0 0 48 30" aria-hidden="true"><rect x="0" y="0" width="48" height="30" rx="5" fill="#fff"/>' + vals.map((v, i) => v >= 0 ? '<rect x="' + (i * 12 + 1) + '" y="' + ((5 - v) * 5 + 0.5) + '" width="10" height="4" rx="1.5" fill="' + pal[v] + '"/>' : '<circle cx="' + (i * 12 + 6) + '" cy="27" r="1.6" fill="#d9ccaa"/>').join('') + '</svg>'; };
-  function previewBlock(vals) { const id = blockId(); if (!id) return; ensureAudio(); const t = ctx.currentTime + 0.05; vals.forEach((v, i) => { if (v >= 0) playCell(id, v, t + i * stepDur()); }); }
+  function previewBlock(vals) { const id = blockId(); if (!id || S.playing) return; ensureAudio();      // さいせい中は、ならさない(はやさに あわせて ながれる おとで かわりを きく)
+    const t = ctx.currentTime + 0.05; vals.forEach((v, i) => { if (v >= 0) playCell(id, v, t + i * stepDur()); }); }
   const slotVals = (s) => { const id = blockId(); return id ? S.cells[id].slice(s * BL, s * BL + BL) : []; };
   const setSlot = (s, vals) => { const arr = S.cells[blockId()]; vals.forEach((v, i) => { arr[s * BL + i] = v; }); };
   function renderBlocks(force) {
@@ -578,6 +587,10 @@
     if (m && !S.mute[0] && S.cells.mel[stepOf(0, tk)] >= 0) { m.style.transform = 'scaleY(3)'; clearTimeout(el._t); el._t = setTimeout(() => { m.style.transform = ''; }, Math.max(120, stepDur() * 1500)); }
   }
   $('dlyBtn').onclick = () => { S.dly = !S.dly; ensureAudio(); buildDly(); if (S.dly) melody(ctx.currentTime + 0.01, 2); };
+  $('center').onclick = () => {                                       // まんなかの キャラを おすと、つぎの こえに かわる
+    const i = CHARS.findIndex((c) => c.id === S.char); S.char = CHARS[(i + 1) % CHARS.length].id; buildChars(); ensureAudio(); melody(ctx.currentTime + 0.01, 0);
+    const ce = $('center'); ce.classList.remove('pop'); void ce.offsetWidth; ce.classList.add('pop'); clearTimeout(ce._pt); ce._pt = setTimeout(() => ce.classList.remove('pop'), 400);
+  };
   function buildChars() {
     $('chars').innerHTML = CHARS.map((c) => '<button type="button" class="char' + (c.id === S.char ? ' sel' : '') + '" data-id="' + c.id + '">' + charSvg(c) + '<div>' + c.name + '</div></button>').join('');
     $('center').innerHTML = charSvg(byId(S.char)); $('dancer').innerHTML = charSvg(byId(S.char));

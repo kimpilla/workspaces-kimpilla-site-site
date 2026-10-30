@@ -64,6 +64,11 @@
 
   // ---- おんせい ----
   let ctx = null, filt = null, out = null, src = null, noiseBuf = null;
+  // おとが でなく なる ことへの そなえ: iPhoneは、でんわ・スリープ・アプリの きりかえで 'interrupted' になる。さいせい できる ように、さわる たびに ひらきなおす。
+  try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) { /* ない たんまつは そのまま */ }   // マナーモードでも ならす
+  const wakeAudio = () => { try { if (ctx && ctx.state !== 'running' && ctx.state !== 'closed') { const p = ctx.resume(); if (p && p.catch) p.catch(() => {}); } } catch (e) { /* つぎの タッチで もういちど */ } };
+  ['pointerdown', 'touchend', 'keydown'].forEach((ev) => document.addEventListener(ev, wakeAudio, { passive: true, capture: true }));
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) wakeAudio(); });
   function ensure() {
     if (ctx) return;
     ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -75,7 +80,7 @@
   }
   function stopSound() { if (src) { try { src.stop(); } catch (e) { /* もう とまっている */ } src.disconnect(); src = null; } }
   function startSound() {
-    ensure(); if (ctx.state === 'suspended') ctx.resume();
+    ensure(); if (ctx.state !== 'running') ctx.resume();
     stopSound();
     if (st.wave === 'noise') { src = ctx.createBufferSource(); src.buffer = noiseBuf; src.loop = true; }
     else { src = ctx.createOscillator(); src.type = st.wave; src.frequency.value = f0(); }

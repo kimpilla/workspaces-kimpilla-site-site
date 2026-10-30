@@ -43,3 +43,11 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 
 h3.sub { font-size: 14px; margin: 18px 0 0; padding-left: 8px; border-left: 4px solid var(--accent); }
 ul.list + h3.sub { margin-top: 22px; }
+
+/* さわって あそぶ ページ: スライダーを うごかす とき、文字の 選択(青い「コピー」)や、ページの よこゆれが 出ないように */
+body:has(input[type=range]), body:has(canvas), body:has(button) { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
+body:has(input[type=range]) textarea, body:has(canvas) textarea, body:has(button) textarea,
+body:has(input[type=range]) input[type=text], body:has(canvas) input[type=text], body:has(button) input[type=text],
+pre, code { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
+input[type=range] { touch-action: pan-y; }
+html, body { overscroll-behavior-x: none; }

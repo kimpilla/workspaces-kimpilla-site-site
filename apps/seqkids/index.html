@@ -21,7 +21,10 @@
   #dancer svg { width: 100%; height: auto; display: block; overflow: visible; transform-origin: 50% 90%; }
   #dancer .mouth { transform-box: fill-box; transform-origin: center; transition: transform .06s; }
   #dlyBtn.on, #dlyBtn.on:hover:not(:disabled) { background: #ffe3cf; border-color: #ff7a3d; color: #7a4b00; }
-  #center { position: absolute; left: 50%; top: 50%; width: 26%; transform: translate(-50%, -50%); pointer-events: none; }
+  #center { position: absolute; left: 50%; top: 50%; width: 26%; transform: translate(-50%, -50%); pointer-events: auto; cursor: pointer; touch-action: manipulation; }
+  #center.pop svg { animation: cpop .35s ease-out; }
+  @keyframes cpop { 0% { transform: scale(.7) rotate(-14deg); } 55% { transform: scale(1.18) rotate(8deg); } 100% { transform: scale(1); } }
+  @media (prefers-reduced-motion: reduce) { #center.pop svg { animation: none; } }
   #center svg { width: 100%; height: auto; display: block; overflow: visible; }
   #center .mouth, .char .mouth { transform-box: fill-box; transform-origin: center; transition: transform .06s; }
   #center.hit svg { animation: bob .18s ease-in-out infinite alternate; }
@@ -190,7 +193,7 @@
   <div class="rep">
     <div class="rephead" id="repHead"></div>
     <div id="voiceBox">
-        <p class="small" style="margin:4px 0"><b>🎤 メロディの だれの こえ?</b></p>
+        <p class="small" style="margin:4px 0"><b>🎤 メロディの だれの こえ?</b>(まるい ばんの まんなかの キャラを おしても かわるよ)</p>
         <div class="chars" id="chars"></div>
         <div class="row" style="margin:6px 0 2px"><button type="button" class="big sm" id="dlyBtn">🔁 やまびこ: なし</button></div>
         <p class="small" style="margin:2px 0">メロディの おとが、はやさに あわせて 「やまびこ」みたいに くりかえすよ(おとの 3マスぶん おくれて)。</p>
