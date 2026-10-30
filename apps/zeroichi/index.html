@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>0から？ 1から？ | kimpilla</title>
+<link rel="stylesheet" href="../../style.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Klee+One:wght@600&display=swap">
+<style>
+  .play { background: #fbf8f1; color: #4a4038; border-radius: 22px; padding: 10px 10px 12px; margin: 8px 0; border: 3px solid #e8dfcc; font-family: "Hiragino Maru Gothic ProN", "Yu Gothic", system-ui, sans-serif; }
+  .play button { font-family: inherit; margin: 0; touch-action: manipulation; }
+  h1 { margin: 14px 0 0; }
+  .num { font-family: "Klee One", serif; font-weight: 600; }
+  /* いまの カード */
+  .card { background: #fff; border-radius: 18px; box-shadow: 0 3px 0 #e8dfcc; padding: 10px 12px; display: flex; align-items: center; gap: 12px; min-height: 104px; transition: transform .35s ease-in, opacity .35s ease-in; }
+  .card img { width: 84px; height: 84px; flex: none; }
+  .card .q { font-size: 19px; font-weight: bold; line-height: 1.5; color: #4a4038; }
+  .card.shake { animation: shake .4s; }
+  @keyframes shake { 20%, 60% { transform: translateX(-8px); } 40%, 80% { transform: translateX(8px); } }
+  .card.toL { transform: translate(-25%, 120%) scale(.3); opacity: 0; }
+  .card.toR { transform: translate(25%, 120%) scale(.3); opacity: 0; }
+  /* わけ(かずの ならび) */
+  .why { min-height: 128px; margin-top: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .why .t { font-size: 15px; font-weight: bold; color: #6b6058; text-align: center; margin-top: 4px; }
+  .seq { display: flex; align-items: flex-end; gap: 4px; }
+  .seq.tower { flex-direction: column-reverse; align-items: center; gap: 3px; }
+  .cell { background: #fff; border: 2px solid #e8dfcc; border-radius: 12px; min-width: 56px; padding: 2px 6px; text-align: center; color: #6b6058; }
+  .cell .n { font-size: 30px; line-height: 1.1; }
+  .cell .u { font-size: 12px; font-weight: bold; }
+  .cell.first { border-color: #e8a46a; background: #fff3e6; color: #d27a3a; }
+  .cell img { width: 34px; height: 34px; display: block; margin: 0 auto; }
+  .seq .ar { color: #c9bca8; font-size: 16px; align-self: center; }
+  .tower .cell { width: 120px; display: flex; align-items: center; justify-content: center; gap: 6px; }
+  .tower .cell .n { font-size: 24px; }
+  .tower .cell img { width: 26px; height: 26px; margin: 0; }
+  .ruler { width: min(100%, 320px); }
+  .ruler text { font-family: "Klee One", serif; font-weight: 600; }
+  /* はこ */
+  .boxes { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+  .box { border: 0; border-radius: 18px; padding: 6px 4px 8px; color: #4a4038; box-shadow: 0 4px 0 #0002; min-height: 150px; display: flex; flex-direction: column; align-items: center; }
+  .box:hover:not(:disabled) { color: #4a4038; }
+  .box.z, .box.z:hover:not(:disabled) { background: #dff1ff; }
+  .box.o, .box.o:hover:not(:disabled) { background: #ffe3ee; }
+  .box .big { font-size: 54px; line-height: 1; }
+  .box .lb { font-size: 13px; font-weight: bold; }
+  .box .in { display: flex; flex-wrap: wrap; justify-content: center; gap: 2px; margin-top: 6px; min-height: 34px; }
+  .box .in img { width: 32px; height: 32px; animation: drop .35s ease-out; }
+  @keyframes drop { from { transform: translateY(-20px) scale(1.4); opacity: 0; } }
+  .box:active { transform: translateY(3px); box-shadow: 0 1px 0 #0002; }
+  .box.no { animation: shake .4s; }
+  .row { display: flex; justify-content: center; gap: 8px; margin-top: 10px; }
+  .chip { font-size: 13px; padding: 5px 12px; border-radius: 999px; border: 2px solid #e8dfcc; background: #fff; color: #6b6058; font-weight: bold; }
+  .chip:hover:not(:disabled) { background: #fff; color: #6b6058; }
+  .chip.go { border-color: #e8a46a; background: #fff3e6; font-size: 16px; padding: 7px 18px; }
+  [hidden] { display: none !important; }
+  .credit { font-size: 11px; color: var(--muted); }
+  @media (prefers-reduced-motion: reduce) { .card, .box .in img { transition: none; animation: none; } }
+</style>
+</head>
+<body>
+<header>
+  <a class="home" href="../../index.html">kimpilla</a>
+  <nav><a href="../../music.html">音楽</a> <a href="../../apps.html">アプリ</a> <a href="../../memo.html">メモ</a></nav>
+</header>
+<main>
+<h1>0から？ 1から？</h1>
+<div class="play">
+  <div class="card" id="card"><img id="cimg" alt=""><div class="q" id="q"></div></div>
+  <div class="why" id="why"></div>
+  <div class="boxes">
+    <button type="button" class="box z" id="b0"><span class="big num">0</span><span class="lb">0から はじまる</span><span class="in" id="in0"></span></button>
+    <button type="button" class="box o" id="b1"><span class="big num">1</span><span class="lb">1から はじまる</span><span class="in" id="in1"></span></button>
+  </div>
+  <div class="row"><button type="button" class="chip go" id="next" hidden>つぎ</button><button type="button" class="chip go" id="again" hidden>もういちど</button><button type="button" class="chip" id="voice">こえ あり</button></div>
+</div>
+
+<h2>おとなの人へ</h2>
+<ul class="small">
+<li>身の回りの数には、0から数えるもの(年齢・ものさし・時計)と、1から数えるもの(建物の階・かけっこの順位)がある。カードを読んで、「0から はじまる」「1から はじまる」のどちらかの箱を押す。</li>
+<li>箱を押すと、その数の並び(0さい→1さい→2さい、1かい・2かい・3かい など)が出て、最初の数が色つきで見える。違う箱を押しても、カードが揺れて並びが出るだけで、もう一度選べる(当てるより、並びを見ることが目当て)。5枚ぜんぶ分けたら「もういちど」で順番を変えて遊べる。</li>
+<li>年齢: 生まれたときは0さいで、1年たつと1さい。階: いちばん下が1かい(国によっては0から数える)。ものさし: 目盛りは0から。かけっこ: いちばんは1ばん。時計: 日付が変わる夜中は0じ(24時間の数え方)。</li>
+<li>文は、ブラウザの読み上げ(日本語の声がある端末だけ)で読む。音は、AIは耳で確かめていない。</li>
+</ul>
+<p class="credit">イラスト: Microsoft「Fluent Emoji」(MITライセンス。<a href="img/LICENSE-fluentui-emoji.txt">ライセンス文</a>)/ 数字: Klee One(Google Fonts)</p>
+</main>
+<footer>kimpilla</footer>
+<script src="zeroichi.js"></script>
+</body>
+</html>
