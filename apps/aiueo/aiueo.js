@@ -63,6 +63,11 @@
     const b = await load(i);
     const s = ac.createBufferSource(); s.buffer = b;
     s.connect(robot ? voc.modIn : plainOut); s.start();
+    const t0 = performance.now();                                  // しらべる: ほんとうに なった じかんと、ファイルの ながさを くらべる
+    s.onended = () => {
+      const real = (performance.now() - t0) / 1000;
+      $('diag').textContent = 'しらべる: 版 v5 / こえ「' + KANA[i] + '」 ファイル ' + b.duration.toFixed(2) + '秒・' + b.sampleRate + 'Hz → なった じかん ' + real.toFixed(2) + '秒 / おとの はやさ ' + ac.sampleRate + 'Hz / audioSession ' + (navigator.audioSession ? navigator.audioSession.type : 'なし');
+    };
     if (robot) {                                                   // こえが なっている あいだだけ ロボットの おとを だす
       const g = voc.out.gain, t = ac.currentTime;
       g.cancelScheduledValues(t); g.setValueAtTime(g.value, t); g.linearRampToValueAtTime(0.8, t + 0.01);
