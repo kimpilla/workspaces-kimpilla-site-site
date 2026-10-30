@@ -25,7 +25,7 @@
   .runner canvas { pointer-events: auto; }
   .critter { pointer-events: none; }
   .runner.walk { animation: away 2.2s ease-in .6s forwards; }
-  @keyframes away { 0% { transform: translateX(0); } 100% { transform: translateX(135%); } }
+  @keyframes away { 0% { transform: translateX(0); } 100% { transform: translateX(-135%); } }
   .runner .bob { position: absolute; inset: 0; }
   .runner.walk .bob { animation: bob .22s ease-in-out .6s infinite alternate; }
   @keyframes bob { from { transform: translateY(0) rotate(-2deg); } to { transform: translateY(-3%) rotate(2deg); } }
@@ -72,7 +72,7 @@
 
 <h2>おとなの人へ</h2>
 <ul class="small">
-<li>うすく出ている数字を指でなぞると、鉛筆で書いたような線が残る。だいたいなぞれたら、なぞった数字に目玉と2本の足が生えて、とことこ逃げていく。そのあと、その数字の形に似たもののイラストが出てきて、声で読む。上手になぞれたかどうかは見ていない(最後までなぞれば出てくる)。</li>
+<li>うすく出ている数字を指でなぞると、鉛筆で書いたような線が残る。だいたいなぞれたら、なぞった数字に目玉と2本の足が生えて、とことこ左へ逃げていく。そのあと、その数字の形に似たもののイラストが出てきて、声で読む。上手になぞれたかどうかは見ていない(最後までなぞれば出てくる)。</li>
 <li>数字の形と似ているもの: 0=ドーナツ、1=ろうそく、2=はくちょう、3=みみ、4=ヨット、5=おんぷ、6=さくらんぼ、7=すべりだい、8=ゆきだるま、9=ふうせん。</li>
 <li>数字の字は、教科書体に近い無料のフォント「Klee One」(Google Fonts)。数は、ブラウザの読み上げ(日本語の声がある端末だけ)で読む。音は、AIは耳で確かめていない。</li>
 </ul>

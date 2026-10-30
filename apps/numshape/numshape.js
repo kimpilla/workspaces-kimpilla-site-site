@@ -17,6 +17,14 @@
       pc.fillStyle = Math.random() < 0.5 ? 'rgba(120,100,80,0.05)' : 'rgba(255,255,255,0.6)';
       pc.fillRect(Math.random() * paper.width, Math.random() * paper.height, 1.5 * dpr, 1.5 * dpr);
     }
+    // ノートの けいせん(うすい あおの よこせんと、せんの うえの てん)
+    const step = paper.height / 9;
+    pc.fillStyle = 'rgba(110,160,205,0.55)';
+    for (let k = 1; k < 9; k++) {
+      const y = Math.round(k * step);
+      pc.fillRect(0, y, paper.width, Math.max(1, dpr));
+      for (let x = step; x < paper.width; x += step) pc.fillRect(x - dpr, y - dpr, 2.4 * dpr, 2.4 * dpr);
+    }
     pc.font = FONT.replace('{s}', Math.round(W * 0.9 * dpr));
     pc.textAlign = 'center'; pc.textBaseline = 'middle';
     pc.fillStyle = 'rgba(160,150,140,0.28)';
@@ -108,9 +116,9 @@
   function critter() {                                            // めだま(うえ)と あし 2ほん(した)。まると せんだけ
     const k = 100 / ink.width, cx = (box.x0 + box.x1) / 2 * k, top = box.y0 * k, bot = box.y1 * k;
     const P = 'url(#pencil)', u = 96 * k;                          // えんぴつの もよう(なぞった せんと おなじ)
-    const eyeInk = (x) => '<circle cx="' + x + '" cy="' + (top - 4) + '" r="5.2" fill="none" stroke="' + P + '" stroke-width="1.6"/><circle cx="' + (x + 1.2) + '" cy="' + (top - 3.4) + '" r="2.6" fill="' + P + '"/>';
-    const eye = (x) => '<circle cx="' + x + '" cy="' + (top - 4) + '" r="5.2" fill="#fffdf8"/>' + eyeInk(x) + eyeInk(x) + '<circle cx="' + (x + 0.5) + '" cy="' + (top - 4.3) + '" r=".8" fill="#fffdf8"/>';   // 2かい かさねて、なぞった せんと おなじ こさに
-    const legInk = (x) => '<path d="M' + x + ' ' + bot + ' v10" stroke="' + P + '" stroke-width="2.6" stroke-linecap="round"/><ellipse cx="' + (x + 2.2) + '" cy="' + (bot + 10.5) + '" rx="3.6" ry="1.9" fill="' + P + '"/>';
+    const eyeInk = (x) => '<circle cx="' + x + '" cy="' + (top - 4) + '" r="5.2" fill="none" stroke="' + P + '" stroke-width="1.6"/><circle cx="' + (x - 1.2) + '" cy="' + (top - 3.4) + '" r="2.6" fill="' + P + '"/>';
+    const eye = (x) => '<circle cx="' + x + '" cy="' + (top - 4) + '" r="5.2" fill="#fffdf8"/>' + eyeInk(x) + eyeInk(x) + '<circle cx="' + (x - 1.9) + '" cy="' + (top - 4.3) + '" r=".8" fill="#fffdf8"/>';   // 2かい かさねて、なぞった せんと おなじ こさに
+    const legInk = (x) => '<path d="M' + x + ' ' + bot + ' v10" stroke="' + P + '" stroke-width="2.6" stroke-linecap="round"/><ellipse cx="' + (x - 2.2) + '" cy="' + (bot + 10.5) + '" rx="3.6" ry="1.9" fill="' + P + '"/>';
     const leg = (x, cls) => '<g class="leg ' + cls + '">' + legInk(x) + legInk(x) + '</g>';
     $('critter').innerHTML = '<defs><pattern id="pencil" patternUnits="userSpaceOnUse" width="' + u + '" height="' + u + '"><image href="' + grainURL + '" width="' + u + '" height="' + u + '"/></pattern></defs><g class="eyes">' + eye(cx - 5.6) + eye(cx + 5.6) + '</g><g class="legs">' + leg(cx - 5, 'l') + leg(cx + 5, 'r') + '</g>';
   }
@@ -129,7 +137,7 @@
     $('rimg').src = 'img/' + digit + '.svg'; $('rimg').alt = NAME[digit];
     critter(); $('stage').classList.add('alive');                  // めだまと あしが はえる
     chime(); steps();
-    timers.push(setTimeout(() => $('runner').classList.add('walk'), 350));      // とことこ にげていく
+    timers.push(setTimeout(() => $('runner').classList.add('walk'), 350));      // とことこ ひだりへ にげていく
     timers.push(setTimeout(() => {                                 // にげたあと、かたちの にている もの
       $('runner').style.visibility = 'hidden'; $('stage').classList.add('shown');
       $('msg').innerHTML = '<b>' + digit + '</b> は ' + NAME[digit] + 'の かたち！';
