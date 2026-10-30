@@ -110,10 +110,15 @@
     const partying = Date.now() < partyUntil;
     $('counter').innerHTML = drawWho(partying ? b : p.loose);
     $('counter').classList.toggle('party', partying);
-    // おさら
+    // つめている とちゅうの パック(あなは かぞえる かかりの かず。からっぽの ときは 0 を だす)
     $('cLoose').textContent = p.loose;
-    $('plate').innerHTML = p.loose ? '' : '<span class="empty">からっぽ</span>';
-    for (let i = 0; i < p.loose; i++) { const e = document.createElement('span'); e.className = 'egg' + (fx.newLoose && i === p.loose - 1 ? ' new' : ''); $('plate').appendChild(e); }
+    const pl = $('plate'); pl.innerHTML = ''; pl.style.gridTemplateColumns = 'repeat(' + (b / 2) + ', 26px)';
+    for (let i = 0; i < b; i++) {
+      const sl = document.createElement('span'); sl.className = 'slot';
+      if (i < p.loose) sl.innerHTML = '<span class="egg' + (fx.newLoose && i === p.loose - 1 ? ' new' : '') + '"></span>';
+      pl.appendChild(sl);
+    }
+    $('zero').textContent = p.loose ? '' : '0';
     // パック
     $('cPack').textContent = p.pack; $('packNote').textContent = '(1パックに ' + b + 'こ)';
     $('packs').innerHTML = p.pack ? '' : '<span class="empty">まだ ない</span>';

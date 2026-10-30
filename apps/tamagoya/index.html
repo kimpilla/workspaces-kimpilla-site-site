@@ -51,7 +51,10 @@
   .row .lab { font-size: 13px; color: #8a6a3a; margin-bottom: 4px; }
   .row .lab b { font-size: 18px; color: #d2541a; font-variant-numeric: tabular-nums; }
   .items { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; min-height: 40px; }
-  .plate { display: flex; flex-wrap: wrap; gap: 4px; align-items: flex-end; justify-content: center; min-height: 48px; min-width: 160px; padding: 6px 14px 10px; border-radius: 50%; background: radial-gradient(ellipse at center, #fff 55%, #e9e2d3 56%, #fff 70%); border: 2px solid #e2d7bf; }
+  .opencarton { display: grid; gap: 4px; padding: 8px; border-radius: 10px; background: #cfe8f7; border: 3px solid #9cc8e6; }
+  .slot { width: 26px; height: 32px; border-radius: 50% 50% 46% 46% / 60% 60% 40% 40%; background: #e6f3fb; box-shadow: inset 0 3px 4px #7fb3d655; display: flex; align-items: center; justify-content: center; }
+  .slot .egg { width: 24px; height: 30px; }
+  .zero { font-size: 40px; font-weight: bold; color: #d2541a; margin-left: 12px; align-self: center; }
   .egg { width: 24px; height: 30px; display: inline-block; background: radial-gradient(circle at 35% 30%, #fff 0 20%, #fbeedc 45%, #f0d9b5 100%); border-radius: 50% 50% 46% 46% / 60% 60% 40% 40%; box-shadow: 0 2px 2px #0002; }
   .egg.new { animation: roll .4s ease-out; }
   @keyframes roll { 0% { transform: translateX(-40px) rotate(-200deg); opacity: 0; } 100% { transform: none; opacity: 1; } }
@@ -129,7 +132,7 @@
 
   <h2>たまご</h2>
   <div class="field">
-    <div class="row"><div class="lab">おさら(ばら) <b id="cLoose">0</b> こ</div><div class="items"><div class="plate" id="plate"></div></div></div>
+    <div class="row"><div class="lab">いま つめている パック <b id="cLoose">0</b> こ</div><div class="items"><div class="opencarton" id="plate"></div><span class="zero" id="zero"></span></div></div>
     <div class="row"><div class="lab">パック <b id="cPack">0</b> こ <span id="packNote"></span></div><div class="items" id="packs"></div></div>
     <div class="row"><div class="lab">はこ <b id="cBox">0</b> こ <span id="boxNote"></span></div><div class="items" id="boxes"></div></div>
     <div class="row"><div class="lab">トラック <b id="cTruck">0</b> だい <span id="truckNote"></span></div><div class="items" id="trucks"></div></div>
@@ -139,7 +142,7 @@
 <h2>おとなの人へ</h2>
 <ul class="small">
 <li>たまごが1こ増えるたびに、指が1本ずつ立つ。10本ぜんぶ立つと、たまごがパックにしまわれ、指はグーに戻る。人が10ずつまとめて数えるのは、指が10本だからだと言われている。</li>
-<li>パックが10こで箱、箱が10こでトラック。数字の各桁は、ばら・パック・箱・トラックがそれぞれ何こあるかに当たる。たとえば「236」は、箱2つ・パック3つ・ばら6こ。パックにしまった直後は、お皿が空(ばら0こ)になる。これが「10」「20」の0。</li>
+<li>パックが10こで箱、箱が10こでトラック。数字の各桁は、つめている途中のパックのたまご(ばら)・閉じたパック・箱・トラックがそれぞれ何こあるかに当たる。たとえば「236」は、箱2つ・パック3つ・ばら6こ。パックがいっぱいになって閉じた直後は、新しいパックが空っぽ(ばら0こ)になる。これが「10」「20」の0。</li>
 <li>「だれが かぞえる？」でタコ(足8本)やむし(足6本)を選ぶと、パックに入る数が8こ・6こに変わる。上の数字は、いつもの数え方の「たまごの全部の数」のままにしてある。</li>
 <li>数は、ブラウザの読み上げ(日本語の声がある端末だけ)で読む。ときどき、ひよこが遊びに来る(数とは関係ない)。音は、AIは耳で確かめていない。</li>
 </ul>
