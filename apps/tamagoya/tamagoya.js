@@ -1,7 +1,6 @@
 // たまごやさん: おきゃくさんの ちゅうもん(6こ・10こ・12こ いりの パック)を、にわとりの たまごで いっぱいに する
 (() => {
   const $ = (id) => document.getElementById(id);
-  const MAX = 99999;
 
   // ---- おきゃくさん(ほしい パックの おおきさは、ほんとうに おみせに ある 6・10・12) ----
   const CUST = [
@@ -88,21 +87,20 @@
   }
 
   // ---- じょうたい ----
-  let n = 0, fill = 0, cust = CUST[0], busy = false, sold = [], partyUntil = 0;
+  let fill = 0, cust = CUST[0], busy = false, sold = [], partyUntil = 0;
   function render(newEgg) {
     const s = cust.size;
-    $('num').textContent = n; $('yomi').textContent = yomi(n);
+    $('num').textContent = fill; $('yomi').textContent = yomi(fill); $('packsize').textContent = s + 'こ いり' + (s === 12 ? '(1ダース)' : '');
     const partying = Date.now() < partyUntil;
     $('counter').innerHTML = handsSvg(partying ? s : fill, s);
     $('counter').classList.toggle('party', partying);
-    $('cLoose').textContent = fill;
     const pl = $('plate'); pl.innerHTML = ''; pl.style.gridTemplateColumns = 'repeat(' + (s / 2) + ', 22px)';
     for (let i = 0; i < s; i++) {
       const sl = document.createElement('span'); sl.className = 'slot';
       if (i < fill) sl.innerHTML = '<span class="egg' + (newEgg && i === fill - 1 ? ' new' : '') + '"></span>';
       pl.appendChild(sl);
     }
-    $('cSold').textContent = sold.length; $('cSoldEggs').textContent = sold.reduce((a, x) => a + x, 0);
+    $('cSold').textContent = sold.length;
     const box = $('sold'); box.innerHTML = '';
     sold.slice(-14).forEach((sz, i, arr) => { const e = document.createElement('span'); e.className = 'mini s' + sz + (i === arr.length - 1 && partying ? ' new' : ''); e.title = sz + 'こ いり'; box.appendChild(e); });
     if (sold.length > 14) { const m = document.createElement('span'); m.className = 'more'; m.textContent = '…'; box.prepend(m); }
@@ -123,8 +121,8 @@
   }
 
   function addEgg() {
-    if (busy || n >= MAX) return false;
-    n++; fill++;
+    if (busy) return false;
+    fill++;
     const num = $('num'); num.classList.remove('bump'); void num.offsetWidth; num.classList.add('bump');
     const s = cust.size;
     if (fill === s) {                                              // いっぱい！ おきゃくさんに わたす
@@ -179,7 +177,7 @@
   hen.addEventListener('click', (e) => { if (e.detail === 0) lay(); });   // キーボード(Enter・スペース)
   hen.addEventListener('contextmenu', (e) => e.preventDefault());
   $('shop').addEventListener('click', () => { hitAnim($('shop')); if (!busy) sayWords(cust.name + '。' + cust.size + 'こ ください'); });
-  $('reset').onclick = () => { stopHold(); n = 0; fill = 0; sold = []; busy = false; partyUntil = 0; cust = CUST[0]; showCust(true); render(); };
+  $('reset').onclick = () => { stopHold(); fill = 0; sold = []; busy = false; partyUntil = 0; cust = CUST[0]; showCust(true); render(); };
   $('voice').onclick = () => { voiceOn = !voiceOn; $('voice').textContent = voiceOn ? '🗣 こえ あり' : '🤐 こえ なし'; if (!voiceOn && window.speechSynthesis) speechSynthesis.cancel(); };
   if (window.speechSynthesis) speechSynthesis.getVoices();
   showCust(true);

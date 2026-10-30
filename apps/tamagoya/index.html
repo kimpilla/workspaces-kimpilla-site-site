@@ -107,7 +107,7 @@
         </svg>
       <span class="finger" id="finger" aria-hidden="true">👆</span>
     </button>
-    <div class="packbox"><div class="opencarton" id="plate"></div><div class="loose">いま <b id="cLoose">0</b> こ</div></div>
+    <div class="packbox"><div class="opencarton" id="plate"></div><div class="loose" id="packsize">10こ いり</div></div>
     <div class="shopwrap">
       <div class="cust" id="cust"></div>
       <div class="bubble" id="bubble"></div>
@@ -128,7 +128,7 @@
   </div>
   <div class="counterwrap"><div class="counter" id="counter"></div><div class="say" id="say"></div></div>
   <div class="store">
-    <div class="shelf" style="flex-basis:100%"><div class="lab">うれた パック <b id="cSold">0</b> こ ・ うれた たまご <b id="cSoldEggs">0</b> こ</div><div class="its" id="sold"></div></div>
+    <div class="shelf" style="flex-basis:100%"><div class="lab">うれた パック <b id="cSold">0</b> こ</div><div class="its" id="sold"></div></div>
   </div>
   <div class="sub"><button type="button" class="chip" id="voice">🗣 こえ あり</button><button type="button" class="chip" id="reset">さいしょから</button></div>
 </div>
@@ -137,7 +137,7 @@
 <ul class="small">
 <li>お店に、お客さんが順番に来る。ほしいパックは、くまさんが10こ入り、うさぎさんが6こ入り、ペンギンさんが12こ入り(1ダース)。どれも実際のお店にある大きさ。にわとりを押してパックをいっぱいにすると、お客さんが受け取って、次のお客さんが来る。</li>
 <li>たまごが1こ入るたびに、指が1本ずつ立つ。人が10ずつまとめて数えるのは、指が10本だからだと言われている。12こ入りでは指が足りなくなり、足の指も使う。</li>
-<li>パックを渡した直後は、新しいパックが空っぽ(0こ)になる。上の大きな数字は、にわとりが産んだたまごの全部の数(いつもの数え方)。</li>
+<li>上の大きな数字は、いま詰めているパックのたまごの数。パックを渡した直後は、新しいパックが空っぽで0こになる。</li>
 <li>数は、ブラウザの読み上げ(日本語の声がある端末だけ)で読む。ときどき、ひよこが遊びに来る(数とは関係ない)。音は、AIは耳で確かめていない。</li>
 </ul>
 
