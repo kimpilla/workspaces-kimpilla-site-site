@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>あいうえおシンセ | kimpilla</title>
+<link rel="stylesheet" href="../../style.css">
+<style>
+  .play { background: linear-gradient(180deg, #eef6ff 0%, #f6efff 100%); color: #3a3550; border-radius: 22px; padding: 8px 8px 12px; margin: 8px 0; border: 3px solid #cfe0f7; font-family: "Hiragino Maru Gothic ProN", "Yu Gothic", system-ui, sans-serif; }
+  .play button { font-family: inherit; margin: 0; touch-action: manipulation; }
+  h1 { margin: 14px 0 0; }
+  .top { display: flex; align-items: center; gap: 10px; }
+  .bot { width: 70px; flex: none; }
+  .bot img { width: 100%; display: block; }
+  .bot.sing { animation: sing .12s ease-in-out 6 alternate; }
+  @keyframes sing { from { transform: rotate(-6deg) translateY(0); } to { transform: rotate(6deg) translateY(-6px); } }
+  .now { flex: 1; min-width: 0; }
+  .now .k { font-size: 44px; font-weight: bold; line-height: 1; color: #5a4fcf; }
+  .now .n { font-size: 14px; color: #6b6590; }
+  .mode { display: flex; gap: 4px; }
+  .chip { font-size: 12px; padding: 5px 9px; border-radius: 999px; border: 2px solid #cfe0f7; background: #fff; color: #3a3550; font-weight: bold; }
+  .chip:hover:not(:disabled) { background: #fff; color: #3a3550; }
+  .chip.sel, .chip.sel:hover:not(:disabled) { border-color: #7a6cf0; background: #ece9ff; }
+  /* 50おん(みぎの れつから: あ・か・さ…) */
+  .kana { display: grid; grid-template-columns: repeat(11, minmax(0, 1fr)); direction: rtl; gap: 2px; margin-top: 8px; }
+  .kk { direction: ltr; aspect-ratio: 1 / 1; border-radius: 10px; border: 0; background: #fff; box-shadow: 0 2px 0 #c9d6ee; font-size: clamp(14px, 4.6vw, 24px); font-weight: bold; color: #3a3550; padding: 0; min-width: 0; border-radius: 8px; }
+  .kk:hover:not(:disabled) { background: #fff; color: #3a3550; }
+  .kk:active, .kk.on { transform: translateY(2px); box-shadow: 0 0 0 #c9d6ee; background: #ffe9a8; }
+  .kk.blank { visibility: hidden; }
+  /* たかさ(ドレミ) */
+  .keys { display: grid; grid-template-columns: repeat(8, 1fr); gap: 3px; margin-top: 8px; }
+  .key { border: 0; border-radius: 10px; padding: 10px 0 6px; font-size: 14px; font-weight: bold; color: #fff; text-shadow: 0 1px 1px #0004; box-shadow: 0 3px 0 #0002; }
+  .key:hover:not(:disabled) { color: #fff; }
+  .key.sel { outline: 3px solid #3a3550; outline-offset: -3px; }
+  .key:active { transform: translateY(2px); box-shadow: none; }
+  .hint { font-size: 12px; color: #6b6590; text-align: center; margin-top: 6px; }
+  .credit { font-size: 11px; color: var(--muted); }
+  @media (prefers-reduced-motion: reduce) { .bot.sing { animation: none; } }
+</style>
+</head>
+<body>
+<header>
+  <a class="home" href="../../index.html">kimpilla</a>
+  <nav><a href="../../music.html">音楽</a> <a href="../../apps.html">アプリ</a> <a href="../../memo.html">メモ</a></nav>
+</header>
+<main>
+<h1>あいうえおシンセ</h1>
+<div class="play">
+  <div class="top">
+    <div class="bot" id="bot"><img src="img/robot.svg" alt="ロボット"></div>
+    <div class="now"><div class="k" id="nowK">あ</div><div class="n" id="nowN">たかさ: ド</div></div>
+    <div class="mode"><button type="button" class="chip sel" id="mRobot">ロボット</button><button type="button" class="chip" id="mPlain">ふつう</button></div>
+  </div>
+  <div class="kana" id="kana"></div>
+  <div class="keys" id="keys"></div>
+  <div class="hint">もじを おすと ロボットが うたうよ。したの いろの ボタンで たかさが かわるよ。</div>
+</div>
+
+<h2>おとなの人へ</h2>
+<ul class="small">
+<li>文字を押すと、その文字の声を「ボコーダー」に通して、下の色のボタンで選んだ高さのロボット声で鳴らす。色のボタンを押すと、最後の文字をその高さで鳴らし直すので、ボタンを順に押すと歌える。</li>
+<li>ボコーダーのしくみ: 声を高さごとに18の帯に分けて、それぞれの帯の大きさの変化(どの響きが強いか)を取り出し、のこぎり波(シンセの音)の同じ帯の大きさをそれに合わせて動かす。声の「あ」「い」などの響きが、シンセの音にうつる。サ行の「シュッ」のような高い息の音は、元の声から少しだけ足している。「ふつう」にすると、元の声をそのまま鳴らす。</li>
+<li>声は、音声合成ソフト Open JTalk で、1文字ずつ作ってページに置いたもの(は・へは「わ」「え」と読まれないよう、カタカナで作った)。音は、AIは耳で確かめていない。</li>
+</ul>
+<p class="credit">声: 名古屋工業大学「HTS voice NIT ATR503 M001」(CC BY 3.0、<a href="https://open-jtalk.sourceforge.net/">Open JTalk</a>で合成)/ イラスト: Microsoft「Fluent Emoji」(MITライセンス。<a href="img/LICENSE-fluentui-emoji.txt">ライセンス文</a>)</p>
+</main>
+<footer>kimpilla</footer>
+<script src="aiueo.js"></script>
+</body>
+</html>
