@@ -47,7 +47,10 @@
     grain = ic.createPattern(c, 'repeat');
   }
   const BW = () => W * 0.042 * dpr;                                // せんの ふとさ(こどもの ゆびに あわせて ふとめ)
+  let box = null;                                                 // なぞった せんの はんい(めだまと あしを つける ばしょ)
   function mark(x, y) {                                            // なぞった マスに しるし(すこし ひろめに みる)
+    const h = BW() / 2;
+    box = box ? { x0: Math.min(box.x0, x - h), y0: Math.min(box.y0, y - h), x1: Math.max(box.x1, x + h), y1: Math.max(box.y1, y + h) } : { x0: x - h, y0: y - h, x1: x + h, y1: y + h };
     const r = BW() * 0.9, gx = Math.floor(x / ink.width * G), gy = Math.floor(y / ink.height * G), gr = Math.ceil(r / ink.width * G);
     for (let yy = gy - gr; yy <= gy + gr; yy++) for (let xx = gx - gr; xx <= gx + gr; xx++)
       if (xx >= 0 && yy >= 0 && xx < G && yy < G) covered[yy * G + xx] = 1;
@@ -102,12 +105,33 @@
     const v = speechSynthesis.getVoices().find((x) => /^ja/i.test(x.lang)); if (v) u.voice = v;
     speechSynthesis.speak(u);
   }
+  function critter() {                                            // めだま(うえ)と あし 2ほん(した)。まると せんだけ
+    const k = 100 / ink.width, cx = (box.x0 + box.x1) / 2 * k, top = box.y0 * k, bot = box.y1 * k;
+    const eye = (x) => '<circle cx="' + x + '" cy="' + (top - 4) + '" r="5.2" fill="#fff" stroke="#4b4a4f" stroke-width="1.2"/><circle cx="' + (x + 1.2) + '" cy="' + (top - 3.4) + '" r="2.5" fill="#2a2a30"/><circle cx="' + (x + 0.4) + '" cy="' + (top - 4.3) + '" r=".8" fill="#fff"/>';
+    const leg = (x, cls) => '<g class="leg ' + cls + '"><path d="M' + x + ' ' + bot + ' v10" stroke="#4b4a4f" stroke-width="2.4" stroke-linecap="round"/><ellipse cx="' + (x + 2.2) + '" cy="' + (bot + 10.5) + '" rx="3.6" ry="1.9" fill="#4b4a4f"/></g>';
+    $('critter').innerHTML = '<g class="eyes">' + eye(cx - 5.6) + eye(cx + 5.6) + '</g><g class="legs">' + leg(cx - 5, 'l') + leg(cx + 5, 'r') + '</g>';
+  }
+  function steps() {                                               // とことこ(あしおと)
+    if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)();
+    for (let i = 0; i < 9; i++) {
+      const o = ac.createOscillator(), g = ac.createGain(), t = ac.currentTime + 0.6 + i * 0.22;
+      o.type = 'sine'; o.frequency.value = i % 2 ? 620 : 820;
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.18, t + 0.005); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.07);
+      o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t + 0.08);
+    }
+  }
+  let timers = [];
   function reward() {
     solved = true; done.add(digit); renderDigits();
     $('rimg').src = 'img/' + digit + '.svg'; $('rimg').alt = NAME[digit];
-    $('stage').classList.add('solved');
-    $('msg').innerHTML = '<b>' + digit + '</b> は ' + NAME[digit] + 'の かたち！';
-    chime(); say(YOMI[digit] + '。' + NAME[digit]);
+    critter(); $('stage').classList.add('alive');                  // めだまと あしが はえる
+    chime(); steps();
+    timers.push(setTimeout(() => $('runner').classList.add('walk'), 350));      // とことこ にげていく
+    timers.push(setTimeout(() => {                                 // にげたあと、かたちの にている もの
+      $('runner').style.visibility = 'hidden'; $('stage').classList.add('shown');
+      $('msg').innerHTML = '<b>' + digit + '</b> は ' + NAME[digit] + 'の かたち！';
+      say(YOMI[digit] + '。' + NAME[digit]);
+    }, 3300));
   }
 
   // ---- すうじを えらぶ ----
@@ -123,7 +147,9 @@
   }
   function setDigit(d) {
     digit = d; solved = false; last = null;
-    $('stage').classList.remove('solved'); $('msg').textContent = ''; $('hint').style.display = '';
+    timers.forEach(clearTimeout); timers = []; box = null;
+    $('stage').classList.remove('alive', 'shown'); $('runner').classList.remove('walk'); $('runner').style.visibility = ''; $('critter').innerHTML = '';
+    $('msg').textContent = ''; $('hint').style.display = '';
     ic.clearRect(0, 0, ink.width, ink.height);
     renderDigits(); drawPaper(); makeTarget();
     say(YOMI[d]);
@@ -134,7 +160,7 @@
     for (const c of [paper, ink]) { c.width = Math.round(W * dpr); c.height = Math.round(W * dpr); }
     makeGrain();
     drawPaper(); makeTarget();
-    if (solved) { solved = false; $('stage').classList.remove('solved'); $('msg').textContent = ''; }
+    if (solved) setDigit(digit);
   }
   $('clear').onclick = () => setDigit(digit);
   $('next').onclick = () => setDigit((digit + 1) % 10);
