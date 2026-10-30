@@ -33,28 +33,34 @@
     covered = new Uint8Array(G * G);
   }
 
-  // ---- えんぴつの せん(こまかい てんを たくさん うって、ざらっと させる) ----
-  let last = null;
-  const R = () => W * 0.045 * dpr;
-  function dots(x, y) {
-    const r = R();
-    for (let k = 0; k < 7; k++) {
-      const a = Math.random() * Math.PI * 2, d = Math.random() * r;
-      ic.globalAlpha = 0.18 + Math.random() * 0.22;
-      ic.fillStyle = Math.random() < 0.8 ? '#4b4a4f' : '#7a7880';
-      ic.fillRect(x + Math.cos(a) * d, y + Math.sin(a) * d, 1.6 * dpr, 1.6 * dpr);
+  // ---- えんぴつの せん(くっきりした 1ぽんの せんに、なまりの つぶつぶの もようを かさねる) ----
+  let last = null, grain = null;
+  function makeGrain() {                                           // なまり(えんぴつの しん)の ざらつき
+    const c = document.createElement('canvas'); c.width = c.height = 96;
+    const x = c.getContext('2d'), img = x.createImageData(96, 96);
+    for (let i = 0; i < 96 * 96; i++) {
+      const v = 70 + Math.random() * 40;
+      img.data[i * 4] = v; img.data[i * 4 + 1] = v; img.data[i * 4 + 2] = v + 6;
+      img.data[i * 4 + 3] = Math.random() < 0.35 ? 30 + Math.random() * 70 : 140 + Math.random() * 90;   // ところどころ うすい = かみの めが みえる
     }
-    ic.globalAlpha = 0.06; ic.fillStyle = '#4b4a4f';
-    ic.beginPath(); ic.arc(x, y, r * 0.75, 0, Math.PI * 2); ic.fill();
-    ic.globalAlpha = 1;
-    // なぞった マスに しるし
-    const gx = Math.floor(x / ink.width * G), gy = Math.floor(y / ink.height * G), gr = Math.ceil(r / ink.width * G);
+    x.putImageData(img, 0, 0);
+    grain = ic.createPattern(c, 'repeat');
+  }
+  const BW = () => W * 0.042 * dpr;                                // せんの ふとさ(こどもの ゆびに あわせて ふとめ)
+  function mark(x, y) {                                            // なぞった マスに しるし(すこし ひろめに みる)
+    const r = BW() * 0.9, gx = Math.floor(x / ink.width * G), gy = Math.floor(y / ink.height * G), gr = Math.ceil(r / ink.width * G);
     for (let yy = gy - gr; yy <= gy + gr; yy++) for (let xx = gx - gr; xx <= gx + gr; xx++)
       if (xx >= 0 && yy >= 0 && xx < G && yy < G) covered[yy * G + xx] = 1;
   }
+  function dots(x, y) {                                            // おした ところ(まるい てん)
+    ic.fillStyle = grain; ic.beginPath(); ic.arc(x, y, BW() / 2, 0, Math.PI * 2); ic.fill(); mark(x, y);
+  }
   function line(a, b) {
-    const dx = b.x - a.x, dy = b.y - a.y, n = Math.max(1, Math.hypot(dx, dy) / (1.2 * dpr));
-    for (let i = 0; i <= n; i++) dots(a.x + dx * i / n, a.y + dy * i / n);
+    ic.strokeStyle = grain; ic.lineCap = 'round'; ic.lineJoin = 'round';
+    ic.lineWidth = BW() * (0.92 + Math.random() * 0.12);             // ひつあつの むら
+    ic.beginPath(); ic.moveTo(a.x, a.y); ic.lineTo(b.x, b.y); ic.stroke();
+    const n = Math.max(1, Math.hypot(b.x - a.x, b.y - a.y) / (4 * dpr));
+    for (let i = 0; i <= n; i++) mark(a.x + (b.x - a.x) * i / n, a.y + (b.y - a.y) * i / n);
   }
   const pos = (e) => { const r = ink.getBoundingClientRect(); return { x: (e.clientX - r.left) * dpr, y: (e.clientY - r.top) * dpr }; };
   ink.addEventListener('pointerdown', (e) => {
@@ -74,7 +80,7 @@
   function check() {
     let hit = 0;
     for (let i = 0; i < G * G; i++) if (target[i] && covered[i]) hit++;
-    if (hit / targetCount >= 0.6) reward();                         // だいたい なぞれたら OK(じょうずかは みない)
+    if (hit / targetCount >= 0.55) reward();                         // だいたい なぞれたら OK(じょうずかは みない)
   }
 
   // ---- できた！ ----
@@ -126,6 +132,7 @@
     dpr = Math.min(window.devicePixelRatio || 1, 2);
     W = $('stage').clientWidth;
     for (const c of [paper, ink]) { c.width = Math.round(W * dpr); c.height = Math.round(W * dpr); }
+    makeGrain();
     drawPaper(); makeTarget();
     if (solved) { solved = false; $('stage').classList.remove('solved'); $('msg').textContent = ''; }
   }
