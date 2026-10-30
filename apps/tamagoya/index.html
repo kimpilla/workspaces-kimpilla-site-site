@@ -11,7 +11,7 @@
   /* 上: かず(スクロールしても見える) */
   .top { position: sticky; top: 0; z-index: 5; background: #fff7e0; border-bottom: 3px solid #ffd36b; margin: 0 -14px; padding: 8px 14px; box-shadow: 0 4px 8px #0002; }
   .numrow { display: flex; align-items: baseline; justify-content: center; gap: 10px; }
-  .num { font-size: 52px; font-weight: bold; color: #d2541a; font-variant-numeric: tabular-nums; line-height: 1.1; }
+  .num { font-size: 44px; font-weight: bold; color: #d2541a; font-variant-numeric: tabular-nums; line-height: 1.1; }
   .num.bump { animation: bump .25s; }
   @keyframes bump { 50% { transform: scale(1.15); } }
   .yomi { text-align: center; font-size: 18px; color: #7a4b00; min-height: 1.4em; }
@@ -23,6 +23,19 @@
   .chip:hover:not(:disabled) { background: #fff; color: #7a4b00; }
   .chip.sel, .chip.sel:hover:not(:disabled) { border-color: #ff7a3d; background: #ffe3cf; }
   .hint { text-align: center; font-size: 12px; color: #8a6a3a; margin-top: 4px; }
+  .scene { display: flex; justify-content: center; gap: 14px; margin-top: 4px; }
+  .pic { position: relative; width: 124px; padding: 0; border: 0; background: none; cursor: pointer; -webkit-touch-callout: none; }
+  .pic:hover:not(:disabled) { background: none; }
+  .pic svg { width: 100%; height: auto; display: block; overflow: visible; }
+  .pic .tag { display: block; text-align: center; font-size: 12px; color: #8a6a3a; }
+  .pic:active svg, .pic.hit svg { transform: scale(.93); }
+  .hen.hit svg { animation: cluck .25s; }
+  @keyframes cluck { 0% { transform: scale(1); } 40% { transform: scale(1.06, .9) translateY(4px); } 100% { transform: scale(1); } }
+  .shop.hit svg { animation: sold .5s; }
+  @keyframes sold { 30% { transform: rotate(-4deg) scale(1.05); } 60% { transform: rotate(4deg); } 100% { transform: none; } }
+  .flyegg { position: absolute; width: 20px; height: 26px; z-index: 7; pointer-events: none; background: radial-gradient(circle at 35% 30%, #fff 0 20%, #fbeedc 45%, #f0d9b5 100%); border-radius: 50% 50% 46% 46% / 60% 60% 40% 40%; animation: pop .5s ease-out forwards; }
+  @keyframes pop { 0% { transform: translate(0, 0) scale(.4); opacity: 1; } 60% { transform: translate(var(--dx), -30px) scale(1); } 100% { transform: translate(var(--dx), 20px); opacity: 0; } }
+  .hint .chip { font-size: 11px; padding: 3px 8px; border-width: 2px; margin-left: 4px; }
   /* かぞえる かかり */
   .who { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
   .who .chip { display: inline-flex; align-items: center; gap: 6px; }
@@ -57,6 +70,7 @@
   .chick { position: absolute; font-size: 34px; z-index: 6; pointer-events: none; animation: run 2.2s linear forwards; }
   @keyframes run { 0% { transform: translateX(0) translateY(0); } 25% { transform: translateX(25vw) translateY(-14px); } 50% { transform: translateX(50vw) translateY(0); } 75% { transform: translateX(75vw) translateY(-14px); } 100% { transform: translateX(110vw) translateY(0); } }
   @media (prefers-reduced-motion: reduce) {
+    .hen.hit svg, .shop.hit svg, .flyegg { animation: none; }
     .num.bump, .counter.party svg, .egg.new, .carton.new, .box.new, .truck.new { animation: none; }
     .chick { display: none; }
   }
@@ -69,19 +83,43 @@
 </header>
 <main>
 <h1>たまごやさん</h1>
-<p>たまごを ころがして、どんどん ふやそう。ゆびが ぜんぶ たったら、パックに しまうよ。</p>
+<p>にわとりを おして、たまごを どんどん ふやそう。ゆびが ぜんぶ たったら、パックに しまうよ。おみせを おすと、たまごが ぜんぶ うれて ゼロに もどるよ。</p>
 <div class="play" id="play">
   <div class="top">
     <div class="numrow"><span class="num" id="num">0</span><span style="font-size:18px;color:#7a4b00">こ</span></div>
     <div class="yomi" id="yomi">ゼロ</div>
-    <div class="btns">
-      <button type="button" class="egg-btn" id="add">🥚 ころがす</button>
-      <button type="button" class="chip" id="add10">＋10</button>
-      <button type="button" class="chip" id="add100">＋100</button>
-      <button type="button" class="chip" id="reset">さいしょから</button>
-      <button type="button" class="chip" id="voice">🗣 こえ あり</button>
+    <div class="scene">
+      <button type="button" class="pic hen" id="hen" aria-label="にわとり(おすと たまごを うむ)">
+        <svg viewBox="0 0 160 140" aria-hidden="true">
+          <ellipse cx="80" cy="132" rx="60" ry="6" fill="#0001"/>
+          <path d="M60 112 l-6 18 M60 130 h-10 M96 112 l6 18 M102 130 h10" stroke="#e08a1e" stroke-width="5" stroke-linecap="round" fill="none"/>
+          <path d="M126 70 q26 -20 22 -46 q-12 18 -26 20 z" fill="#fff" stroke="#d9cbb0" stroke-width="3" stroke-linejoin="round"/>
+          <ellipse cx="86" cy="82" rx="52" ry="36" fill="#fff" stroke="#d9cbb0" stroke-width="3"/>
+          <path d="M70 80 q20 26 46 4" fill="none" stroke="#e9dcc2" stroke-width="5" stroke-linecap="round"/>
+          <circle cx="48" cy="46" r="26" fill="#fff" stroke="#d9cbb0" stroke-width="3"/>
+          <path d="M36 22 q4 -14 12 -4 q6 -12 12 0 q8 -8 8 6 q-16 6 -32 -2z" fill="#e8413c"/>
+          <path d="M20 46 l-14 6 l14 6 z" fill="#ffb020"/>
+          <path d="M26 60 q-4 12 6 14 q8 -2 4 -12z" fill="#e8413c"/>
+          <circle cx="42" cy="42" r="5" fill="#2b2150"/><circle cx="40.5" cy="40.5" r="1.6" fill="#fff"/>
+        </svg>
+        <span class="tag">にわとり</span>
+      </button>
+      <button type="button" class="pic shop" id="shop" aria-label="おみせ(おすと たまごが ぜんぶ うれる)">
+        <svg viewBox="0 0 160 140" aria-hidden="true">
+          <rect x="16" y="52" width="128" height="80" rx="6" fill="#fff3d6" stroke="#c9a46a" stroke-width="3"/>
+          <path d="M10 36 h140 l-6 22 h-128 z" fill="#ff7a3d"/>
+          <path d="M30 36 l-4 22 M54 36 l-3 22 M80 36 v22 M106 36 l3 22 M130 36 l4 22" stroke="#fff" stroke-width="9"/>
+          <rect x="44" y="10" width="72" height="24" rx="6" fill="#fff" stroke="#c9a46a" stroke-width="3"/>
+          <text x="80" y="28" font-size="15" text-anchor="middle" fill="#7a4b00" font-weight="bold">たまご</text>
+          <rect x="28" y="96" width="104" height="10" rx="3" fill="#c9a46a"/>
+          <ellipse cx="50" cy="90" rx="8" ry="10" fill="#fbeedc" stroke="#e2c99a"/><ellipse cx="66" cy="90" rx="8" ry="10" fill="#fbeedc" stroke="#e2c99a"/><ellipse cx="82" cy="90" rx="8" ry="10" fill="#fbeedc" stroke="#e2c99a"/>
+          <circle cx="114" cy="78" r="12" fill="#ffd9b8"/><path d="M104 96 q10 -10 20 0 v6 h-20z" fill="#5bb6ff"/>
+          <circle cx="110" cy="77" r="2" fill="#2b2150"/><circle cx="118" cy="77" r="2" fill="#2b2150"/><path d="M110 83 q4 3 8 0" stroke="#7a2b3b" stroke-width="2" fill="none" stroke-linecap="round"/>
+        </svg>
+        <span class="tag">おみせ</span>
+      </button>
     </div>
-    <div class="hint">「ころがす」を ながおし すると、どんどん ふえるよ</div>
+    <div class="hint">にわとりを おすと たまごを うむよ(ながおしで どんどん)。おみせを おすと ぜんぶ うれるよ。 <button type="button" class="chip" id="voice">🗣 こえ あり</button></div>
   </div>
 
   <h2>だれが かぞえる？</h2>

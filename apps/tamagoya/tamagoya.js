@@ -170,18 +170,31 @@
     setTimeout(() => c.remove(), 2400);
   }
 
-  // ---- ボタン ----
-  const addBtn = $('add');
+  // ---- え を おす(にわとり = たまごを うむ、おみせ = ぜんぶ うれる) ----
+  const hen = $('hen');
+  function hitAnim(el) { el.classList.remove('hit'); void el.offsetWidth; el.classList.add('hit'); }
+  function lay() {
+    add(1); hitAnim(hen);
+    tone(880, 0, 0.05, 'square', 0.05); tone(660, 0.06, 0.07, 'square', 0.05);          // コケッ
+    const e = document.createElement('span'); e.className = 'flyegg';
+    const r = hen.getBoundingClientRect(), pr = $('play').getBoundingClientRect();
+    e.style.left = (r.left - pr.left + r.width * 0.55) + 'px'; e.style.top = (r.top - pr.top + r.height * 0.55) + 'px';
+    e.style.setProperty('--dx', (20 + Math.random() * 30) + 'px');
+    $('play').appendChild(e); setTimeout(() => e.remove(), 520);
+  }
   let holdT = null, holdI = null, speed = 180;
   function stopHold() { clearTimeout(holdT); clearTimeout(holdI); holdT = holdI = null; }
-  function loop() { add(1); speed = Math.max(45, speed * 0.88); holdI = setTimeout(loop, speed); }
-  addBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); add(1); speed = 180; holdT = setTimeout(loop, 450); });
-  ['pointerup', 'pointerleave', 'pointercancel'].forEach((t) => addBtn.addEventListener(t, stopHold));
-  addBtn.addEventListener('click', (e) => { if (e.detail === 0) add(1); });   // キーボード(Enter・スペース)
-  addBtn.addEventListener('contextmenu', (e) => e.preventDefault());
-  $('add10').onclick = () => add(10);
-  $('add100').onclick = () => add(100);
-  $('reset').onclick = () => { n = 0; partyUntil = 0; $('say').textContent = ''; render(); speak(0); };
+  function loop() { lay(); speed = Math.max(45, speed * 0.88); holdI = setTimeout(loop, speed); }
+  hen.addEventListener('pointerdown', (e) => { e.preventDefault(); lay(); speed = 180; holdT = setTimeout(loop, 450); });
+  ['pointerup', 'pointerleave', 'pointercancel'].forEach((t) => hen.addEventListener(t, stopHold));
+  hen.addEventListener('click', (e) => { if (e.detail === 0) lay(); });   // キーボード(Enter・スペース)
+  hen.addEventListener('contextmenu', (e) => e.preventDefault());
+  $('shop').addEventListener('click', () => {
+    hitAnim($('shop'));
+    if (n === 0) { $('say').textContent = 'まだ たまごが ないよ。にわとりを おしてね。'; return; }
+    for (let i = 0; i < 6; i++) tone(1568 + (i % 2) * 300, i * 0.07, 0.12, 'triangle', 0.12);   // チャリン
+    $('say').textContent = 'ぜんぶ うれた！ たまごは ゼロ。'; n = 0; partyUntil = 0; render(); speak(0);
+  });
   $('voice').onclick = () => { voiceOn = !voiceOn; $('voice').textContent = voiceOn ? '🗣 こえ あり' : '🤐 こえ なし'; if (!voiceOn && window.speechSynthesis) speechSynthesis.cancel(); };
 
   WHO.forEach((w) => {
