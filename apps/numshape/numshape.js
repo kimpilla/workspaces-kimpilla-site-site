@@ -34,7 +34,7 @@
   }
 
   // ---- えんぴつの せん(くっきりした 1ぽんの せんに、なまりの つぶつぶの もようを かさねる) ----
-  let last = null, grain = null;
+  let last = null, grain = null, grainURL = '';
   function makeGrain() {                                           // なまり(えんぴつの しん)の ざらつき
     const c = document.createElement('canvas'); c.width = c.height = 96;
     const x = c.getContext('2d'), img = x.createImageData(96, 96);
@@ -44,7 +44,7 @@
       img.data[i * 4 + 3] = Math.random() < 0.35 ? 30 + Math.random() * 70 : 140 + Math.random() * 90;   // ところどころ うすい = かみの めが みえる
     }
     x.putImageData(img, 0, 0);
-    grain = ic.createPattern(c, 'repeat');
+    grain = ic.createPattern(c, 'repeat'); grainURL = c.toDataURL();   // めだまと あしにも おなじ もようを つかう
   }
   const BW = () => W * 0.042 * dpr;                                // せんの ふとさ(こどもの ゆびに あわせて ふとめ)
   let box = null;                                                 // なぞった せんの はんい(めだまと あしを つける ばしょ)
@@ -107,9 +107,12 @@
   }
   function critter() {                                            // めだま(うえ)と あし 2ほん(した)。まると せんだけ
     const k = 100 / ink.width, cx = (box.x0 + box.x1) / 2 * k, top = box.y0 * k, bot = box.y1 * k;
-    const eye = (x) => '<circle cx="' + x + '" cy="' + (top - 4) + '" r="5.2" fill="#fff" stroke="#4b4a4f" stroke-width="1.2"/><circle cx="' + (x + 1.2) + '" cy="' + (top - 3.4) + '" r="2.5" fill="#2a2a30"/><circle cx="' + (x + 0.4) + '" cy="' + (top - 4.3) + '" r=".8" fill="#fff"/>';
-    const leg = (x, cls) => '<g class="leg ' + cls + '"><path d="M' + x + ' ' + bot + ' v10" stroke="#4b4a4f" stroke-width="2.4" stroke-linecap="round"/><ellipse cx="' + (x + 2.2) + '" cy="' + (bot + 10.5) + '" rx="3.6" ry="1.9" fill="#4b4a4f"/></g>';
-    $('critter').innerHTML = '<g class="eyes">' + eye(cx - 5.6) + eye(cx + 5.6) + '</g><g class="legs">' + leg(cx - 5, 'l') + leg(cx + 5, 'r') + '</g>';
+    const P = 'url(#pencil)', u = 96 * k;                          // えんぴつの もよう(なぞった せんと おなじ)
+    const eyeInk = (x) => '<circle cx="' + x + '" cy="' + (top - 4) + '" r="5.2" fill="none" stroke="' + P + '" stroke-width="1.6"/><circle cx="' + (x + 1.2) + '" cy="' + (top - 3.4) + '" r="2.6" fill="' + P + '"/>';
+    const eye = (x) => '<circle cx="' + x + '" cy="' + (top - 4) + '" r="5.2" fill="#fffdf8"/>' + eyeInk(x) + eyeInk(x) + '<circle cx="' + (x + 0.5) + '" cy="' + (top - 4.3) + '" r=".8" fill="#fffdf8"/>';   // 2かい かさねて、なぞった せんと おなじ こさに
+    const legInk = (x) => '<path d="M' + x + ' ' + bot + ' v10" stroke="' + P + '" stroke-width="2.6" stroke-linecap="round"/><ellipse cx="' + (x + 2.2) + '" cy="' + (bot + 10.5) + '" rx="3.6" ry="1.9" fill="' + P + '"/>';
+    const leg = (x, cls) => '<g class="leg ' + cls + '">' + legInk(x) + legInk(x) + '</g>';
+    $('critter').innerHTML = '<defs><pattern id="pencil" patternUnits="userSpaceOnUse" width="' + u + '" height="' + u + '"><image href="' + grainURL + '" width="' + u + '" height="' + u + '"/></pattern></defs><g class="eyes">' + eye(cx - 5.6) + eye(cx + 5.6) + '</g><g class="legs">' + leg(cx - 5, 'l') + leg(cx + 5, 'r') + '</g>';
   }
   function steps() {                                               // とことこ(あしおと)
     if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)();
