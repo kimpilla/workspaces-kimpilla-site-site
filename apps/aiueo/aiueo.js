@@ -4,12 +4,13 @@
   const KANA = 'あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわをん';   // voice/<ばんごう>.wav の じゅん
   // 50おんの ひょう(れつ = あ・か・さ…、みぎから。'' は あき)
   const COLS = ['あいうえお', 'かきくけこ', 'さしすせそ', 'たちつてと', 'なにぬねの', 'はひふへほ', 'まみむめも', 'や ゆ よ', 'らりるれろ', 'わ   を', 'ん    '];
-  const NOTES = [['ド', 130.81, '#ff6b6b'], ['レ', 146.83, '#ff9f43'], ['ミ', 164.81, '#f7c948'], ['ファ', 174.61, '#6bd68c'], ['ソ', 196.0, '#4ecdc4'], ['ラ', 220.0, '#5b9cff'], ['シ', 246.94, '#9b7bff'], ['ド', 261.63, '#ff7ac4']];
+  // こどもが うたう たかさ(まんなかの ド〜うえの ド)
+  const NOTES = [['ド', 261.63, '#ff6b6b'], ['レ', 293.66, '#ff9f43'], ['ミ', 329.63, '#f7c948'], ['ファ', 349.23, '#6bd68c'], ['ソ', 392.0, '#4ecdc4'], ['ラ', 440.0, '#5b9cff'], ['シ', 493.88, '#9b7bff'], ['ド', 523.25, '#ff7ac4']];
   let note = 0, last = 0, robot = true;
 
   // ---- ボコーダー(こえを 18の たかさの おびに わけて、おびごとの おおきさで のこぎりなみを うごかす) ----
   function buildVocoder(c, dest) {
-    const modIn = c.createGain(), out = c.createGain(); out.gain.value = 0.8;
+    const modIn = c.createGain(), out = c.createGain(); out.gain.value = 1.2;
     const osc = c.createOscillator(); osc.type = 'sawtooth'; osc.frequency.value = NOTES[note][1];
     const noiseBuf = c.createBuffer(1, c.sampleRate, c.sampleRate), nd = noiseBuf.getChannelData(0);
     for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
