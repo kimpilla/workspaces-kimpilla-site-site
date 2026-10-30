@@ -10,7 +10,7 @@
 
   // ---- ボコーダー(こえを 18の たかさの おびに わけて、おびごとの おおきさで のこぎりなみを うごかす) ----
   function buildVocoder(c, dest) {
-    const modIn = c.createGain(), out = c.createGain(); out.gain.value = 1.2;
+    const modIn = c.createGain(), out = c.createGain(); out.gain.value = 0.8;
     const osc = c.createOscillator(); osc.type = 'sawtooth'; osc.frequency.value = NOTES[note][1];
     const noiseBuf = c.createBuffer(1, c.sampleRate, c.sampleRate), nd = noiseBuf.getChannelData(0);
     for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
@@ -52,7 +52,7 @@
   }
   async function load(i) {
     if (bufs[i]) return bufs[i];
-    const r = await fetch('voice/' + i + '.wav');
+    const r = await fetch('voice/' + i + '.wav?v=2');
     bufs[i] = await ac.decodeAudioData(await r.arrayBuffer());
     return bufs[i];
   }
@@ -65,7 +65,7 @@
     s.connect(robot ? voc.modIn : plainOut); s.start();
     if (robot) {                                                   // こえが なっている あいだだけ ロボットの おとを だす
       const g = voc.out.gain, t = ac.currentTime;
-      g.cancelScheduledValues(t); g.setValueAtTime(g.value, t); g.linearRampToValueAtTime(1.2, t + 0.01);
+      g.cancelScheduledValues(t); g.setValueAtTime(g.value, t); g.linearRampToValueAtTime(0.8, t + 0.01);
       g.setTargetAtTime(0, t + b.duration + 0.03, 0.04);
     }
     const bot = $('bot'); bot.classList.remove('sing'); void bot.offsetWidth; bot.classList.add('sing');
