@@ -100,7 +100,7 @@
       if (i < fill) sl.innerHTML = '<span class="egg' + (newEgg && i === fill - 1 ? ' new' : '') + '"></span>';
       pl.appendChild(sl);
     }
-    $('cSold').textContent = sold.length;
+    $('cSold').textContent = sold.length; $('cSoldEggs').textContent = sold.reduce((a, x) => a + x, 0);
     const box = $('sold'); box.innerHTML = '';
     sold.slice(-14).forEach((sz, i, arr) => { const e = document.createElement('span'); e.className = 'mini s' + sz + (i === arr.length - 1 && partying ? ' new' : ''); e.title = sz + 'こ いり'; box.appendChild(e); });
     if (sold.length > 14) { const m = document.createElement('span'); m.className = 'more'; m.textContent = '…'; box.prepend(m); }
