@@ -37,6 +37,18 @@
   .loose b { font-size: 26px; color: #d2541a; font-variant-numeric: tabular-nums; }
   .flyegg { position: absolute; width: 18px; height: 23px; z-index: 7; pointer-events: none; background: radial-gradient(circle at 35% 30%, #fff 0 20%, #fbeedc 45%, #f0d9b5 100%); border-radius: 50% 50% 46% 46% / 60% 60% 40% 40%; animation: pop .4s ease-out forwards; }
   @keyframes pop { 0% { transform: translate(0, 0) scale(.4); opacity: 1; } 60% { transform: translate(var(--dx), -26px) scale(1); } 100% { transform: translate(var(--dx), 10px); opacity: 0; } }
+  .shopwrap { position: relative; justify-self: center; width: 100%; max-width: 120px; }
+  .cust { position: absolute; right: -6px; bottom: 0; width: 54%; z-index: 2; pointer-events: none; }
+  .cust svg { width: 100%; height: auto; display: block; overflow: visible; }
+  .cust.in { animation: walkin .6s ease-out; }
+  @keyframes walkin { 0% { transform: translateX(80px); opacity: 0; } 100% { transform: none; opacity: 1; } }
+  .cust.dance { animation: dance .25s ease-in-out 4 alternate; }
+  @keyframes dance { from { transform: rotate(-12deg) translateY(0); } to { transform: rotate(12deg) translateY(-10px); } }
+  .cust.out { animation: walkout .5s ease-in forwards; }
+  @keyframes walkout { to { transform: translateX(90px); opacity: 0; } }
+  .bubble { position: absolute; right: 0; top: -6px; z-index: 3; background: #fff; border: 2px solid #f1dfae; border-radius: 10px; padding: 1px 6px; font-size: 12px; font-weight: bold; color: #d2541a; white-space: nowrap; }
+  .mini.s6 { width: 12px; } .mini.s12 { width: 24px; }
+  .feet { opacity: 1; }
   /* ゆび */
   .counterwrap { display: flex; align-items: center; gap: 6px; margin-top: 6px; background: #fff; border: 3px solid #f1dfae; border-radius: 16px; padding: 4px 8px; }
   .counter { flex: 1; min-width: 0; }
@@ -64,6 +76,7 @@
   .chick { position: absolute; font-size: 30px; z-index: 6; pointer-events: none; animation: run 2.2s linear forwards; }
   @keyframes run { 0% { transform: translateX(0) translateY(0); } 25% { transform: translateX(25vw) translateY(-14px); } 50% { transform: translateX(50vw) translateY(0); } 75% { transform: translateX(75vw) translateY(-14px); } 100% { transform: translateX(110vw) translateY(0); } }
   @media (prefers-reduced-motion: reduce) {
+    .cust.in, .cust.dance, .cust.out,
     .num.bump, .counter.party svg, .egg.new, .mini.new, .minibox.new, .minitruck.new, .hen.hit svg, .shop.hit svg, .flyegg, .finger { animation: none; }
     .chick { display: none; }
   }
@@ -95,7 +108,10 @@
       <span class="finger" id="finger" aria-hidden="true">👆</span>
     </button>
     <div class="packbox"><div class="opencarton" id="plate"></div><div class="loose">いま <b id="cLoose">0</b> こ</div></div>
-    <button type="button" class="pic shop" id="shop" aria-label="おみせ(おすと たまごが ぜんぶ うれる)">
+    <div class="shopwrap">
+      <div class="cust" id="cust"></div>
+      <div class="bubble" id="bubble"></div>
+    <button type="button" class="pic shop" id="shop" aria-label="おみせ(おきゃくさんが ほしい パックを いう)">
 <svg viewBox="0 0 160 140" aria-hidden="true">
           <rect x="16" y="52" width="128" height="80" rx="6" fill="#fff3d6" stroke="#c9a46a" stroke-width="3"/>
           <path d="M10 36 h140 l-6 22 h-128 z" fill="#ff7a3d"/>
@@ -108,21 +124,20 @@
           <circle cx="110" cy="77" r="2" fill="#2b2150"/><circle cx="118" cy="77" r="2" fill="#2b2150"/><path d="M110 83 q4 3 8 0" stroke="#7a2b3b" stroke-width="2" fill="none" stroke-linecap="round"/>
         </svg>
     </button>
+    </div>
   </div>
   <div class="counterwrap"><div class="counter" id="counter"></div><div class="say" id="say"></div></div>
   <div class="store">
-    <div class="shelf"><div class="lab">パック <b id="cPack">0</b></div><div class="its" id="packs"></div></div>
-    <div class="shelf"><div class="lab">はこ <b id="cBox">0</b></div><div class="its" id="boxes"></div></div>
-    <div class="shelf"><div class="lab">トラック <b id="cTruck">0</b></div><div class="its" id="trucks"></div></div>
+    <div class="shelf" style="flex-basis:100%"><div class="lab">うれた パック <b id="cSold">0</b> こ ・ うれた たまご <b id="cSoldEggs">0</b> こ</div><div class="its" id="sold"></div></div>
   </div>
-  <div class="sub"><span>ほかの かぞえかた:</span><span id="who"></span><button type="button" class="chip" id="voice">🗣 こえ あり</button></div>
+  <div class="sub"><button type="button" class="chip" id="voice">🗣 こえ あり</button><button type="button" class="chip" id="reset">さいしょから</button></div>
 </div>
 
 <h2>おとなの人へ</h2>
 <ul class="small">
-<li>たまごが1こ増えるたびに、指が1本ずつ立つ。10本ぜんぶ立つと、たまごがパックにしまわれ、指はグーに戻る。人が10ずつまとめて数えるのは、指が10本だからだと言われている。</li>
-<li>パックが10こで箱、箱が10こでトラック。数字の各桁は、つめている途中のパックのたまご(ばら)・閉じたパック・箱・トラックがそれぞれ何こあるかに当たる。たとえば「236」は、箱2つ・パック3つ・ばら6こ。パックがいっぱいになって閉じた直後は、新しいパックが空っぽ(ばら0こ)になる。これが「10」「20」の0。</li>
-<li>下の「ほかの かぞえかた」でタコ(足8本)やむし(足6本)を選ぶと、パックに入る数が8こ・6こに変わる。上の数字は、いつもの数え方の「たまごの全部の数」のままにしてある。</li>
+<li>お店に、お客さんが順番に来る。ほしいパックは、くまさんが10こ入り、うさぎさんが6こ入り、ペンギンさんが12こ入り(1ダース)。どれも実際のお店にある大きさ。にわとりを押してパックをいっぱいにすると、お客さんが受け取って、次のお客さんが来る。</li>
+<li>たまごが1こ入るたびに、指が1本ずつ立つ。人が10ずつまとめて数えるのは、指が10本だからだと言われている。12こ入りでは指が足りなくなり、足の指も使う。</li>
+<li>パックを渡した直後は、新しいパックが空っぽ(0こ)になる。上の大きな数字は、にわとりが産んだたまごの全部の数(いつもの数え方)。</li>
 <li>数は、ブラウザの読み上げ(日本語の声がある端末だけ)で読む。ときどき、ひよこが遊びに来る(数とは関係ない)。音は、AIは耳で確かめていない。</li>
 </ul>
 
