@@ -76,6 +76,32 @@
   .chip.sel, .chip.sel:hover:not(:disabled) { border-color: #ff7a3d; background: #ffe3cf; }
   .chick { position: absolute; font-size: 30px; z-index: 6; pointer-events: none; animation: run 2.2s linear forwards; }
   @keyframes run { 0% { transform: translateX(0) translateY(0); } 25% { transform: translateX(25vw) translateY(-14px); } 50% { transform: translateX(50vw) translateY(0); } 75% { transform: translateX(75vw) translateY(-14px); } 100% { transform: translateX(110vw) translateY(0); } }
+  /* たべちゃう くまさん */
+  .enum { text-align: center; font-size: 15px; color: #7a4b00; }
+  .enum span#eNum { font-size: 52px; font-weight: bold; color: #ff8a4c; font-variant-numeric: tabular-nums; }
+  .enum small { font-size: 16px; margin-left: 2px; } .eyomi { font-size: 17px; }
+  .erow { display: grid; grid-template-columns: auto 1fr 84px; gap: 6px; align-items: end; }
+  .ebox, .eover { background: #fff; border: 3px solid #ffe3c6; border-radius: 14px; padding: 5px; display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; }
+  .ebox .tlab b, .eover .tlab b { font-size: 16px; color: #ff8a4c; }
+  .egrid { display: grid; grid-template-columns: repeat(5, 24px); gap: 2px; padding: 4px; border-radius: 8px; background: #fffaf3; border: 2px solid #ffd7a8; }
+  .eslot { width: 24px; height: 24px; border-radius: 50%; background: #fff4ea; box-shadow: inset 0 2px 3px #e6b48a55; }
+  .eslot .tdn { width: 24px; height: 24px; }
+  .eol { display: flex; flex-wrap: wrap; gap: 3px; justify-content: center; min-height: 56px; align-items: center; }
+  .eol .tdn { width: 30px; height: 30px; }
+  .ebear { padding: 0; border: 0; background: none; cursor: pointer; width: 84px; }
+  .ebear:hover:not(:disabled) { background: none; }
+  .ebear svg { width: 100%; height: auto; display: block; overflow: visible; }
+  .ebear.chew svg { animation: chew .14s ease-in-out 4 alternate; }
+  @keyframes chew { from { transform: scale(1, 1); } to { transform: scale(1.06, .94) translateY(2px); } }
+  .eat .eaten { animation: gone .3s ease-in forwards; }
+  @keyframes gone { to { transform: scale(0) rotate(40deg); opacity: 0; } }
+  .ecmp { display: flex; justify-content: center; gap: 22px; margin-top: 6px; }
+  .ecmp[hidden] { display: none; }
+  .ebox .tlab, .eover .tlab { white-space: nowrap; font-size: 11px; }
+  .ecmp > div { display: flex; flex-direction: column; align-items: center; }
+  .ecmp b { font-size: 34px; color: #ff8a4c; line-height: 1.1; } .ecmp small { font-size: 12px; color: #9a5a2a; font-weight: bold; }
+  .eplate { width: 64px; height: 40px; border-radius: 50%; background: radial-gradient(ellipse at center, #fff 55%, #eadfce 57%, #fff 70%); border: 2px solid #e2d7bf; display: flex; align-items: center; justify-content: center; }
+  .eplate .tdn { width: 28px; height: 28px; }
   /* おうようへん */
   .ohead { font-size: 16px; margin: 22px 0 0; }
   .ten .tenrow { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
@@ -103,7 +129,7 @@
   .tyomi { text-align: center; font-size: 17px; color: #7a4b00; }
   .tsay { text-align: center; font-size: 13px; color: #9a5a2a; font-weight: bold; min-height: 2.6em; margin-top: 4px; line-height: 1.5; }
   @media (prefers-reduced-motion: reduce) {
-    .tclosed.new, .tdn.new, .tloose .tdn.pack, .tnum span.bump { animation: none; }
+    .tclosed.new, .tdn.new, .tloose .tdn.pack, .tnum span.bump, .ebear.chew svg, .eat .eaten { animation: none; }
     .cust.in, .cust.dance, .cust.out,
     .num.bump, .counter.party svg, .egg.new, .mini.new, .minibox.new, .minitruck.new, .hen.hit svg, .shop.hit svg, .flyegg, .finger { animation: none; }
     .chick { display: none; }
@@ -140,6 +166,19 @@
   <div class="sub"><button type="button" class="chip" id="voice">🗣 こえ あり</button><button type="button" class="chip" id="reset">さいしょから</button></div>
 </div>
 
+<h2 class="ohead">たべちゃう くまさん</h2>
+<div class="play eat">
+  <div class="enum" aria-live="polite"><span id="eNum">12</span><small>こ</small> <span class="eyomi" id="eYomi">じゅうに</span></div>
+  <div class="erow">
+    <div class="ebox"><div class="tlab">10こ いりの はこ <b id="eBoxN">10</b>こ</div><div class="egrid" id="eGrid"></div></div>
+    <div class="eover"><div class="tlab">はみだし <b id="eOverN">2</b>こ</div><div class="eol" id="eOver"></div></div>
+    <button type="button" class="ebear" id="eBear" aria-label="くまさん(おすと ドーナツを 1こ たべる)"></button>
+  </div>
+  <div class="tsay" id="eSay">くまさんを おすと、ドーナツを 1こ たべるよ</div>
+  <div class="ecmp" id="eCmp" hidden><div><span class="eplate"><span class="tdn" id="eCmp1"></span></span><b>1</b><small>1こ ある</small></div><div><span class="eplate"></span><b>0</b><small>なにも ない</small></div></div>
+  <div class="sub"><button type="button" class="chip" id="eMore">おかわり</button></div>
+</div>
+
 <h2 class="ohead">おうようへん: 10こ いりの はこで かぞえる</h2>
 <div class="play ten">
   <div class="tenrow">
@@ -163,6 +202,7 @@
 <h2>おとなの人へ</h2>
 <ul class="small">
 <li>お店に、お客さんが順番に来る。ほしい箱は、くまさんが10こ入り、うさぎさんが6こ入り、ユニコーンさんが12こ入り(1ダース)。ドーナツの箱は、実際のお店でも6こ入り・12こ入りがよくある。オーブンを押して箱をいっぱいにすると、お客さんが受け取って、次のお客さんが来る。</li>
+<li>「たべちゃう くまさん」では、くまさんが、10こ入りの箱いっぱいと、はみ出した1〜3このドーナツを、1こずつ食べる。はみ出しがなくなると10(箱1つと、はみ出し0こ)、最後の1こで「あと 1こ」、全部食べると0。最後に、1こ載ったお皿の「1」と、空っぽのお皿の「0」を並べて見せる。</li>
 <li>下の「おうようへん」では、10こ入りの箱と、ばらのドーナツを足していく。ばらが10こになると箱に詰まる。大きな数字の十の位(ピンク)は箱の数、一の位(オレンジ)はばらの数。たとえば箱2つとばら3こで23。</li>
 <li>ドーナツが1こ入るたびに、指が1本ずつ立つ。人が10ずつまとめて数えるのは、指が10本だからだと言われている。12こ入りでは指が足りなくなり、足の指も使う。</li>
 <li>上の大きな数字は、いま詰めている箱のドーナツの数。箱を渡した直後は、新しい箱が空っぽで0こになる。</li>

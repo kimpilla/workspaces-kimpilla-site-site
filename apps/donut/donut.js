@@ -182,6 +182,45 @@
   $('shop').addEventListener('click', () => { hitAnim($('shop')); if (!busy) sayWords(cust.name + '。' + cust.size + 'こ ください'); });
   $('reset').onclick = () => { stopHold(); fill = 0; sold = []; busy = false; partyUntil = 0; cust = CUST[0]; showCust(true); render(); };
   $('voice').onclick = () => { voiceOn = !voiceOn; $('voice').textContent = voiceOn ? '🗣 こえ あり' : '🤐 こえ なし'; if (!voiceOn && window.speechSynthesis) speechSynthesis.cancel(); };
+  // ---- たべちゃう くまさん: 1こ ある(1)と、なにも ない(0)の ちがい ----
+  let eBox = 10, eOver = 2, eBusy = false;
+  $('eBear').innerHTML = custSvg(CUST[0]);
+  $('eCmp1').innerHTML = donut(0);
+  function eRender(gone) {                                         // gone = 'over' | 'box'(いま たべた ところ)
+    const n = eBox + eOver;
+    $('eNum').textContent = n; $('eYomi').textContent = yomi(n);
+    $('eBoxN').textContent = eBox; $('eOverN').textContent = eOver;
+    $('eGrid').innerHTML = '';
+    for (let i = 0; i < 10; i++) { const sl = document.createElement('span'); sl.className = 'eslot'; if (i < eBox) sl.innerHTML = '<span class="tdn">' + donut(i) + '</span>'; $('eGrid').appendChild(sl); }
+    $('eOver').innerHTML = '';
+    for (let i = 0; i < eOver; i++) { const e = document.createElement('span'); e.className = 'tdn'; e.innerHTML = donut(i + 3); $('eOver').appendChild(e); }
+    $('eCmp').hidden = n !== 0;
+  }
+  function eat() {
+    if (eBusy) return;
+    if (eBox + eOver === 0) { $('eSay').textContent = 'もう ない！ 「おかわり」を おしてね'; return; }
+    eBusy = true;
+    const el = eOver > 0 ? $('eOver').lastElementChild : $('eGrid').children[eBox - 1].firstElementChild;
+    if (el) el.classList.add('eaten');
+    const b = $('eBear'); b.classList.remove('chew'); void b.offsetWidth; b.classList.add('chew');
+    tone(300, 0, 0.08, 'sine', 0.2); tone(260, 0.14, 0.08, 'sine', 0.2);   // もぐもぐ
+    setTimeout(() => {
+      if (eOver > 0) eOver--; else eBox--;
+      const n = eBox + eOver;
+      eRender();
+      let t;
+      if (n === 10) t = 'はみだしが なくなった。はこ 1つと、はみだし 0こ。だから 10';
+      else if (n === 1) t = 'あと 1こ！ まだ 1こ ある';
+      else if (n === 0) { t = 'もう ない！ なにも ない ときは 0'; sParty(); }
+      else t = eOver > 0 ? 'はみだしを たべた' : 'はこの ドーナツを たべた。のこり ' + n + 'こ';
+      $('eSay').textContent = t; speak(n);
+      eBusy = false;
+    }, 320);
+  }
+  $('eBear').onclick = eat;
+  $('eMore').onclick = () => { eBox = 10; eOver = 1 + Math.floor(Math.random() * 3); eBusy = false; eRender(); $('eSay').textContent = 'おかわり！ くまさんを おすと、1こ たべるよ'; };
+  eOver = 1 + Math.floor(Math.random() * 3); eRender();
+
   // ---- おうようへん: 10こ いりの はこが いくつと、ばらが いくつで、いくつ ----
   let tBox = 0, tOne = 0, tTimer = null;
   function tRender(fx) {
