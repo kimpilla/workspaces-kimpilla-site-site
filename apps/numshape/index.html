@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>すうじの かたち | kimpilla</title>
+<link rel="stylesheet" href="../../style.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Klee+One:wght@600&display=swap">
+<style>
+  .play { background: #fbf8f1; color: #4a4038; border-radius: 22px; padding: 8px 10px 12px; margin: 8px 0; border: 3px solid #e8dfcc; font-family: "Hiragino Maru Gothic ProN", "Yu Gothic", system-ui, sans-serif; position: relative; }
+  .play button { font-family: inherit; margin: 0; touch-action: manipulation; }
+  h1 { margin: 14px 0 0; }
+  /* すうじを えらぶ */
+  .digits { display: grid; grid-template-columns: repeat(10, 1fr); gap: 3px; }
+  .dg { font-family: "Klee One", serif; font-weight: 600; font-size: 22px; padding: 2px 0; border-radius: 10px; border: 2px solid #e8dfcc; background: #fff; color: #6b6058; position: relative; }
+  .dg:hover:not(:disabled) { background: #fff; color: #6b6058; }
+  .dg.sel { border-color: #e8a46a; background: #fff3e6; }
+  .dg.done::after { content: "★"; position: absolute; top: -8px; right: -3px; font-size: 12px; color: #f2b94c; }
+  /* なぞる ところ */
+  .stage { background: #fdfbf6; position: relative; margin: 8px auto 0; width: min(100%, 360px); aspect-ratio: 1 / 1; border-radius: 16px; overflow: hidden; border: 2px solid #e8dfcc; touch-action: none; }
+  .stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .stage canvas { transition: transform .45s ease; transform-origin: 0 50%; }
+  .stage.solved canvas { transform: translate(4%, 0) scale(.56); }            /* できたら すうじを ひだりに よせて、みぎに イラスト */
+  .reward { position: absolute; right: 4%; top: 50%; width: 44%; transform: translateY(-50%) scale(0); transition: transform .45s cubic-bezier(.3, 1.6, .5, 1) .15s; pointer-events: none; }
+  .stage.solved .reward { transform: translateY(-50%) scale(1); }
+  .eq { position: absolute; left: 54%; top: 50%; transform: translate(-50%, -50%); font-size: 28px; color: #c9bfb2; opacity: 0; transition: opacity .3s .3s; pointer-events: none; }
+  .stage.solved .eq { opacity: 1; }
+  .reward img { width: 100%; display: block; filter: drop-shadow(0 4px 6px #0002); }
+  .hint { position: absolute; left: 0; right: 0; top: 6px; text-align: center; font-size: 13px; color: #9a8f84; pointer-events: none; }
+  .msg { text-align: center; font-size: 18px; font-weight: bold; color: #6b6058; min-height: 1.6em; margin-top: 6px; }
+  .msg b { font-family: "Klee One", serif; font-size: 26px; color: #d27a3a; }
+  .row { display: flex; justify-content: center; gap: 8px; margin-top: 4px; }
+  .chip { font-size: 13px; padding: 5px 12px; border-radius: 999px; border: 2px solid #e8dfcc; background: #fff; color: #6b6058; font-weight: bold; }
+  .chip:hover:not(:disabled) { background: #fff; color: #6b6058; }
+  .credit { font-size: 11px; color: var(--muted); }
+  @media (prefers-reduced-motion: reduce) { .reward, .stage canvas, .eq { transition: none; } }
+</style>
+</head>
+<body>
+<header>
+  <a class="home" href="../../index.html">kimpilla</a>
+  <nav><a href="../../music.html">音楽</a> <a href="../../apps.html">アプリ</a> <a href="../../memo.html">メモ</a></nav>
+</header>
+<main>
+<h1>すうじの かたち</h1>
+<div class="play">
+  <div class="digits" id="digits"></div>
+  <div class="stage" id="stage">
+    <canvas id="paper"></canvas>
+    <canvas id="ink"></canvas>
+    <div class="eq" aria-hidden="true">＝</div>
+    <div class="reward" id="reward"><img id="rimg" alt=""></div>
+    <div class="hint" id="hint">ゆびで なぞってみよう</div>
+  </div>
+  <div class="msg" id="msg"></div>
+  <div class="row"><button type="button" class="chip" id="clear">けす</button><button type="button" class="chip" id="next">つぎの すうじ</button><button type="button" class="chip" id="voice">🗣 こえ あり</button></div>
+</div>
+
+<h2>おとなの人へ</h2>
+<ul class="small">
+<li>うすく出ている数字を指でなぞると、鉛筆で書いたような線が残る。だいたいなぞれたら、その数字の形に似たもののイラストが出てきて、声で読む。上手になぞれたかどうかは見ていない(最後までなぞれば出てくる)。</li>
+<li>数字の形と似ているもの: 0=ドーナツ、1=ろうそく、2=はくちょう、3=みみ、4=ヨット、5=おんぷ、6=さくらんぼ、7=すべりだい、8=ゆきだるま、9=ふうせん。</li>
+<li>数字の字は、教科書体に近い無料のフォント「Klee One」(Google Fonts)。数は、ブラウザの読み上げ(日本語の声がある端末だけ)で読む。音は、AIは耳で確かめていない。</li>
+</ul>
+<p class="credit">イラスト: Microsoft「Fluent Emoji」(MITライセンス。<a href="img/LICENSE-fluentui-emoji.txt">ライセンス文</a>)</p>
+</main>
+<footer>kimpilla</footer>
+<script src="numshape.js"></script>
+</body>
+</html>
