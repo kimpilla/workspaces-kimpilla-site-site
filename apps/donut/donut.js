@@ -1,21 +1,25 @@
-// たまごやさん: おきゃくさんの ちゅうもん(6こ・10こ・12こ いりの パック)を、にわとりの たまごで いっぱいに する
+// ドーナツやさん: おきゃくさんの ちゅうもん(6こ・10こ・12こ いりの はこ)を、オーブンで やいた ドーナツで いっぱいに する
 (() => {
   const $ = (id) => document.getElementById(id);
 
-  // ---- おきゃくさん(ほしい パックの おおきさは、ほんとうに おみせに ある 6・10・12) ----
+  // ---- おきゃくさん(ほしい はこの おおきさは、ほんとうに おみせに ある 6・10・12) ----
   const CUST = [
     { name: 'くまさん', size: 10, w: 5, svg: '<circle cx="18" cy="16" r="9" fill="#a8723e"/><circle cx="52" cy="16" r="9" fill="#a8723e"/><circle cx="35" cy="34" r="24" fill="#b98049"/><ellipse cx="35" cy="42" rx="11" ry="8" fill="#e8c8a0"/><circle cx="27" cy="30" r="3" fill="#2b2150"/><circle cx="43" cy="30" r="3" fill="#2b2150"/><circle cx="35" cy="39" r="3" fill="#2b2150"/><rect x="16" y="56" width="38" height="26" rx="10" fill="#e8413c"/>' },
-    { name: 'うさぎさん', size: 6, w: 2, svg: '<ellipse cx="25" cy="10" rx="6" ry="18" fill="#fff" stroke="#e2d4e8" stroke-width="2"/><ellipse cx="45" cy="10" rx="6" ry="18" fill="#fff" stroke="#e2d4e8" stroke-width="2"/><circle cx="35" cy="36" r="22" fill="#fff" stroke="#e2d4e8" stroke-width="2"/><circle cx="27" cy="33" r="3" fill="#c0395a"/><circle cx="43" cy="33" r="3" fill="#c0395a"/><path d="M31 42 q4 4 8 0" stroke="#c0395a" stroke-width="2" fill="none"/><rect x="16" y="56" width="38" height="26" rx="10" fill="#ff8fb1"/>' },
-    { name: 'ペンギンさん', size: 12, w: 2, svg: '<ellipse cx="35" cy="48" rx="26" ry="34" fill="#2b3550"/><ellipse cx="35" cy="54" rx="17" ry="25" fill="#fff"/><circle cx="28" cy="32" r="3" fill="#2b2150"/><circle cx="42" cy="32" r="3" fill="#2b2150"/><path d="M30 40 l5 6 l5 -6 z" fill="#ffb020"/><path d="M22 82 h10 M38 82 h10" stroke="#ffb020" stroke-width="5" stroke-linecap="round"/>' },
+    { name: 'うさぎさん', size: 6, w: 2, svg: '<ellipse cx="25" cy="10" rx="6" ry="18" fill="#fff" stroke="#e2d4e8" stroke-width="2"/><ellipse cx="45" cy="10" rx="6" ry="18" fill="#fff" stroke="#e2d4e8" stroke-width="2"/><circle cx="35" cy="36" r="22" fill="#fff" stroke="#e2d4e8" stroke-width="2"/><circle cx="27" cy="33" r="3" fill="#c0395a"/><circle cx="43" cy="33" r="3" fill="#c0395a"/><path d="M31 42 q4 4 8 0" stroke="#c0395a" stroke-width="2" fill="none"/><rect x="16" y="56" width="38" height="26" rx="10" fill="#a8eadf"/>' },
+    { name: 'ユニコーンさん', size: 12, w: 2, emo: '🦄' },
   ];
-  const custSvg = (c) => '<svg viewBox="0 0 70 86" aria-hidden="true">' + c.svg + '</svg>';
+  const custSvg = (c) => c.emo ? '<span class="emo" aria-hidden="true">' + c.emo + '</span>' : '<svg viewBox="0 0 70 86" aria-hidden="true">' + c.svg + '</svg>';
+  // ドーナツ(アイシングの いろは じゅんばんに かわる)
+  const ICING = ['#ffb3d9', '#c9b3ff', '#a8eadf', '#fff0a0', '#ffc9a8', '#b3dcff'];
+  const SPR = ['#7ad3ff', '#ffe066', '#b98cff', '#ff8fc4'];
+  const donut = (k) => '<svg viewBox="-14 -14 28 28" aria-hidden="true"><circle r="13" fill="#e7b27a"/><path d="M-12 -2 a12 12 0 0 1 24 0 q-3 4 -6 1 q-3 5 -6 1 q-3 5 -6 0 q-3 4 -6 0z" fill="' + ICING[k % 6] + '"/><circle r="4.5" fill="#fff4ea"/>' + [[-7, -6], [5, -8], [8, -2], [-9, 0]].map(([a, b], i) => '<rect x="' + a + '" y="' + b + '" width="4" height="1.6" rx=".8" fill="' + SPR[(i + k) % 4] + '" transform="rotate(30 ' + a + ' ' + b + ')"/>').join('') + '</svg>';
   function pickCust(prev) {
     const pool = CUST.filter((c) => c !== prev), tot = pool.reduce((a, c) => a + c.w, 0);
     let r = Math.random() * tot; for (const c of pool) { r -= c.w; if (r < 0) return c; } return pool[0];
   }
 
   // ---- え(ゆび) ----
-  function handsSvg(up, need) {                                     // 両手。左手の おやゆび → こゆび → 右手の おやゆび → こゆび の じゅんに たつ。need = パックの かず
+  function handsSvg(up, need) {                                     // 両手。左手の おやゆび → こゆび → 右手の おやゆび → こゆび の じゅんに たつ。need = はこの かず
     const F = [['おや', 34, 46, 38], ['ひとさし', 50, 22, 0], ['なか', 56, 0, 0], ['くすり', 50, -22, 0], ['こ', 40, -43, 0]];
     const feet = need > 10 && up >= 10;                              // 10を こえると、あしの ゆびも つかう
     let s = '<svg viewBox="0 0 400 ' + (feet ? 300 : 190) + '" aria-label="りょうて">';
@@ -90,14 +94,14 @@
   let fill = 0, cust = CUST[0], busy = false, sold = [], partyUntil = 0;
   function render(newEgg) {
     const s = cust.size;
-    $('num').textContent = fill; $('yomi').textContent = yomi(fill); $('packsize').textContent = s + 'こ いり' + (s === 12 ? '(1ダース)' : '');
+    $('num').textContent = fill; $('yomi').textContent = yomi(fill); $('packsize').textContent = s + 'こ いりの はこ' + (s === 12 ? '(1ダース)' : '');
     const partying = Date.now() < partyUntil;
     $('counter').innerHTML = handsSvg(partying ? s : fill, s);
     $('counter').classList.toggle('party', partying);
     const pl = $('plate'); pl.innerHTML = ''; pl.style.gridTemplateColumns = 'repeat(' + (s / 2) + ', 22px)';
     for (let i = 0; i < s; i++) {
       const sl = document.createElement('span'); sl.className = 'slot';
-      if (i < fill) sl.innerHTML = '<span class="egg' + (newEgg && i === fill - 1 ? ' new' : '') + '"></span>';
+      if (i < fill) sl.innerHTML = '<span class="egg' + (newEgg && i === fill - 1 ? ' new' : '') + '">' + donut(i) + '</span>';
       pl.appendChild(sl);
     }
     $('cSold').textContent = sold.length; $('cSoldEggs').textContent = sold.reduce((a, x) => a + x, 0);
@@ -109,7 +113,7 @@
     const el = $('cust'); el.innerHTML = custSvg(cust);
     el.classList.remove('dance', 'out', 'in'); void el.offsetWidth; el.classList.add('in');
     $('bubble').textContent = cust.size + 'こ ください';
-    $('say').textContent = cust.name + '「' + cust.size + 'こ いりの パックを いっぱいに して！」' + (cust.size === 12 ? '(1ダース)' : '');
+    $('say').textContent = cust.name + '「' + cust.size + 'こ いりの はこを いっぱいに して！」' + (cust.size === 12 ? '(1ダース)' : '');
     if (!first) sayWords(cust.size + 'こ ください');
   }
   function sayWords(t) {
@@ -143,7 +147,6 @@
     if (fill === 10 && s > 10) $('say').textContent = 'ゆびが たりない！ あしの ゆびも つかおう';
     else $('say').textContent = s - fill === 1 ? 'あと 1こで ' + s + 'こ！' : (fill <= 10 ? 'ゆびが ' : 'あしの ゆびも あわせて ') + fill + 'ほん';
     render(true); speak(fill);
-    if (Math.random() < 0.06) chick();
     return true;
   }
 
@@ -156,14 +159,14 @@
     setTimeout(() => c.remove(), 2400);
   }
 
-  // ---- え を おす(にわとり = たまごを うむ、おみせ・おきゃくさん = ちゅうもんを もういちど いう) ----
+  // ---- え を おす(オーブン = ドーナツが やける、おみせ = おきゃくさんが ちゅうもんを もういちど いう) ----
   const hen = $('hen');
   function hitAnim(el) { el.classList.remove('hit'); void el.offsetWidth; el.classList.add('hit'); }
   function lay() {
     hitAnim(hen); $('finger').style.display = 'none';
-    tone(880, 0, 0.05, 'square', 0.05); tone(660, 0.06, 0.07, 'square', 0.05);          // コケッ
+    tone(1320, 0, 0.12, 'sine', 0.12); tone(1760, 0.03, 0.18, 'sine', 0.06);          // チン(やけた)
     if (!addEgg()) return;
-    const e = document.createElement('span'); e.className = 'flyegg';
+    const e = document.createElement('span'); e.className = 'flyegg'; e.innerHTML = donut(fill - 1);
     const r = hen.getBoundingClientRect(), pr = $('play').getBoundingClientRect();
     e.style.left = (r.left - pr.left + r.width * 0.55) + 'px'; e.style.top = (r.top - pr.top + r.height * 0.55) + 'px';
     e.style.setProperty('--dx', (20 + Math.random() * 30) + 'px');
