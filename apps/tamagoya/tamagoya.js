@@ -112,32 +112,21 @@
     $('counter').classList.toggle('party', partying);
     // つめている とちゅうの パック(あなは かぞえる かかりの かず。からっぽの ときは 0 を だす)
     $('cLoose').textContent = p.loose;
-    const pl = $('plate'); pl.innerHTML = ''; pl.style.gridTemplateColumns = 'repeat(' + (b / 2) + ', 26px)';
+    const pl = $('plate'); pl.innerHTML = ''; pl.style.gridTemplateColumns = 'repeat(' + (b / 2) + ', 22px)';
     for (let i = 0; i < b; i++) {
       const sl = document.createElement('span'); sl.className = 'slot';
       if (i < p.loose) sl.innerHTML = '<span class="egg' + (fx.newLoose && i === p.loose - 1 ? ' new' : '') + '"></span>';
       pl.appendChild(sl);
     }
-    $('zero').textContent = p.loose ? '' : '0';
-    // パック
-    $('cPack').textContent = p.pack; $('packNote').textContent = '(1パックに ' + b + 'こ)';
-    $('packs').innerHTML = p.pack ? '' : '<span class="empty">まだ ない</span>';
-    for (let i = 0; i < p.pack; i++) {
-      const c = document.createElement('div'); c.className = 'carton' + (fx.newPack && i === p.pack - 1 ? ' new' : '');
-      c.style.gridTemplateColumns = 'repeat(' + (b / 2) + ', 14px)';
-      c.innerHTML = '<span class="egg"></span>'.repeat(b);
-      $('packs').appendChild(c);
-    }
-    // はこ
-    $('cBox').textContent = p.box; $('boxNote').textContent = '(1はこに パック' + b + 'こ = たまご ' + b * b + 'こ)';
-    $('boxes').innerHTML = p.box ? '' : '<span class="empty">まだ ない</span>';
-    for (let i = 0; i < p.box; i++) { const e = document.createElement('div'); e.className = 'box' + (fx.newBox && i === p.box - 1 ? ' new' : ''); e.innerHTML = 'パック<br>×' + b; $('boxes').appendChild(e); }
-    // トラック
-    $('cTruck').textContent = p.truck; $('truckNote').textContent = '(1だいに はこ' + b + 'こ = たまご ' + b * b * b + 'こ)';
-    $('trucks').innerHTML = p.truck ? '' : '<span class="empty">まだ ない</span>';
-    const shown = Math.min(p.truck, 10);
-    for (let i = 0; i < shown; i++) { const e = document.createElement('span'); e.className = 'truck' + (fx.newTruck && i === shown - 1 ? ' new' : ''); e.textContent = '🚚'; $('trucks').appendChild(e); }
-    if (p.truck > 10) { const m = document.createElement('span'); m.className = 'more'; m.textContent = '… ぜんぶで ' + p.truck + 'だい'; $('trucks').appendChild(m); }
+    // しまった もの(パック・はこ・トラック)
+    const shelf = (id, cnt, cls, html, isNew, cap) => {
+      $(id).innerHTML = '';
+      for (let i = 0; i < Math.min(cnt, cap); i++) { const e = document.createElement('span'); e.className = cls + (isNew && i === Math.min(cnt, cap) - 1 ? ' new' : ''); e.innerHTML = html; $(id).appendChild(e); }
+      if (cnt > cap) { const m = document.createElement('span'); m.className = 'more'; m.textContent = '…'; $(id).appendChild(m); }
+    };
+    $('cPack').textContent = p.pack; shelf('packs', p.pack, 'mini', '', fx.newPack, 12);
+    $('cBox').textContent = p.box; shelf('boxes', p.box, 'minibox', '', fx.newBox, 12);
+    $('cTruck').textContent = p.truck; shelf('trucks', p.truck, 'minitruck', '🚚', fx.newTruck, 6);
   }
 
   function add(k) {
@@ -152,12 +141,12 @@
     if (packed) {
       sParty(); partyUntil = Date.now() + 700;
       clearTimeout(partyTimer); partyTimer = setTimeout(() => render(), 720);
-      say = who.full + ' パックに しまおう。';
-      if (boxed) { sBox(); say = 'パックが ' + b + 'こ そろった！ はこに いれよう。'; }
-      if (trucked) { sTruck(); say = 'はこが ' + b + 'こ！ トラック しゅっぱつ！'; }
+      say = who.full + ' パックを とじて、あたらしい パックへ';
+      if (boxed) { sBox(); say = 'パックが ' + b + 'こ！ はこに いれよう'; }
+      if (trucked) { sTruck(); say = 'はこが ' + b + 'こ！ トラック しゅっぱつ'; }
     } else {
       sFinger(now.loose);
-      say = who.part + 'が ' + now.loose + 'つ。' + (b - now.loose === 1 ? 'あと 1つで ' + b + '！' : '');
+      say = b - now.loose === 1 ? 'あと 1つで ' + b + '！' : who.part + 'が ' + now.loose + 'つ';
     }
     $('say').textContent = say;
     const num = $('num'); num.classList.remove('bump'); void num.offsetWidth; num.classList.add('bump');
@@ -168,7 +157,7 @@
 
   function chick() {                                                // ときどき ひよこが あそびに くる(かずとは かんけい ない)
     const c = document.createElement('span'); c.className = 'chick'; c.textContent = '🐥';
-    const play = $('play'), field = play.querySelector('.field');
+    const play = $('play'), field = play.querySelector('.store');
     c.style.left = '-40px'; c.style.top = (field.offsetTop + 10 + Math.random() * 60) + 'px';
     play.appendChild(c);
     tone(1200, 0, 0.08, 'sine', 0.15); tone(1500, 0.1, 0.08, 'sine', 0.15);
@@ -179,7 +168,7 @@
   const hen = $('hen');
   function hitAnim(el) { el.classList.remove('hit'); void el.offsetWidth; el.classList.add('hit'); }
   function lay() {
-    add(1); hitAnim(hen);
+    add(1); hitAnim(hen); $('finger').style.display = 'none';
     tone(880, 0, 0.05, 'square', 0.05); tone(660, 0.06, 0.07, 'square', 0.05);          // コケッ
     const e = document.createElement('span'); e.className = 'flyegg';
     const r = hen.getBoundingClientRect(), pr = $('play').getBoundingClientRect();
@@ -196,19 +185,19 @@
   hen.addEventListener('contextmenu', (e) => e.preventDefault());
   $('shop').addEventListener('click', () => {
     hitAnim($('shop'));
-    if (n === 0) { $('say').textContent = 'まだ たまごが ないよ。にわとりを おしてね。'; return; }
+    if (n === 0) { $('say').textContent = 'まだ たまごが ないよ'; return; }
     for (let i = 0; i < 6; i++) tone(1568 + (i % 2) * 300, i * 0.07, 0.12, 'triangle', 0.12);   // チャリン
-    $('say').textContent = 'ぜんぶ うれた！ たまごは ゼロ。'; n = 0; partyUntil = 0; render(); speak(0);
+    $('say').textContent = 'ぜんぶ うれた！ ゼロ'; n = 0; partyUntil = 0; render(); speak(0);
   });
   $('voice').onclick = () => { voiceOn = !voiceOn; $('voice').textContent = voiceOn ? '🗣 こえ あり' : '🤐 こえ なし'; if (!voiceOn && window.speechSynthesis) speechSynthesis.cancel(); };
 
   WHO.forEach((w) => {
-    const b = document.createElement('button'); b.type = 'button'; b.className = 'chip' + (w === who ? ' sel' : '');
-    b.innerHTML = '<span style="font-size:20px">' + w.icon + '</span>' + w.name + '<small style="font-weight:normal">(' + w.base + 'こ)</small>';
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'chip' + (w === who ? ' sel' : ''); b.style.marginRight = '4px';
+    b.innerHTML = w.icon + ' ' + w.name + '(' + w.base + ')';
     b.onclick = () => {
       who = w; partyUntil = 0;
       document.querySelectorAll('#who .chip').forEach((x) => x.classList.toggle('sel', x === b));
-      $('say').textContent = w.id === 'hito' ? 'ゆびは 10ぽん。10こで パックに するよ。' : w.name + 'の あしは ' + w.base + 'ほん。' + w.base + 'こで パックに するよ。';
+      $('say').textContent = w.id === 'hito' ? 'ゆびは 10ぽん。10こで 1パック' : w.name + 'の あしは ' + w.base + 'ほん。' + w.base + 'こで 1パック';
       render();
     };
     $('who').appendChild(b);

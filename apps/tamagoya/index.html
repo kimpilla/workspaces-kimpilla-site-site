@@ -6,75 +6,65 @@
 <title>たまごやさん | kimpilla</title>
 <link rel="stylesheet" href="../../style.css">
 <style>
-  .play { background: #fff7e0; color: #3a2a12; border-radius: 22px; padding: 0 14px 18px; margin: 14px 0; border: 3px solid #ffd36b; font-family: "Hiragino Maru Gothic ProN", "Yu Gothic", system-ui, sans-serif; overflow: hidden; position: relative; }
-  .play h2 { font-size: 16px; margin: 16px 0 6px; color: #7a4b00; }
-  /* 上: かず(スクロールしても見える) */
-  .top { position: sticky; top: 0; z-index: 5; background: #fff7e0; border-bottom: 3px solid #ffd36b; margin: 0 -14px; padding: 8px 14px; box-shadow: 0 4px 8px #0002; }
-  .numrow { display: flex; align-items: baseline; justify-content: center; gap: 10px; }
-  .num { font-size: 44px; font-weight: bold; color: #d2541a; font-variant-numeric: tabular-nums; line-height: 1.1; }
+  .play { background: #fff7e0; color: #3a2a12; border-radius: 22px; padding: 8px 10px 10px; margin: 8px 0; border: 3px solid #ffd36b; font-family: "Hiragino Maru Gothic ProN", "Yu Gothic", system-ui, sans-serif; overflow: hidden; position: relative; }
+  .play button { font-family: inherit; font-weight: bold; margin: 0; touch-action: manipulation; }
+  h1 { margin: 14px 0 0; }
+  /* かず */
+  .numrow { display: flex; align-items: baseline; justify-content: center; gap: 8px; }
+  .num { font-size: 42px; font-weight: bold; color: #d2541a; font-variant-numeric: tabular-nums; line-height: 1.1; }
   .num.bump { animation: bump .25s; }
   @keyframes bump { 50% { transform: scale(1.15); } }
-  .yomi { text-align: center; font-size: 18px; color: #7a4b00; min-height: 1.4em; }
-  .btns { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 6px; }
-  .play button { font-family: inherit; font-weight: bold; margin: 0; touch-action: manipulation; }
-  .egg-btn { font-size: 22px; padding: 12px 26px; border-radius: 999px; border: 3px solid #ff7a3d; background: #ff7a3d; color: #fff; }
-  .egg-btn:hover:not(:disabled) { background: #ff8f5a; color: #fff; }
-  .chip { font-size: 14px; padding: 8px 12px; border-radius: 999px; border: 3px solid #f1dfae; background: #fff; color: #7a4b00; }
-  .chip:hover:not(:disabled) { background: #fff; color: #7a4b00; }
-  .chip.sel, .chip.sel:hover:not(:disabled) { border-color: #ff7a3d; background: #ffe3cf; }
-  .hint { text-align: center; font-size: 12px; color: #8a6a3a; margin-top: 4px; }
-  .scene { display: flex; justify-content: center; gap: 14px; margin-top: 4px; }
-  .pic { position: relative; width: 124px; padding: 0; border: 0; background: none; cursor: pointer; -webkit-touch-callout: none; }
+  .yomi { font-size: 17px; color: #7a4b00; }
+  /* にわとり → パック → おみせ */
+  .scene { display: grid; grid-template-columns: 1fr auto 1fr; align-items: end; gap: 6px; margin-top: 2px; }
+  .pic { position: relative; padding: 0; border: 0; background: none; cursor: pointer; -webkit-touch-callout: none; max-width: 120px; justify-self: center; width: 100%; }
   .pic:hover:not(:disabled) { background: none; }
   .pic svg { width: 100%; height: auto; display: block; overflow: visible; }
-  .pic .tag { display: block; text-align: center; font-size: 12px; color: #8a6a3a; }
-  .pic:active svg, .pic.hit svg { transform: scale(.93); }
+  .pic.hit svg { transform: scale(.93); }
   .hen.hit svg { animation: cluck .25s; }
   @keyframes cluck { 0% { transform: scale(1); } 40% { transform: scale(1.06, .9) translateY(4px); } 100% { transform: scale(1); } }
   .shop.hit svg { animation: sold .5s; }
   @keyframes sold { 30% { transform: rotate(-4deg) scale(1.05); } 60% { transform: rotate(4deg); } 100% { transform: none; } }
-  .flyegg { position: absolute; width: 20px; height: 26px; z-index: 7; pointer-events: none; background: radial-gradient(circle at 35% 30%, #fff 0 20%, #fbeedc 45%, #f0d9b5 100%); border-radius: 50% 50% 46% 46% / 60% 60% 40% 40%; animation: pop .5s ease-out forwards; }
-  @keyframes pop { 0% { transform: translate(0, 0) scale(.4); opacity: 1; } 60% { transform: translate(var(--dx), -30px) scale(1); } 100% { transform: translate(var(--dx), 20px); opacity: 0; } }
-  .hint .chip { font-size: 11px; padding: 3px 8px; border-width: 2px; margin-left: 4px; }
-  /* かぞえる かかり */
-  .who { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
-  .who .chip { display: inline-flex; align-items: center; gap: 6px; }
-  .counter { background: #fff; border: 3px solid #f1dfae; border-radius: 18px; padding: 8px; display: flex; justify-content: center; }
-  .counter svg { width: 100%; max-width: 420px; height: auto; display: block; overflow: visible; }
-  .counter .up { fill: #ffb070; }
+  .finger { position: absolute; right: -4px; top: 6px; font-size: 26px; animation: tap 1s ease-in-out infinite; pointer-events: none; }
+  @keyframes tap { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(-8px, 10px); } }
+  .packbox { display: flex; flex-direction: column; align-items: center; }
+  .opencarton { display: grid; gap: 3px; padding: 6px; border-radius: 10px; background: #cfe8f7; border: 3px solid #9cc8e6; }
+  .slot { width: 22px; height: 27px; border-radius: 50% 50% 46% 46% / 60% 60% 40% 40%; background: #e6f3fb; box-shadow: inset 0 3px 4px #7fb3d655; display: flex; align-items: center; justify-content: center; }
+  .egg { display: inline-block; width: 20px; height: 25px; background: radial-gradient(circle at 35% 30%, #fff 0 20%, #fbeedc 45%, #f0d9b5 100%); border-radius: 50% 50% 46% 46% / 60% 60% 40% 40%; box-shadow: 0 2px 2px #0002; }
+  .egg.new { animation: roll .35s ease-out; }
+  @keyframes roll { 0% { transform: translateY(-24px) scale(.5); opacity: 0; } 100% { transform: none; opacity: 1; } }
+  .loose { font-size: 13px; color: #7a4b00; margin-top: 2px; }
+  .loose b { font-size: 26px; color: #d2541a; font-variant-numeric: tabular-nums; }
+  .flyegg { position: absolute; width: 18px; height: 23px; z-index: 7; pointer-events: none; background: radial-gradient(circle at 35% 30%, #fff 0 20%, #fbeedc 45%, #f0d9b5 100%); border-radius: 50% 50% 46% 46% / 60% 60% 40% 40%; animation: pop .4s ease-out forwards; }
+  @keyframes pop { 0% { transform: translate(0, 0) scale(.4); opacity: 1; } 60% { transform: translate(var(--dx), -26px) scale(1); } 100% { transform: translate(var(--dx), 10px); opacity: 0; } }
+  /* ゆび */
+  .counterwrap { display: flex; align-items: center; gap: 6px; margin-top: 6px; background: #fff; border: 3px solid #f1dfae; border-radius: 16px; padding: 4px 8px; }
+  .counter { flex: 1; min-width: 0; }
+  .counter svg { width: 100%; max-width: 300px; height: auto; display: block; margin: 0 auto; overflow: visible; }
   .counter.party svg { animation: clap .18s ease-in-out 4 alternate; }
   @keyframes clap { from { transform: scale(1); } to { transform: scale(1.06) rotate(1deg); } }
-  .say { text-align: center; font-size: 15px; color: #7a4b00; min-height: 1.6em; margin: 6px 0 0; font-weight: bold; }
-  /* たまご */
-  .field { display: grid; gap: 10px; }
-  .row { background: #fff; border: 3px solid #f1dfae; border-radius: 16px; padding: 8px 10px; }
-  .row .lab { font-size: 13px; color: #8a6a3a; margin-bottom: 4px; }
-  .row .lab b { font-size: 18px; color: #d2541a; font-variant-numeric: tabular-nums; }
-  .items { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; min-height: 40px; }
-  .opencarton { display: grid; gap: 4px; padding: 8px; border-radius: 10px; background: #cfe8f7; border: 3px solid #9cc8e6; }
-  .slot { width: 26px; height: 32px; border-radius: 50% 50% 46% 46% / 60% 60% 40% 40%; background: #e6f3fb; box-shadow: inset 0 3px 4px #7fb3d655; display: flex; align-items: center; justify-content: center; }
-  .slot .egg { width: 24px; height: 30px; }
-  .zero { font-size: 40px; font-weight: bold; color: #d2541a; margin-left: 12px; align-self: center; }
-  .egg { width: 24px; height: 30px; display: inline-block; background: radial-gradient(circle at 35% 30%, #fff 0 20%, #fbeedc 45%, #f0d9b5 100%); border-radius: 50% 50% 46% 46% / 60% 60% 40% 40%; box-shadow: 0 2px 2px #0002; }
-  .egg.new { animation: roll .4s ease-out; }
-  @keyframes roll { 0% { transform: translateX(-40px) rotate(-200deg); opacity: 0; } 100% { transform: none; opacity: 1; } }
-  .carton { display: grid; gap: 2px; padding: 4px; border-radius: 8px; background: #cfe8f7; border: 2px solid #9cc8e6; }
-  .carton .egg { width: 14px; height: 18px; }
-  .carton.new { animation: close .5s ease-out; }
-  @keyframes close { 0% { transform: scale(1.4); } 40% { transform: scale(.9) rotateX(40deg); } 100% { transform: none; } }
-  .box { width: 58px; height: 46px; border-radius: 6px; background: #d9a066; border: 3px solid #b07a43; color: #fff; font-size: 11px; display: flex; align-items: center; justify-content: center; text-align: center; line-height: 1.2; text-shadow: 0 1px 1px #0005; }
-  .box.new { animation: drop .5s ease-out; }
-  @keyframes drop { 0% { transform: translateY(-40px); } 70% { transform: translateY(4px); } 100% { transform: none; } }
-  .truck { font-size: 40px; line-height: 1; }
-  .truck.new { animation: drive 1s ease-out; }
-  @keyframes drive { 0% { transform: translateX(-120px); } 80% { transform: translateX(6px); } 100% { transform: none; } }
-  .more { font-size: 15px; color: #7a4b00; font-weight: bold; align-self: center; }
-  .empty { font-size: 12px; color: #b8a27a; align-self: center; }
-  .chick { position: absolute; font-size: 34px; z-index: 6; pointer-events: none; animation: run 2.2s linear forwards; }
+  .say { width: 34%; font-size: 13px; line-height: 1.45; color: #7a4b00; font-weight: bold; }
+  /* しまった もの */
+  .store { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .shelf { flex: 1 1 30%; min-width: 0; background: #fff; border: 3px solid #f1dfae; border-radius: 14px; padding: 4px 6px; }
+  .shelf .lab { font-size: 12px; color: #8a6a3a; white-space: nowrap; }
+  .shelf .lab b { font-size: 18px; color: #d2541a; font-variant-numeric: tabular-nums; }
+  .shelf .its { display: flex; flex-wrap: wrap; gap: 3px; min-height: 26px; align-items: center; }
+  .mini { width: 18px; height: 12px; border-radius: 3px; background: #cfe8f7; border: 2px solid #9cc8e6; }
+  .mini.new, .minibox.new, .minitruck.new { animation: drop .5s ease-out; }
+  @keyframes drop { 0% { transform: translateY(-16px) scale(1.4); } 70% { transform: translateY(2px); } 100% { transform: none; } }
+  .minibox { width: 20px; height: 16px; border-radius: 3px; background: #d9a066; border: 2px solid #b07a43; }
+  .minitruck { font-size: 20px; line-height: 1; }
+  .more { font-size: 12px; color: #7a4b00; font-weight: bold; }
+  /* サブ: ほかの かぞえかた・こえ */
+  .sub { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; font-size: 12px; color: #8a6a3a; }
+  .chip { font-size: 12px; padding: 4px 9px; border-radius: 999px; border: 2px solid #f1dfae; background: #fff; color: #7a4b00; }
+  .chip:hover:not(:disabled) { background: #fff; color: #7a4b00; }
+  .chip.sel, .chip.sel:hover:not(:disabled) { border-color: #ff7a3d; background: #ffe3cf; }
+  .chick { position: absolute; font-size: 30px; z-index: 6; pointer-events: none; animation: run 2.2s linear forwards; }
   @keyframes run { 0% { transform: translateX(0) translateY(0); } 25% { transform: translateX(25vw) translateY(-14px); } 50% { transform: translateX(50vw) translateY(0); } 75% { transform: translateX(75vw) translateY(-14px); } 100% { transform: translateX(110vw) translateY(0); } }
   @media (prefers-reduced-motion: reduce) {
-    .hen.hit svg, .shop.hit svg, .flyegg { animation: none; }
-    .num.bump, .counter.party svg, .egg.new, .carton.new, .box.new, .truck.new { animation: none; }
+    .num.bump, .counter.party svg, .egg.new, .mini.new, .minibox.new, .minitruck.new, .hen.hit svg, .shop.hit svg, .flyegg, .finger { animation: none; }
     .chick { display: none; }
   }
 </style>
@@ -86,14 +76,11 @@
 </header>
 <main>
 <h1>たまごやさん</h1>
-<p>にわとりを おして、たまごを どんどん ふやそう。ゆびが ぜんぶ たったら、パックに しまうよ。おみせを おすと、たまごが ぜんぶ うれて ゼロに もどるよ。</p>
 <div class="play" id="play">
-  <div class="top">
-    <div class="numrow"><span class="num" id="num">0</span><span style="font-size:18px;color:#7a4b00">こ</span></div>
-    <div class="yomi" id="yomi">ゼロ</div>
-    <div class="scene">
-      <button type="button" class="pic hen" id="hen" aria-label="にわとり(おすと たまごを うむ)">
-        <svg viewBox="0 0 160 140" aria-hidden="true">
+  <div class="numrow"><span class="num" id="num">0</span><span class="yomi">こ</span><span class="yomi" id="yomi">ゼロ</span></div>
+  <div class="scene">
+    <button type="button" class="pic hen" id="hen" aria-label="にわとり(おすと たまごを うむ)">
+<svg viewBox="0 0 160 140" aria-hidden="true">
           <ellipse cx="80" cy="132" rx="60" ry="6" fill="#0001"/>
           <path d="M60 112 l-6 18 M60 130 h-10 M96 112 l6 18 M102 130 h10" stroke="#e08a1e" stroke-width="5" stroke-linecap="round" fill="none"/>
           <path d="M126 70 q26 -20 22 -46 q-12 18 -26 20 z" fill="#fff" stroke="#d9cbb0" stroke-width="3" stroke-linejoin="round"/>
@@ -105,10 +92,11 @@
           <path d="M26 60 q-4 12 6 14 q8 -2 4 -12z" fill="#e8413c"/>
           <circle cx="42" cy="42" r="5" fill="#2b2150"/><circle cx="40.5" cy="40.5" r="1.6" fill="#fff"/>
         </svg>
-        <span class="tag">にわとり</span>
-      </button>
-      <button type="button" class="pic shop" id="shop" aria-label="おみせ(おすと たまごが ぜんぶ うれる)">
-        <svg viewBox="0 0 160 140" aria-hidden="true">
+      <span class="finger" id="finger" aria-hidden="true">👆</span>
+    </button>
+    <div class="packbox"><div class="opencarton" id="plate"></div><div class="loose">いま <b id="cLoose">0</b> こ</div></div>
+    <button type="button" class="pic shop" id="shop" aria-label="おみせ(おすと たまごが ぜんぶ うれる)">
+<svg viewBox="0 0 160 140" aria-hidden="true">
           <rect x="16" y="52" width="128" height="80" rx="6" fill="#fff3d6" stroke="#c9a46a" stroke-width="3"/>
           <path d="M10 36 h140 l-6 22 h-128 z" fill="#ff7a3d"/>
           <path d="M30 36 l-4 22 M54 36 l-3 22 M80 36 v22 M106 36 l3 22 M130 36 l4 22" stroke="#fff" stroke-width="9"/>
@@ -119,33 +107,25 @@
           <circle cx="114" cy="78" r="12" fill="#ffd9b8"/><path d="M104 96 q10 -10 20 0 v6 h-20z" fill="#5bb6ff"/>
           <circle cx="110" cy="77" r="2" fill="#2b2150"/><circle cx="118" cy="77" r="2" fill="#2b2150"/><path d="M110 83 q4 3 8 0" stroke="#7a2b3b" stroke-width="2" fill="none" stroke-linecap="round"/>
         </svg>
-        <span class="tag">おみせ</span>
-      </button>
-    </div>
-    <div class="hint">にわとりを おすと たまごを うむよ(ながおしで どんどん)。おみせを おすと ぜんぶ うれるよ。 <button type="button" class="chip" id="voice">🗣 こえ あり</button></div>
+    </button>
   </div>
-
-  <h2>だれが かぞえる？</h2>
-  <div class="who" id="who"></div>
-  <div class="counter" id="counter" style="margin-top:8px"></div>
-  <div class="say" id="say"></div>
-
-  <h2>たまご</h2>
-  <div class="field">
-    <div class="row"><div class="lab">いま つめている パック <b id="cLoose">0</b> こ</div><div class="items"><div class="opencarton" id="plate"></div><span class="zero" id="zero"></span></div></div>
-    <div class="row"><div class="lab">パック <b id="cPack">0</b> こ <span id="packNote"></span></div><div class="items" id="packs"></div></div>
-    <div class="row"><div class="lab">はこ <b id="cBox">0</b> こ <span id="boxNote"></span></div><div class="items" id="boxes"></div></div>
-    <div class="row"><div class="lab">トラック <b id="cTruck">0</b> だい <span id="truckNote"></span></div><div class="items" id="trucks"></div></div>
+  <div class="counterwrap"><div class="counter" id="counter"></div><div class="say" id="say"></div></div>
+  <div class="store">
+    <div class="shelf"><div class="lab">パック <b id="cPack">0</b></div><div class="its" id="packs"></div></div>
+    <div class="shelf"><div class="lab">はこ <b id="cBox">0</b></div><div class="its" id="boxes"></div></div>
+    <div class="shelf"><div class="lab">トラック <b id="cTruck">0</b></div><div class="its" id="trucks"></div></div>
   </div>
+  <div class="sub"><span>ほかの かぞえかた:</span><span id="who"></span><button type="button" class="chip" id="voice">🗣 こえ あり</button></div>
 </div>
 
 <h2>おとなの人へ</h2>
 <ul class="small">
 <li>たまごが1こ増えるたびに、指が1本ずつ立つ。10本ぜんぶ立つと、たまごがパックにしまわれ、指はグーに戻る。人が10ずつまとめて数えるのは、指が10本だからだと言われている。</li>
 <li>パックが10こで箱、箱が10こでトラック。数字の各桁は、つめている途中のパックのたまご(ばら)・閉じたパック・箱・トラックがそれぞれ何こあるかに当たる。たとえば「236」は、箱2つ・パック3つ・ばら6こ。パックがいっぱいになって閉じた直後は、新しいパックが空っぽ(ばら0こ)になる。これが「10」「20」の0。</li>
-<li>「だれが かぞえる？」でタコ(足8本)やむし(足6本)を選ぶと、パックに入る数が8こ・6こに変わる。上の数字は、いつもの数え方の「たまごの全部の数」のままにしてある。</li>
+<li>下の「ほかの かぞえかた」でタコ(足8本)やむし(足6本)を選ぶと、パックに入る数が8こ・6こに変わる。上の数字は、いつもの数え方の「たまごの全部の数」のままにしてある。</li>
 <li>数は、ブラウザの読み上げ(日本語の声がある端末だけ)で読む。ときどき、ひよこが遊びに来る(数とは関係ない)。音は、AIは耳で確かめていない。</li>
 </ul>
+
 </main>
 <footer>kimpilla</footer>
 <script src="tamagoya.js"></script>
