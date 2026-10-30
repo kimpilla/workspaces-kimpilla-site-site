@@ -221,6 +221,8 @@
   $('eMore').onclick = () => { eBox = 10; eOver = 1 + Math.floor(Math.random() * 3); eBusy = false; eRender(); $('eSay').textContent = 'おかわり！ くまさんを おすと、1こ たべるよ'; };
   eOver = 1 + Math.floor(Math.random() * 3); eRender();
 
+  // 10こ いりの はこ: ふたを あけて、なかの 10こ(5こ×2れつ)が みえる かたち。したに「10」
+  const box10 = (cls) => '<span class="tbox10' + (cls ? ' ' + cls : '') + '"><span class="g">' + Array.from({ length: 10 }, (_, i) => '<span class="tdn">' + donut(i) + '</span>').join('') + '</span><span class="lb">10</span></span>';
   // ---- おうようへん: いわれた かずを、10こ いりの はこと ばらで そろえる。そろったら ドーナツ パーティー ----
   let tBox = 0, tOne = 0, tTimer = null, target = 23, partying2 = false;
   const n2 = () => tBox * 10 + tOne;
@@ -234,7 +236,7 @@
     fx = fx || {};
     $('tBoxes').innerHTML = '';
     for (let i = 0; i < tBox; i++) {
-      const e = document.createElement('span'); e.className = 'tclosed' + (fx.newBox && i === tBox - 1 ? ' new' : ''); e.innerHTML = '<span>10</span>';
+      const e = document.createElement('span'); e.className = 'tbwrap' + (fx.newBox && i === tBox - 1 ? ' new' : ''); e.innerHTML = box10();
       e.title = 'おすと へる'; e.onclick = () => { if (partying2 || tTimer) return; tBox--; tRender(); bump('tTens'); after(); };
       $('tBoxes').appendChild(e);
     }
@@ -259,8 +261,18 @@
   }
   function party() {                                               // みんなで ドーナツ パーティー
     partying2 = true; tSay('ぴったり ' + target + 'こ！');
-    const crew = CUST.map((c) => '<div class="pc">' + custSvg(c) + '</div>');
-    $('pcrew').innerHTML = crew[0] + '<div class="pd">' + donut(0) + '</div>' + crew[1] + '<div class="pd">' + donut(2) + '</div>' + crew[2];
+    // はこが おおいほど、なかまが ふえる(はこの かず+1にん、さいていでも 2にん)
+    const members = Math.max(2, tBox + 1);
+    let crew = '';
+    for (let i = 0; i < members; i++) crew += '<div class="pc" style="animation-delay:' + (i % 4) * 0.1 + 's">' + custSvg(CUST[i % CUST.length]) + '</div>';
+    $('pcrew').innerHTML = crew; $('pcrew').classList.toggle('many', members > 4);
+    // そろえた かず(おおきな すうじ)と、はこ・ばらの ならび
+    $('pNum').innerHTML = '<span class="tt">' + Math.floor(target / 10) + '</span><span class="to">' + target % 10 + '</span><small>こ</small>';
+    $('pYomi').textContent = 'はこ ' + tBox + 'つ と ばら ' + tOne + 'こ で ' + target + 'こ';
+    let lay = '';
+    for (let i = 0; i < tBox; i++) lay += box10('sm');
+    for (let i = 0; i < tOne; i++) lay += '<span class="tdn">' + donut(i) + '</span>';
+    $('pLay').innerHTML = lay;
     $('party').hidden = false;
     const box = $('party'), colors = ['#ffb3d9', '#c9b3ff', '#a8eadf', '#fff0a0', '#ffc9a8', '#b3dcff'];
     for (let i = 0; i < 40; i++) {
@@ -271,7 +283,7 @@
     [523.3, 659.3, 784, 659.3, 784, 1046.5, 880, 1046.5].forEach((f, i) => tone(f, i * 0.16, 0.22, 'triangle', 0.15));   // パーティーの メロディ
     for (let i = 0; i < 6; i++) clap(0.1 + i * 0.32);
     sayWords('ぴったり ' + yomi(target) + '。ドーナツ パーティー');
-    setTimeout(() => { $('party').hidden = true; box.querySelectorAll('.confetti').forEach((c) => c.remove()); partying2 = false; newTarget(); }, 3600);
+    setTimeout(() => { $('party').hidden = true; box.querySelectorAll('.confetti').forEach((c) => c.remove()); partying2 = false; newTarget(); }, 5000);
   }
   $('tAddBox').onclick = () => {
     if (partying2 || tTimer) return;
@@ -293,7 +305,7 @@
     after();
   };
   $('tReset').onclick = () => { if (partying2) return; clearTimeout(tTimer); tTimer = null; newTarget(); };
-  $('tOneIcon').innerHTML = donut(0);
+  $('tOneIcon').innerHTML = donut(0); $('tBoxIcon').innerHTML = box10('big');
   target = 0; newTarget(true);
 
   if (window.speechSynthesis) speechSynthesis.getVoices();

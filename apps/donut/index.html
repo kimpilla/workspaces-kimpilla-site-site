@@ -107,13 +107,13 @@
   .ttarget { text-align: center; font-size: 20px; font-weight: bold; color: #7a4b00; margin-bottom: 6px; }
   .ttarget .tt, .ttarget .to { font-size: 42px; font-variant-numeric: tabular-nums; }
   .ttarget .tt { color: #e05a9a; } .ttarget .to { color: #ff8a4c; }
-  .tboxes .tclosed, .tloose .tdn { cursor: pointer; }
+  .tloose .tdn { cursor: pointer; }
   .tnum { font-size: 44px; }
-  .party { position: absolute; inset: 0; background: #fff8eecc; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 9; }
+  .party { position: absolute; inset: 0; background: #fff8eef2; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 9; }
   .party[hidden] { display: none; }
   .pcrew { display: flex; gap: 6px; align-items: flex-end; }
   .pcrew .pc { width: 72px; animation: hop2 .35s ease-in-out infinite alternate; }
-  .pcrew .pc:nth-child(2) { animation-delay: .12s; } .pcrew .pc:nth-child(3) { animation-delay: .24s; }
+  
   .pcrew .pc svg { width: 100%; height: auto; display: block; overflow: visible; }
   .pcrew .pd { width: 34px; animation: spin 1.2s linear infinite; } .pcrew .pd svg { width: 100%; display: block; }
   @keyframes hop2 { from { transform: translateY(0) rotate(-6deg); } to { transform: translateY(-14px) rotate(6deg); } }
@@ -126,12 +126,21 @@
   .tcol { background: #fff; border: 3px solid #ffe3c6; border-radius: 16px; padding: 6px; display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 0; }
   .tlab { font-size: 12px; color: #9a5a2a; font-weight: bold; }
   .tboxes, .tloose { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; align-content: flex-start; min-height: 72px; width: 100%; }
-  .tclosed { width: 34px; height: 26px; border-radius: 6px; background: #ffd1e4; border: 2px solid #f7a8c9; position: relative; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; color: #c2416f; }
-  .tclosed::before { content: ""; position: absolute; left: -2px; right: -2px; top: 6px; height: 2px; background: #f7a8c9; }
-  .tclosed.big { width: 52px; height: 40px; font-size: 16px; }
-  .tclosed.big::before { top: 9px; }
-  .tclosed.new { animation: tpop .5s ease-out; }
   @keyframes tpop { 0% { transform: scale(.3) rotate(-10deg); } 60% { transform: scale(1.2) rotate(4deg); } 100% { transform: none; } }
+  /* 10こ いりの はこ(ふたが あいて、なかの 10こが みえる) */
+  .tbox10 { display: inline-flex; flex-direction: column; align-items: center; background: #ffd1e4; border: 2px solid #f7a8c9; border-radius: 7px; padding: 2px 2px 0; }
+  .tbox10 .g { display: grid; grid-template-columns: repeat(5, 13px); gap: 1px; background: #fffaf3; border-radius: 4px; padding: 1px; }
+  .tbox10 .g .tdn { width: 13px; height: 13px; }
+  .tbox10 .lb { font-size: 11px; font-weight: bold; color: #c2416f; line-height: 1.2; }
+  .tbox10.big .g { grid-template-columns: repeat(5, 16px); } .tbox10.big .g .tdn { width: 16px; height: 16px; } .tbox10.big .lb { font-size: 13px; }
+  .tbox10.sm .g { grid-template-columns: repeat(5, 10px); } .tbox10.sm .g .tdn { width: 10px; height: 10px; } .tbox10.sm .lb { font-size: 10px; }
+  .tbwrap { display: inline-block; cursor: pointer; } .tbwrap.new { animation: tpop .5s ease-out; }
+  .pnum { font-size: 56px; font-weight: bold; line-height: 1; margin-top: 6px; font-variant-numeric: tabular-nums; }
+  .pnum .tt { color: #e05a9a; } .pnum .to { color: #ff8a4c; } .pnum small { font-size: 22px; color: #7a4b00; margin-left: 2px; }
+  .playout { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 3px; max-width: 330px; margin-top: 6px; }
+  .playout .tdn { width: 20px; height: 20px; }
+  .pyomi { font-size: 14px; font-weight: bold; color: #7a4b00; margin-top: 4px; }
+  .pcrew.many { flex-wrap: wrap; justify-content: center; max-width: 340px; gap: 2px 4px; } .pcrew.many .pc { width: 50px; }
   .tdn { width: 26px; height: 26px; display: inline-block; } .tdn svg { width: 100%; height: 100%; display: block; }
   .tdn.new { animation: tpop .4s ease-out; }
   .tloose .tdn.pack { animation: packaway .5s ease-in forwards; }
@@ -148,7 +157,7 @@
   .tsay { text-align: center; font-size: 13px; color: #9a5a2a; font-weight: bold; min-height: 2.6em; margin-top: 4px; line-height: 1.5; }
   @media (prefers-reduced-motion: reduce) {
     .pcrew .pc, .pcrew .pd, .confetti { animation: none; }
-    .tclosed.new, .tdn.new, .tloose .tdn.pack, .tnum span.bump, .ebear.chew svg, .eat .eaten { animation: none; }
+    .tbwrap.new, .tdn.new, .tloose .tdn.pack, .tnum span.bump, .ebear.chew svg, .eat .eaten { animation: none; }
     .cust.in, .cust.dance, .cust.out,
     .num.bump, .counter.party svg, .egg.new, .mini.new, .minibox.new, .minitruck.new, .hen.hit svg, .shop.hit svg, .flyegg, .finger { animation: none; }
     .chick { display: none; }
@@ -205,7 +214,7 @@
     <div class="tcol">
       <div class="tlab">10こ いりの はこ</div>
       <div class="tboxes" id="tBoxes"></div>
-      <button type="button" class="tadd" id="tAddBox" aria-label="10こ いりの はこを ふやす"><span class="tclosed big"><span>10</span></span><span class="plus">＋</span></button>
+      <button type="button" class="tadd" id="tAddBox" aria-label="10こ いりの はこを ふやす"><span id="tBoxIcon"></span><span class="plus">＋</span></button>
     </div>
     <div class="tcol">
       <div class="tlab">ばらの ドーナツ</div>
@@ -216,7 +225,7 @@
   <div class="tnum" aria-live="polite"><span class="tt" id="tTens">0</span><span class="to" id="tOnes">0</span></div>
   <div class="tyomi" id="tYomi">ゼロ</div>
   <div class="tsay" id="tSay">はこを おすと 10こ、ドーナツを おすと 1こ ふえるよ。ならんだ ものを おすと へるよ。</div>
-  <div class="party" id="party" hidden><div class="pcrew" id="pcrew"></div><div class="pmsg">ドーナツ パーティー！</div></div>
+  <div class="party" id="party" hidden><div class="pcrew" id="pcrew"></div><div class="pnum" id="pNum"></div><div class="playout" id="pLay"></div><div class="pyomi" id="pYomi"></div><div class="pmsg">ドーナツ パーティー！</div></div>
   <div class="sub"><button type="button" class="chip" id="tReset">べつの かず</button></div>
 </div>
 
@@ -224,7 +233,7 @@
 <ul class="small">
 <li>お店に、お客さんが順番に来る。ほしい箱は、くまさんが10こ入り、うさぎさんが6こ入り、ユニコーンさんが12こ入り(1ダース)。ドーナツの箱は、実際のお店でも6こ入り・12こ入りがよくある。オーブンを押して箱をいっぱいにすると、お客さんが受け取って、次のお客さんが来る。</li>
 <li>「たべちゃう くまさん」では、くまさんが、10こ入りの箱いっぱいと、はみ出した1〜3このドーナツを、1こずつ食べる。はみ出しがなくなると10(箱1つと、はみ出し0こ)、最後の1こで「あと 1こ」、全部食べると0。最後に、1こ載ったお皿の「1」と、空っぽのお皿の「0」を並べて見せる。</li>
-<li>下の「おうようへん」では、示された数(10〜59)を、10こ入りの箱とばらのドーナツでそろえる。ばらが10こになると箱に詰まる。並んだ箱やドーナツを押すと1つ減らせる。数字の十の位(ピンク)は箱の数、一の位(オレンジ)はばらの数。たとえば23は、箱2つとばら3こ。ぴったりになると、お客さんみんなでドーナツパーティーをして、次の数が出る。</li>
+<li>下の「おうようへん」では、示された数(10〜59)を、10こ入りの箱(ふたが開いていて、中の10こが見える)とばらのドーナツでそろえる。ばらが10こになると箱に詰まる。並んだ箱やドーナツを押すと1つ減らせる。数字の十の位(ピンク)は箱の数、一の位(オレンジ)はばらの数。たとえば23は、箱2つとばら3こ。ぴったりになると、そろえた数(大きな数字)と、箱とばらの並び(「はこ 2つ と ばら 3こ で 23こ」)が出て、お客さんみんなでドーナツパーティーをする。箱が多いほど、集まる仲間が増える(箱の数+1人)。そのあと次の数が出る。</li>
 <li>ドーナツが1こ入るたびに、指が1本ずつ立つ。人が10ずつまとめて数えるのは、指が10本だからだと言われている。12こ入りでは指が足りなくなり、足の指も使う。</li>
 <li>上の大きな数字は、いま詰めている箱のドーナツの数。箱を渡した直後は、新しい箱が空っぽで0こになる。</li>
 <li>数は、ブラウザの読み上げ(日本語の声がある端末だけ)で読む。音は、AIは耳で確かめていない。</li>
