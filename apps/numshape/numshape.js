@@ -76,11 +76,13 @@
   const pos = (e) => { const r = ink.getBoundingClientRect(); return { x: (e.clientX - r.left) * dpr, y: (e.clientY - r.top) * dpr }; };
   ink.addEventListener('pointerdown', (e) => {
     if (solved) return;
+    clearTimeout(checkT);                                          // つぎの せんを かきはじめたら、まだ はんていしない
     e.preventDefault(); ink.setPointerCapture(e.pointerId);
     last = pos(e); dots(last.x, last.y); $('hint').style.display = 'none';
   });
   ink.addEventListener('pointermove', (e) => { if (!last) return; const p = pos(e); line(last, p); last = p; });
-  const up = () => { if (!last) return; last = null; check(); };
+  let checkT = null;
+  const up = () => { if (!last) return; last = null; clearTimeout(checkT); checkT = setTimeout(check, 600); };   // ゆびを はなして すこし まってから はんてい
   // なぞっている あいだ、がめんが うごかない(スクロール・かくだいを しない)ように する。
   // touch-action だけでは とまらない たんまつ(ふるい iPhone など)が あるので、タッチの イベントでも とめる
   const stage = $('stage');
@@ -88,11 +90,21 @@
   ['gesturestart', 'gesturechange', 'gestureend'].forEach((t) => stage.addEventListener(t, (e) => e.preventDefault(), { passive: false }));
   ink.addEventListener('pointerup', up); ink.addEventListener('pointercancel', up);
 
-  function check() {
-    let hit = 0;
-    for (let i = 0; i < G * G; i++) if (target[i] && covered[i]) hit++;
-    if (hit / targetCount >= 0.55) reward();                         // だいたい なぞれたら OK(じょうずかは みない)
+  // すうじを 5×5の くかくに わけて、せんの ある くかくは どこも すこしずつ なぞれていたら OK
+  // (ぜんたいの わりあいだけだと、4の たてぼうを かく まえに できた ことに なっていた。じょうずかは みない)
+  function done1() {
+    const N = 5, tot = new Array(N * N).fill(0), hit = new Array(N * N).fill(0);
+    let all = 0;
+    for (let i = 0; i < G * G; i++) {
+      if (!target[i]) continue;
+      const b = Math.min(N - 1, Math.floor((i % G) * N / G)) + N * Math.min(N - 1, Math.floor(Math.floor(i / G) * N / G));
+      tot[b]++; if (covered[i]) { hit[b]++; all++; }
+    }
+    if (all / targetCount < 0.6) return false;
+    for (let b = 0; b < N * N; b++) if (tot[b] >= targetCount * 0.03 && hit[b] / tot[b] < 0.35) return false;
+    return true;
   }
+  function check() { if (!solved && done1()) reward(); }
 
   // ---- できた！ ----
   let ac = null;
@@ -157,7 +169,7 @@
     }
   }
   function setDigit(d) {
-    digit = d; solved = false; last = null;
+    digit = d; solved = false; last = null; clearTimeout(checkT);
     timers.forEach(clearTimeout); timers = []; box = null;
     $('stage').classList.remove('alive', 'shown'); $('runner').classList.remove('walk'); $('runner').style.visibility = ''; $('critter').innerHTML = '';
     $('msg').textContent = ''; $('hint').style.display = '';
@@ -181,4 +193,5 @@
   if (window.speechSynthesis) speechSynthesis.getVoices();
   renderDigits();
   (document.fonts ? document.fonts.load(FONT.replace('{s}', 100)) : Promise.resolve()).catch(() => {}).then(() => resize());
+  window.__ns = { get target() { return target; }, get covered() { return covered; }, G, done1 };   // たしかめよう
 })();
