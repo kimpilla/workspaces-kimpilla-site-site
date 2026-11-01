@@ -16,8 +16,9 @@
   @keyframes bump { 50% { transform: scale(1.15); } }
   .yomi { font-size: 17px; color: #7a4b00; }
   /* オーブン → はこ → おみせ */
-  .scene { display: grid; grid-template-columns: 1fr auto 1fr; align-items: end; gap: 6px; margin-top: 2px; }
-  .pic { position: relative; padding: 0; border: 0; background: none; cursor: pointer; -webkit-touch-callout: none; max-width: 120px; justify-self: center; width: 100%; }
+  .scene { display: grid; grid-template-columns: 1fr 1fr; align-items: end; gap: 6px 10px; margin-top: 2px; }
+  .scene > .hen, .scene > .shopwrap { grid-row: 1; } .scene > .packbox { grid-row: 2; grid-column: 1 / 3; }
+  .pic { position: relative; padding: 0; border: 0; background: none; cursor: pointer; -webkit-touch-callout: none; max-width: 170px; justify-self: center; width: 100%; }
   .pic:hover:not(:disabled) { background: none; }
   .pic svg { width: 100%; height: auto; display: block; overflow: visible; }
   .pic.hit svg { transform: scale(.93); }
@@ -28,9 +29,12 @@
   .finger { position: absolute; right: -4px; top: 6px; font-size: 26px; animation: tap 1s ease-in-out infinite; pointer-events: none; }
   @keyframes tap { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(-8px, 10px); } }
   .packbox { display: flex; flex-direction: column; align-items: center; }
-  .opencarton { display: grid; gap: 3px; padding: 6px; border-radius: 12px; background: #fff; border: 3px solid #ffd7a8; }
-  .slot { width: 24px; height: 24px; border-radius: 50%; background: #fff4ea; box-shadow: inset 0 2px 3px #e6b48a55; display: flex; align-items: center; justify-content: center; }
-  .egg { display: inline-block; width: 24px; height: 24px; }
+  .opencarton { display: grid; gap: 3px; padding: 6px; border-radius: 14px; background: #fff; border: 3px solid #ffd7a8; padding: 8px; gap: 4px; }
+  .spill { display: none; flex-wrap: wrap; justify-content: center; align-items: center; gap: 2px; max-width: 240px; margin-top: 4px; }
+  .spill .spill1 { background: none; box-shadow: none; }
+  .spillt { font-size: 11px; font-weight: bold; color: #e5484d; width: 100%; text-align: center; }
+  .slot { width: 36px; height: 36px; border-radius: 50%; background: #fff4ea; box-shadow: inset 0 2px 3px #e6b48a55; display: flex; align-items: center; justify-content: center; }
+  .egg { display: inline-block; width: 36px; height: 36px; }
   .egg svg, .flyegg svg { width: 100%; height: 100%; display: block; }
   .egg.new { animation: roll .35s ease-out; }
   @keyframes roll { 0% { transform: translateY(-24px) scale(.5); opacity: 0; } 100% { transform: none; opacity: 1; } }
@@ -38,8 +42,8 @@
   .loose b { font-size: 26px; color: #ff8a4c; font-variant-numeric: tabular-nums; }
   .flyegg { position: absolute; width: 22px; height: 22px; z-index: 7; pointer-events: none; animation: pop .4s ease-out forwards; }
   @keyframes pop { 0% { transform: translate(0, 0) scale(.4); opacity: 1; } 60% { transform: translate(var(--dx), -26px) scale(1); } 100% { transform: translate(var(--dx), 10px); opacity: 0; } }
-  .shopwrap { position: relative; justify-self: center; width: 100%; max-width: 120px; }
-  .cust { position: absolute; right: 2px; bottom: 0; width: 50%; z-index: 2; pointer-events: none; }
+  .shopwrap { position: relative; justify-self: center; width: 100%; max-width: 170px; }
+  .cust { position: absolute; right: 0; bottom: 0; width: 66%; z-index: 2; cursor: pointer; }
   .cust svg { width: 100%; height: auto; display: block; overflow: visible; }
   .cust.in { animation: walkin .6s ease-out; }
   @keyframes walkin { 0% { transform: translateX(80px); opacity: 0; } 100% { transform: none; opacity: 1; } }
@@ -47,14 +51,16 @@
   @keyframes dance { from { transform: rotate(-12deg) translateY(0); } to { transform: rotate(12deg) translateY(-10px); } }
   .cust.out { animation: walkout .5s ease-in forwards; }
   @keyframes walkout { to { transform: translateX(90px); opacity: 0; } }
-  .bubble { position: absolute; right: 0; top: -6px; z-index: 3; background: #fff; border: 2px solid #ffe3c6; border-radius: 10px; padding: 1px 6px; font-size: 12px; font-weight: bold; color: #ff8a4c; white-space: nowrap; }
+  .bubble { position: absolute; right: 2px; top: -44px; z-index: 3; background: #fff; border: 3px solid #ff8a4c; border-radius: 16px; padding: 3px 12px; font-size: 15px; font-weight: bold; color: #7a4b00; white-space: nowrap; box-shadow: 0 3px 0 #d96a2c33; }
+  .bubble b { font-size: 28px; color: #ff8a4c; line-height: 1; vertical-align: -3px; }
+  .bubble::after { content: ''; position: absolute; right: 38px; bottom: -11px; width: 14px; height: 14px; background: #fff; border-right: 3px solid #ff8a4c; border-bottom: 3px solid #ff8a4c; transform: rotate(45deg); }
+  .shopwrap { margin-top: 46px; }
   .mini.s6 { width: 12px; } .mini.s12 { width: 24px; }
   .feet { opacity: 1; }
   /* ゆび */
   .counterwrap { display: flex; align-items: center; gap: 6px; margin-top: 6px; background: #fff; border: 3px solid #ffe3c6; border-radius: 16px; padding: 4px 8px; }
   .counter { flex: 1; min-width: 0; }
   .counter svg { width: 100%; max-width: 300px; height: auto; display: block; margin: 0 auto; overflow: visible; }
-  .counter.party svg { animation: clap .18s ease-in-out 4 alternate; }
   @keyframes clap { from { transform: scale(1); } to { transform: scale(1.06) rotate(1deg); } }
   .say { width: 34%; font-size: 13px; line-height: 1.45; color: #7a4b00; font-weight: bold; }
   /* しまった もの */
@@ -80,17 +86,25 @@
   .enum { text-align: center; font-size: 15px; color: #7a4b00; }
   .enum span#eNum { font-size: 52px; font-weight: bold; color: #ff8a4c; font-variant-numeric: tabular-nums; }
   .enum small { font-size: 16px; margin-left: 2px; } .eyomi { font-size: 17px; }
-  .erow { display: grid; grid-template-columns: auto 1fr 84px; gap: 6px; align-items: end; }
+  .ehead { display: flex; align-items: center; justify-content: center; gap: 6px; flex-wrap: nowrap; } .earrow { color: #ff8a4c; font-size: 22px; } .ehead .etgt { margin: 0; } .ehead .enum { white-space: nowrap; } .ehead .enum span#eNum { font-size: 44px; } .ehead .eyomi { display: none; } .ehead { gap: 2px; } .ehead .enum span#eNum { font-size: 36px; } .ehead .enum small { font-size: 12px; } .ehead .etgt .want { font-size: 16px; padding: 3px 12px; margin: 0; } .ehead .etgt .want b, .ehead .etgt b { font-size: 34px; }
+  .erow { display: grid; grid-template-columns: 1fr 96px; grid-template-rows: auto auto; gap: 6px; align-items: start; } .erow .ecol { grid-row: 1 / 3; grid-column: 2; align-self: center; display: flex; flex-direction: column; gap: 8px; } .ecol .stop { width: 100%; padding: 12px 2px; font-size: 17px; white-space: nowrap; border-radius: 16px; } .erow .ebox { grid-column: 1; grid-row: 1; } .erow .eover { grid-column: 1; grid-row: 2; }
   .ebox, .eover { background: #fff; border: 3px solid #ffe3c6; border-radius: 14px; padding: 5px; display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; }
   .ebox .tlab b, .eover .tlab b { font-size: 16px; color: #ff8a4c; }
-  .egrid { display: grid; grid-template-columns: repeat(5, 24px); gap: 2px; padding: 4px; border-radius: 8px; background: #fffaf3; border: 2px solid #ffd7a8; }
-  .eslot { width: 24px; height: 24px; border-radius: 50%; background: #fff4ea; box-shadow: inset 0 2px 3px #e6b48a55; }
-  .eslot .tdn { width: 24px; height: 24px; }
+  .egrid { display: grid; grid-template-columns: repeat(5, 36px); gap: 3px; padding: 5px; border-radius: 8px; background: #fffaf3; border: 2px solid #ffd7a8; }
+  .eslot { width: 36px; height: 36px; border-radius: 50%; background: #fff4ea; box-shadow: inset 0 2px 3px #e6b48a55; }
+  .eslot .tdn { width: 36px; height: 36px; }
   .eol { display: flex; flex-wrap: wrap; gap: 3px; justify-content: center; min-height: 56px; align-items: center; }
-  .eol .tdn { width: 30px; height: 30px; }
-  .ebear { padding: 0; border: 0; background: none; cursor: pointer; width: 84px; }
+  .eol .tdn { width: 40px; height: 40px; }
+  .ebear { padding: 0; border: 0; background: none; cursor: pointer; width: 100%; display: flex; align-items: center; justify-content: center; position: relative; }
+  .eover { position: relative; } .eover .finger { right: 6px; top: auto; bottom: 4px; font-size: 30px; }
+  .ebox, .eover { cursor: pointer; } .ebox:active, .eover:active { background: #fff3e6; }
+  .ebear:active { transform: translateY(2px); }
   .ebear:hover:not(:disabled) { background: none; }
   .ebear svg { width: 100%; height: auto; display: block; overflow: visible; }
+  .ebear.hungry svg { animation: hungry 1.1s ease-in-out; transform-origin: 50% 90%; }
+  @keyframes hungry { 0%, 100% { transform: rotate(0) translateY(0); } 15% { transform: rotate(-9deg) translateY(-3px); } 35% { transform: rotate(8deg) translateY(0); } 55% { transform: rotate(-7deg) translateY(-3px); } 75% { transform: rotate(5deg) translateY(0); } }
+  .ebear.full svg { animation: fulldance .35s ease-in-out 6 alternate; transform-origin: 50% 90%; }
+  @keyframes fulldance { 0% { transform: translateY(0) rotate(-8deg) scale(1.02); } 100% { transform: translateY(-14px) rotate(8deg) scale(1.1); } }
   .ebear.chew svg { animation: chew .14s ease-in-out 4 alternate; }
   @keyframes chew { from { transform: scale(1, 1); } to { transform: scale(1.06, .94) translateY(2px); } }
   .eat .eaten { animation: gone .3s ease-in forwards; }
@@ -102,7 +116,7 @@
   .ecmp b { font-size: 34px; color: #ff8a4c; line-height: 1.1; } .ecmp small { font-size: 12px; color: #9a5a2a; font-weight: bold; }
   .eplate { width: 64px; height: 40px; border-radius: 50%; background: radial-gradient(ellipse at center, #fff 55%, #eadfce 57%, #fff 70%); border: 2px solid #e2d7bf; display: flex; align-items: center; justify-content: center; }
   .eplate .tdn { width: 28px; height: 28px; }
-  /* おうようへん */
+  /* ドーナツパーティー */
   .play.ten { overflow: hidden; }
   .ttarget { text-align: center; font-size: 20px; font-weight: bold; color: #7a4b00; margin-bottom: 6px; }
   .ttarget .tt, .ttarget .to { font-size: 42px; font-variant-numeric: tabular-nums; }
@@ -120,6 +134,20 @@
   @keyframes spin { to { transform: rotate(360deg); } }
   .pmsg { font-size: 22px; font-weight: bold; color: #e05a9a; margin-top: 8px; }
   .confetti { position: absolute; top: -10px; width: 8px; height: 12px; border-radius: 2px; animation: fall 2.4s linear forwards; }
+  .pspecial { max-width: 330px; margin-top: 6px; padding: 3px 14px; border-radius: 999px; background: #fff; border: 3px solid #ffd23f; color: #c2416f; font-weight: bold; font-size: 14px; text-align: center; }
+  .fw { position: absolute; width: 7px; height: 7px; border-radius: 50%; z-index: 3; animation: fwfly .95s ease-out forwards; pointer-events: none; }
+  @keyframes fwfly { 0% { transform: translate(0, 0) scale(1.2); opacity: 1; } 100% { transform: translate(var(--dx), var(--dy)) scale(.3); opacity: 0; } }
+  .ptower { position: absolute; bottom: calc(50% + 100px); display: flex; flex-direction: column-reverse; align-items: center; z-index: 2; pointer-events: none; }
+  .ptower .ptd { width: 30px; height: 22px; margin-top: -4px; opacity: 0; animation: tdrop .35s ease-out forwards; } .ptower .ptd svg { width: 30px; height: 30px; display: block; margin-top: -4px; }
+  .bigd { position: absolute; left: 50%; top: calc(50% - 425px); z-index: 1; opacity: 0; animation: bigpop 1.1s cubic-bezier(.2,1.4,.4,1) .15s forwards, bigspin 6s linear 1.2s infinite; pointer-events: none; filter: drop-shadow(0 6px 8px #0002); } .bigd svg { width: 100%; height: 100%; display: block; }
+  @keyframes bigpop { 0% { opacity: 0; transform: scale(.1) rotate(-120deg); } 100% { opacity: .95; transform: scale(1) rotate(0); } }
+  @keyframes bigspin { from { opacity: .95; transform: rotate(0); } to { opacity: .95; transform: rotate(360deg); } }
+  .shoot { position: absolute; right: -60px; width: 30px; height: 30px; z-index: 3; opacity: 0; animation: shoot 1.3s ease-in forwards; pointer-events: none; filter: drop-shadow(0 0 6px #ffe36a); } .shoot svg { width: 30px; height: 30px; display: block; position: relative; }
+  .shoot .tail { position: absolute; left: 22px; top: 11px; width: 90px; height: 8px; border-radius: 4px; background: linear-gradient(90deg, #fff6b0, #ffd23f99 40%, #ffd23f00); transform: scaleY(.9); }
+  .shoot::after { content: ''; position: absolute; left: 64px; top: -6px; width: 12px; height: 12px; background: #fff3a0; clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%); animation: twinkle .4s ease-in-out infinite alternate; }
+  @keyframes shoot { 0% { opacity: 0; transform: translate(0, 0); } 12% { opacity: 1; } 100% { opacity: 0; transform: translate(-520px, 190px); } }
+  @keyframes twinkle { from { transform: scale(.5) rotate(0); } to { transform: scale(1.1) rotate(45deg); } }
+  @keyframes tdrop { 0% { opacity: 0; transform: translateY(-40px); } 100% { opacity: 1; transform: translateY(0); } }
   @keyframes fall { to { transform: translateY(420px) rotate(540deg); } }
   .ohead { font-size: 16px; margin: 22px 0 0; }
   .ten .tenrow { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
@@ -156,12 +184,45 @@
   .tyomi { text-align: center; font-size: 17px; color: #7a4b00; }
   .tsay { text-align: center; font-size: 13px; color: #9a5a2a; font-weight: bold; min-height: 2.6em; margin-top: 4px; line-height: 1.5; }
   @media (prefers-reduced-motion: reduce) {
-    .pcrew .pc, .pcrew .pd, .confetti { animation: none; }
-    .tbwrap.new, .tdn.new, .tloose .tdn.pack, .tnum span.bump, .ebear.chew svg, .eat .eaten { animation: none; }
+    .pcrew .pc, .pcrew .pd, .confetti, .fw, .ptower .ptd { animation: none; opacity: 1; } .bigd { animation: none; opacity: .95; } .shoot { animation: none; display: none; }
+    .tbwrap.new, .tdn.new, .tloose .tdn.pack, .tnum span.bump, .ebear.chew svg, .ebear.hungry svg, .ebear.full svg, .eat .eaten { animation: none; }
     .cust.in, .cust.dance, .cust.out,
     .num.bump, .counter.party svg, .egg.new, .mini.new, .minibox.new, .minitruck.new, .hen.hit svg, .shop.hit svg, .flyegg, .finger { animation: none; }
     .chick { display: none; }
   }
+  .shopin { position: relative; }
+  .give { display: block; width: 100%; font-size: 17px; padding: 8px 4px; margin-top: 4px; border-radius: 999px; border: 3px solid #ff8a4c; background: #ff8a4c; color: #fff; }
+  .give:hover:not(:disabled) { background: #ff8a4c; color: #fff; }
+  .streak, .etgt { text-align: center; font-weight: bold; color: #ff8a4c; min-height: 1.2em; font-size: 14px; }
+  .etgt { color: #7a4b00; font-size: 16px; margin-top: 4px; } .etgt b { font-size: 26px; color: #ff8a4c; }
+  .estreak { color: #ff8a4c; font-size: 13px; }
+  .chip.stop { font-size: 18px; padding: 10px 26px; border: 3px solid #ff8a4c; background: #ff8a4c; color: #fff; }
+  .chip.stop:hover:not(:disabled) { background: #ff8a4c; color: #fff; }
+  .play { position: relative; }
+  .want { margin-left: 10px; background: #ff8a4c; color: #fff; border-radius: 999px; padding: 2px 14px; font-size: 16px; font-weight: bold; white-space: nowrap; box-shadow: 0 3px 0 #d96a2c; }
+  .want b { font-size: 34px; line-height: 1; vertical-align: -3px; }
+  .numrow { flex-wrap: wrap; }
+  .etgt { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .etgt .want { margin: 0; font-size: 20px; padding: 4px 22px; } .etgt .want b, .etgt b { font-size: 46px; color: #fff; }
+  .fx { position: absolute; inset: 0; z-index: 20; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; background: rgba(255,255,255,.72); border-radius: 22px; pointer-events: none; animation: fxin .25s ease-out; }
+  .fx.out { opacity: 0; transition: opacity .4s; }
+  @keyframes fxin { from { opacity: 0; transform: scale(.9); } to { opacity: 1; transform: none; } }
+  .fx .big { position: relative; width: min(46vw, 190px); margin: 6px 40px; }
+  .fx .big svg { width: 100%; height: auto; display: block; overflow: visible; }
+  .fx .em { position: absolute; font-size: 38px; line-height: 1; }
+  .fx .e0 { left: -26px; top: 6%; } .fx .e1 { right: -26px; top: 2%; } .fx .e2 { left: -34px; top: 46%; }
+  .fx .e3 { right: -34px; top: 42%; } .fx .e4 { left: -10px; bottom: -6px; } .fx .e5 { right: -10px; bottom: -6px; }
+  .fx.ok .em { animation: twinkle .6s ease-in-out infinite alternate; } .fx.ok .e1, .fx.ok .e4 { animation-delay: .2s; } .fx.ok .e2, .fx.ok .e5 { animation-delay: .4s; }
+  @keyframes twinkle { from { transform: scale(.8) rotate(-8deg); } to { transform: scale(1.25) rotate(8deg); } }
+  .fx.ok .big { animation: hop2 .3s ease-in-out infinite alternate; }
+  .fx.ng .big { filter: saturate(.4); animation: wob .35s ease-in-out 3; }
+  @keyframes wob { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(-6deg); } 75% { transform: rotate(6deg); } }
+  .fxt { font-size: 28px; font-weight: bold; color: #ff8a4c; } .fx.ng .fxt { color: #7a6a9a; }
+  .fxs { font-size: 15px; color: #7a4b00; font-weight: bold; }
+  .ehandwrap { margin: 0 auto 4px; max-width: 170px; padding: 2px 6px; border-width: 2px; } .ehandwrap .counter svg { max-width: 170px; }
+  .rise { transform-box: fill-box; transform-origin: 50% 100%; animation: riseUp .28s ease-out; }
+  @keyframes riseUp { from { transform: scaleY(.35); } to { transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .rise { animation: none; } }
 </style>
 <script src="../../audio-unlock.js?v=2"></script>
 </head>
@@ -180,14 +241,16 @@
       <span class="finger" id="finger" aria-hidden="true">👆</span>
     </button>
     <div class="packbox"><div class="opencarton" id="plate"></div><div class="loose" id="packsize">10こ いり</div></div>
-    <div class="shopwrap">
+    <div class="shopwrap"><div class="shopin">
       <div class="cust" id="cust"></div>
       <div class="bubble" id="bubble"></div>
     <button type="button" class="pic shop" id="shop" aria-label="おみせ(おきゃくさんが ほしい はこを いう)">
-<svg viewBox="0 0 140 130" aria-hidden="true"><rect x="14" y="50" width="112" height="72" rx="10" fill="#fffaf3" stroke="#ff8a4c" stroke-width="3"/><path d="M8 34 h124 l-6 22 h-112z" fill="#ff8a4c"/><path d="M26 34 v22 M50 34 v22 M74 34 v22 M98 34 v22 M122 34 v22" stroke="#fff" stroke-width="9"/><rect x="34" y="8" width="72" height="24" rx="12" fill="#fff" stroke="#ff8a4c" stroke-width="3"/><text x="70" y="25" font-size="13" text-anchor="middle" font-weight="bold" fill="#ff8a4c">ドーナツ</text><rect x="26" y="96" width="88" height="9" rx="4" fill="#ff8a4c" opacity=".7"/></svg>
+<svg viewBox="0 0 140 130" aria-hidden="true"><rect x="14" y="50" width="112" height="72" rx="10" fill="#fffaf3" stroke="#ff8a4c" stroke-width="3"/><path d="M8 34 h124 l-6 22 h-112z" fill="#ff8a4c"/><path d="M26 34 v22 M50 34 v22 M74 34 v22 M98 34 v22 M122 34 v22" stroke="#fff" stroke-width="9"/><rect x="26" y="96" width="88" height="9" rx="4" fill="#ff8a4c" opacity=".7"/></svg>
     </button>
     </div>
+    </div>
   </div>
+  <div class="streak" id="streak" aria-live="polite"></div>
   <div class="counterwrap"><div class="counter" id="counter"></div><div class="say" id="say"></div></div>
   <div class="store">
     <div class="shelf" style="flex-basis:100%"><div class="lab">うれた はこ <b id="cSold">0</b> こ ・ うれた ドーナツ <b id="cSoldEggs">0</b> こ</div><div class="its" id="sold"></div></div>
@@ -196,19 +259,20 @@
 </div>
 
 <h2 class="ohead">たべちゃう くまさん</h2>
-<div class="play eat">
-  <div class="enum" aria-live="polite"><span id="eNum">12</span><small>こ</small> <span class="eyomi" id="eYomi">じゅうに</span></div>
+<div class="play eat" id="eHost">
+  <div class="ehead"><div class="enum" aria-live="polite"><small>いま</small> <span id="eNum">12</span><small>こ</small> <span class="eyomi" id="eYomi">じゅうに</span></div><span class="earrow">▶</span><div class="etgt"><span class="want">のこり <b id="eTgt">5</b> こに！</span></div></div>
   <div class="erow">
     <div class="ebox"><div class="tlab">10こ いりの はこ <b id="eBoxN">10</b>こ</div><div class="egrid" id="eGrid"></div></div>
-    <div class="eover"><div class="tlab">はみだし <b id="eOverN">2</b>こ</div><div class="eol" id="eOver"></div></div>
-    <button type="button" class="ebear" id="eBear" aria-label="くまさん(おすと ドーナツを 1こ たべる)"></button>
+    <div class="eover"><div class="tlab">はみだし <b id="eOverN">2</b>こ</div><div class="eol" id="eOver"></div><span class="finger" id="eFinger" aria-hidden="true">👆</span></div>
+    <div class="ecol"><button type="button" class="ebear" id="eBear" aria-label="くまさん(おすと ストップ。いまの かずで きまり)"></button></div>
   </div>
-  <div class="tsay" id="eSay">くまさんを おすと、ドーナツを 1こ たべるよ</div>
+  <div class="counterwrap ehandwrap"><div class="counter" id="eHands" aria-hidden="true"></div></div>
+  <div class="estreakrow"><span class="estreak" id="eStreak"></span></div>
+  <div class="tsay" id="eSay">ドーナツを おすと、くまさんが 1こ たべるよ。かずが あったら くまさんを おしてね</div>
   <div class="ecmp" id="eCmp" hidden><div><span class="eplate"><span class="tdn" id="eCmp1"></span></span><b>1</b><small>1こ ある</small></div><div><span class="eplate"></span><b>0</b><small>なにも ない</small></div></div>
-  <div class="sub"><button type="button" class="chip" id="eMore">おかわり</button></div>
-</div>
+  </div>
 
-<h2 class="ohead">おうようへん: いわれた かずを そろえよう</h2>
+<h2 class="ohead">ドーナツパーティー: いわれた かずを そろえよう</h2>
 <div class="play ten">
   <div class="ttarget" aria-live="polite">「<span class="tt" id="tgT">2</span><span class="to" id="tgO">3</span>こ ちょうだい！」</div>
   <div class="tenrow">
@@ -226,15 +290,15 @@
   <div class="tnum" aria-live="polite"><span class="tt" id="tTens">0</span><span class="to" id="tOnes">0</span></div>
   <div class="tyomi" id="tYomi">ゼロ</div>
   <div class="tsay" id="tSay">はこを おすと 10こ、ドーナツを おすと 1こ ふえるよ。ならんだ ものを おすと へるよ。</div>
-  <div class="party" id="party" hidden><div class="pcrew" id="pcrew"></div><div class="pnum" id="pNum"></div><div class="playout" id="pLay"></div><div class="pyomi" id="pYomi"></div><div class="pmsg">ドーナツ パーティー！</div></div>
+  <div class="party" id="party" hidden><div class="pcrew" id="pcrew"></div><div class="pnum" id="pNum"></div><div class="playout" id="pLay"></div><div class="pyomi" id="pYomi"></div><div class="pmsg">ドーナツ パーティー！</div><div class="pspecial" id="pSpecial" hidden></div></div>
   <div class="sub"><button type="button" class="chip" id="tReset">べつの かず</button></div>
 </div>
 
 <h2>おとなの人へ</h2>
 <ul class="small">
-<li>お店に、お客さんが順番に来る。ほしい箱は、くまさんが10こ入り、うさぎさんが6こ入り、ユニコーンさんが12こ入り(1ダース)。ドーナツの箱は、実際のお店でも6こ入り・12こ入りがよくある。オーブンを押して箱をいっぱいにすると、お客さんが受け取って、次のお客さんが来る。</li>
-<li>「たべちゃう くまさん」では、くまさんが、10こ入りの箱いっぱいと、はみ出した1〜3このドーナツを、1こずつ食べる。はみ出しがなくなると10(箱1つと、はみ出し0こ)、最後の1こで「あと 1こ」、全部食べると0。最後に、1こ載ったお皿の「1」と、空っぽのお皿の「0」を並べて見せる。</li>
-<li>下の「おうようへん」では、示された数(10〜59)を、10こ入りの箱(ふたが開いていて、中の10こが見える)とばらのドーナツでそろえる。ばらが10こになると箱に詰まる。並んだ箱やドーナツを押すと1つ減らせる。数字の十の位(ピンク)は箱の数、一の位(オレンジ)はばらの数。たとえば23は、箱2つとばら3こ。ぴったりになると、そろえた数(大きな数字)と、箱とばらの並び(「はこ 2つ と ばら 3こ で 23こ」)が出て、お客さんみんなでドーナツパーティーをする。箱が多いほど、集まる仲間が増える(箱の数+1人)。そのあと次の数が出る。</li>
+<li>お店に、お客さんが順番に来て、「○こください」と注文する(くまさんは10こ、うさぎさんは6こ、ユニコーンさんは12こ=1ダース。お客さんごとに、ほしい箱の数が決まっている)。オーブンを押して数を作り、ちょうどの数になったら、お客さんを押すと売れる。足りない・多いときは、お客さんがそう言う(多いときは、並んだドーナツを押して減らす)。ちょうどの数かどうかは、画面は教えない(「いま ○こ」とだけ出る)ので、数えて比べる必要がある。オーブンの押しっぱなしで増える仕組みはない(連打だけではクリアできない)。ほしい箱は、くまさんが10こ入り、うさぎさんが6こ入り、ユニコーンさんが12こ入り(1ダース)。</li>
+<li>「たべちゃう くまさん」では、「のこりを ○こにしよう」という目標が出る(10・8・7・5・3・2・1・0のどれか)。ドーナツを押すとくまさんが1こずつ食べるので、目標の数になったらくまさんを押す。食べすぎる(目標より少なくなる)と失敗で、押しすぎるとクリアできない。はみ出しがなくなると10(箱1つと、はみ出し0こ)、なにも残らないと0、という関係を、食べながら確かめる。</li>
+<li>下の「ドーナツパーティー」では、示された数(10〜99)を、10こ入りの箱(ふたが開いていて、中の10こが見える)とばらのドーナツでそろえる。ばらが10こになると箱に詰まる。並んだ箱やドーナツを押すと1つ減らせる。数字の十の位(ピンク)は箱の数、一の位(オレンジ)はばらの数。たとえば23は、箱2つとばら3こ。ぴったりになると、そろえた数(大きな数字)と、箱とばらの並び(「はこ 2つ と ばら 3こ で 23こ」)が出て、お客さんみんなでドーナツパーティーをする。箱が多いほど、集まる仲間が増える(箱の数+1人)。そのあと次の数が出る。クリアするたびに、出る数がだんだん大きくなっていく(最初は10〜19あたり、続けると90台まで)。</li>
 <li>ドーナツが1こ入るたびに、指が1本ずつ立つ。人が10ずつまとめて数えるのは、指が10本だからだと言われている。12こ入りでは指が足りなくなり、足の指も使う。</li>
 <li>上の大きな数字は、いま詰めている箱のドーナツの数。箱を渡した直後は、新しい箱が空っぽで0こになる。</li>
 <li>数は、ブラウザの読み上げ(日本語の声がある端末だけ)で読む。音は、AIは耳で確かめていない。</li>

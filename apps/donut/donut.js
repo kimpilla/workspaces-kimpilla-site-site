@@ -19,28 +19,51 @@
   }
 
   // ---- え(ゆび) ----
-  function handsSvg(up, need) {                                     // 両手。左手の おやゆび → こゆび → 右手の おやゆび → こゆび の じゅんに たつ。need = はこの かず
-    const F = [['おや', 34, 46, 38], ['ひとさし', 50, 22, 0], ['なか', 56, 0, 0], ['くすり', 50, -22, 0], ['こ', 40, -43, 0]];
-    const feet = need > 10 && up >= 10;                              // 10を こえると、あしの ゆびも つかう
-    let s = '<svg viewBox="0 0 400 ' + (feet ? 300 : 190) + '" aria-label="りょうて">';
+  function handsSvg(up, need) {                                     // 両手(てのひらを みせる むき。おやゆびは そとがわ)。ひとさしゆび → なか → くすり → こ → おやゆび の じゅんに たつ(左手が先、つぎに右手)
+    const RANK = [4, 0, 1, 2, 3];                                   // [おや, ひとさし, なか, くすり, こ] が なんばんめに たつか
+    const FING = [null, [33, 66, 18, 7], [11, 76, 19, 2], [-11, 69, 18, -3], [-32, 52, 15, -9]];   // [そとがわへの よこいち, ながさ, ふとさ, かたむき(そと +)]
+    const feet = need > 10 && up > 10;                              // 10を こえると、あしの ゆびも つかう
+    const SK = '#d99a66', FL = '#ffb070', PM = '#ffd9b8';
+    let s = '<svg viewBox="0 0 400 ' + (feet ? 340 : 215) + '" aria-label="りょうて">';
     [[110, 1], [290, -1]].forEach(([cx, side], h) => {
-      let g = '';
-      F.forEach(([, len, dx, ang], k) => {
-        const i = h * 5 + k, on = i < up, x = cx + dx * side, top = 110, use = i < need;
-        const L = on ? len : 14, a = ang * side;
-        g += '<rect x="' + (x - 10) + '" y="' + (top - L) + '" width="20" height="' + (L + 14) + '" rx="10" fill="' + (on ? '#ffb070' : '#ffd9b8') + '" stroke="#d99a66" opacity="' + (use ? 1 : 0.35) + '" stroke-width="2" transform="rotate(' + a + ' ' + x + ' ' + (top + 6) + ')"/>';
-      });
-      g += '<ellipse cx="' + cx + '" cy="140" rx="56" ry="44" fill="#ffd9b8" stroke="#d99a66" stroke-width="2"/>';
+      const o = -side;                                              // そとがわの むき(左手 = ひだり)
+      let g = '<rect x="' + (cx - 28) + '" y="165" width="56" height="45" rx="12" fill="' + PM + '" stroke="' + SK + '" stroke-width="2"/>';   // てくび
+      let fold = '';                                                 // まげている ゆび(てのひらの うえに かぶせる)
+      for (let k = 1; k < 5; k++) {
+        const [dx, len, wd, lean] = FING[k], x = cx + o * dx, y0 = 114;
+        if (!(h * 5 + RANK[k] < up)) {                               // まだ かぞえていない ゆびは、まげて てのひらに たおしておく
+          fold += '<g transform="rotate(' + (-o * lean * 0.4) + ' ' + x + ' ' + y0 + ')"><line x1="' + x + '" y1="' + (y0 + 2) + '" x2="' + x + '" y2="' + (y0 + 26) + '" stroke="' + SK + '" stroke-width="' + (wd + 4) + '" stroke-linecap="round"/><line x1="' + x + '" y1="' + (y0 + 2) + '" x2="' + x + '" y2="' + (y0 + 26) + '" stroke="#ffc08a" stroke-width="' + wd + '" stroke-linecap="round"/><path d="M' + (x - wd * 0.3) + ' ' + (y0 + 8) + ' h' + (wd * 0.6) + '" stroke="#e39a62" stroke-width="1.6" stroke-linecap="round"/><ellipse cx="' + x + '" cy="' + (y0 + 22) + '" rx="' + (wd * 0.3) + '" ry="' + (wd * 0.36) + '" fill="#fff0ea" stroke="#e8b89a" stroke-width="1"/></g>';
+          continue;
+        }
+        const rise = false;                                            // たてる とちゅうの うごきは なし
+        g += '<g transform="rotate(' + (o * lean) + ' ' + x + ' ' + y0 + ')"><g' + (rise ? ' class="rise"' : '') + '><line x1="' + x + '" y1="' + y0 + '" x2="' + x + '" y2="' + (y0 - len) + '" stroke="' + SK + '" stroke-width="' + (wd + 4) + '" stroke-linecap="round"/><line x1="' + x + '" y1="' + y0 + '" x2="' + x + '" y2="' + (y0 - len) + '" stroke="' + FL + '" stroke-width="' + wd + '" stroke-linecap="round"/>' +
+          [0.4, 0.7].map((t) => '<path d="M' + (x - wd * 0.28) + ' ' + (y0 - len * t) + ' h' + (wd * 0.56) + '" stroke="#e39a62" stroke-width="1.6" stroke-linecap="round"/>').join('') + '</g></g>';
+      }
+      if (h * 5 + RANK[0] < up) {                                  // おやゆび(てのひらの そとがわから でる。2つの ふし)
+        const bx = cx + o * 34, by = 156, jx = bx + o * 26, jy = by - 16, tx = jx + o * 17, ty = jy - 22;
+        const pl = bx + ',' + by + ' ' + jx + ',' + jy + ' ' + tx + ',' + ty, rise = h * 5 === up - 1 - (RANK[0] - 0) + 0 && false;
+        g += '<g' + '' + '><polyline points="' + pl + '" fill="none" stroke="' + SK + '" stroke-width="32" stroke-linecap="round" stroke-linejoin="round"/><polyline points="' + pl + '" fill="none" stroke="' + FL + '" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/><path d="M' + (jx - 7) + ' ' + (jy + 2) + ' l14 -4" stroke="#e39a62" stroke-width="1.6" stroke-linecap="round" transform="rotate(' + (o * 12) + ' ' + jx + ' ' + jy + ')"/></g>';
+      } else {                                                       // まげた おやゆびは、てのひらに たおす
+        fold += '<line x1="' + (cx + o * 34) + '" y1="158" x2="' + (cx + o * 4) + '" y2="164" stroke="' + SK + '" stroke-width="30" stroke-linecap="round"/><line x1="' + (cx + o * 34) + '" y1="158" x2="' + (cx + o * 4) + '" y2="164" stroke="#ffc08a" stroke-width="26" stroke-linecap="round"/><ellipse cx="' + (cx + o * 6) + '" cy="163" rx="8" ry="9" fill="#fff0ea" stroke="#e8b89a" stroke-width="1"/>';
+      }
+      g += '<rect x="' + (cx - 46) + '" y="100" width="92" height="82" rx="34" fill="' + PM + '" stroke="' + SK + '" stroke-width="2"/>';   // てのひら
+      const nUp = [0, 1, 2, 3, 4].filter((q) => h * 5 + q < up).length;
+      if (nUp === 5) {        g += '<path d="M' + (cx - o * 30) + ' 136 Q' + cx + ' 152 ' + (cx + o * 22) + ' 150 M' + (cx - o * 26) + ' 118 Q' + (cx - o * 4) + ' 130 ' + (cx + o * 24) + ' 130" fill="none" stroke="#e8b890" stroke-width="2" stroke-linecap="round"/>';   // てのひらの すじ
+      }
+      g += fold;
       s += g;
     });
-    if (feet) {                                                      // あし: おやゆびから じゅんに たつ(ゆび 11ぽんめ・12ほんめ)
-      [[150, 1], [250, -1]].forEach(([cx, side], h) => {
-        let g = '<ellipse cx="' + cx + '" cy="262" rx="34" ry="26" fill="#ffd9b8" stroke="#d99a66" stroke-width="2"/>';
-        for (let k = 0; k < 5; k++) {
-          const i = 10 + h * 5 + k, on = i < up, use = i < need, x = cx + (-18 + k * 9) * side * -1, L = on ? 22 : 8, r = k === 0 ? 7 : 5;
-          g += '<rect x="' + (x - r) + '" y="' + (240 - L) + '" width="' + (2 * r) + '" height="' + (L + 8) + '" rx="' + r + '" fill="' + (on ? '#ffb070' : '#ffd9b8') + '" stroke="#d99a66" stroke-width="2" opacity="' + (use ? 1 : 0.35) + '"/>';
-        }
-        s += g;
+    if (feet) {                                                      // あし(うえから みた ほんものらしい かたち)。かぞえた あしの ゆびは オレンジに なる(はなさない)
+      const FOOT = 'M-2 54 C-18 54 -23 40 -22 24 C-21 6 -33 -4 -32 -22 C-31 -30 -18 -32 -6 -31 C8 -33 22 -33 31 -26 C34 -4 17 8 16 26 C16 42 12 54 -2 54 Z';   // かかと・ほそい ふみつけず・ひろい まえあし
+      const TOE = [[22, -42, 12, 14], [7, -44, 8, 9.5], [-5, -40, 7.5, 9], [-16, -35, 7, 8.5], [-26, -28, 6.5, 8]];   // [よこ, たて, はば(はんけい), たかさ(はんけい)] おや → こ
+      [[142, 1], [258, -1]].forEach(([cx, side], h) => {
+        let toes = '', curl = '';
+        TOE.forEach(([x, y, rx, ry], k) => {
+          const on = 10 + h * 5 + k < up;
+          if (on) toes += '<ellipse cx="' + x + '" cy="' + y + '" rx="' + rx + '" ry="' + ry + '" fill="' + FL + '" stroke="' + SK + '" stroke-width="2"/>';   // たてた ゆび: のびて オレンジ
+          else curl += '<ellipse cx="' + x + '" cy="' + (y + ry * 0.95) + '" rx="' + (rx * 0.92) + '" ry="' + (ry * 0.5) + '" fill="' + PM + '" stroke="' + SK + '" stroke-width="2"/><ellipse cx="' + x + '" cy="' + (y + ry * 0.95) + '" rx="' + (rx * 0.45) + '" ry="' + (ry * 0.2) + '" fill="#fff0ea" stroke="#e8b89a" stroke-width="1"/>';   // とじた ゆび: まえあしに まるまって つめだけ みえる
+        });
+        s += '<g transform="translate(' + cx + ' 268) scale(' + (side * 1.1) + ' 1.1)">' + toes + '<path d="' + FOOT + '" fill="' + PM + '" stroke="' + SK + '" stroke-width="2" stroke-linejoin="round"/>' + curl + '</g>';
       });
     }
     return s + '</svg>';
@@ -84,26 +107,40 @@
     clearTimeout(speakTimer);
     speakTimer = setTimeout(() => {
       speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance(String(n)); u.lang = 'ja-JP'; u.rate = 1.05;
+      const u = new SpeechSynthesisUtterance(String(n)); u.lang = 'ja-JP'; u.rate = 1.25;
       const v = speechSynthesis.getVoices().find((x) => /^ja/i.test(x.lang)); if (v) u.voice = v;
       speechSynthesis.speak(u);
-    }, 280);
+    }, 110);
   }
 
+  // ---- せいこう・しっぱいの おおきな え(おきゃくさん・くまさんが でる) ----
+  function fx(host, kind, c, title, sub) {
+    const old = host.querySelector('.fx'); if (old) old.remove();
+    const el = document.createElement('div'); el.className = 'fx ' + kind;
+    const ok = kind === 'ok';
+    const ems = ok ? ['⭐', '❤️', '✨', '⭐', '❤️', '✨'] : ['💦', '❌', '💦', '💧', '❌', '💧'];
+    el.innerHTML = '<div class="big">' + custSvg(c) + ems.map((e, i) => '<span class="em e' + i + '">' + e + '</span>').join('') + '</div><div class="fxt">' + title + '</div>' + (sub ? '<div class="fxs">' + sub + '</div>' : '');
+    host.appendChild(el); setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 400); }, ok ? 1500 : 1700);
+  }
   // ---- じょうたい ----
-  let fill = 0, cust = CUST[0], busy = false, sold = [], partyUntil = 0;
+  let fill = 0, cust = CUST[0], busy = false, sold = [], partyUntil = 0, need = 10, streak = 0;
+  const MAXF = 14;                                                  // おけるのは 14こまで
   function render(newEgg) {
-    const s = cust.size;
-    $('num').textContent = fill; $('yomi').textContent = yomi(fill); $('packsize').textContent = s + 'こ いりの はこ' + (s === 12 ? '(1ダース)' : '');
+    const s = need, slots = Math.max(s, fill);
+    $('num').textContent = fill; $('yomi').textContent = yomi(fill); $('packsize').textContent = (s === cust.size ? s + 'こ いりの はこ' + (s === 12 ? '(1ダース)' : '') : s + 'こ');
     const partying = Date.now() < partyUntil;
-    $('counter').innerHTML = handsSvg(partying ? s : fill, s);
+    $('counter').innerHTML = handsSvg(partying ? s : fill, Math.max(s, fill));
     $('counter').classList.toggle('party', partying);
-    const pl = $('plate'); pl.innerHTML = ''; pl.style.gridTemplateColumns = 'repeat(' + (s / 2) + ', 22px)';
-    for (let i = 0; i < s; i++) {
+    const pl = $('plate'); pl.innerHTML = ''; pl.style.gridTemplateColumns = 'repeat(' + Math.ceil(s / 2) + ', 36px)';
+    for (let i = 0; i < s; i++) {                                    // はこの なかは「ほしい かず」ぶんだけ
       const sl = document.createElement('span'); sl.className = 'slot';
       if (i < fill) sl.innerHTML = '<span class="egg' + (newEgg && i === fill - 1 ? ' new' : '') + '">' + donut(i) + '</span>';
       pl.appendChild(sl);
     }
+    let sp = $('spill'); if (!sp) { sp = document.createElement('div'); sp.id = 'spill'; sp.className = 'spill'; pl.parentNode.insertBefore(sp, pl.nextSibling); }
+    sp.innerHTML = ''; sp.style.display = fill > s ? 'flex' : 'none';   // はいらない ぶんは はこの そとへ
+    for (let i = s; i < fill; i++) { const e = document.createElement('span'); e.className = 'slot spill1'; e.innerHTML = '<span class="egg' + (newEgg && i === fill - 1 ? ' new' : '') + '">' + donut(i) + '</span>'; sp.appendChild(e); }
+    if (fill > s) { const t = document.createElement('span'); t.className = 'spillt'; t.textContent = 'はこから はみだし ' + (fill - s) + 'こ'; sp.appendChild(t); }
     $('cSold').textContent = sold.length; $('cSoldEggs').textContent = sold.reduce((a, x) => a + x, 0);
     const box = $('sold'); box.innerHTML = '';
     sold.slice(-14).forEach((sz, i, arr) => { const e = document.createElement('span'); e.className = 'mini s' + sz + (i === arr.length - 1 && partying ? ' new' : ''); e.title = sz + 'こ いり'; box.appendChild(e); });
@@ -112,9 +149,11 @@
   function showCust(first) {
     const el = $('cust'); el.innerHTML = custSvg(cust);
     el.classList.remove('dance', 'out', 'in'); void el.offsetWidth; el.classList.add('in');
-    $('bubble').textContent = cust.size + 'こ ください';
-    $('say').textContent = cust.name + '「' + cust.size + 'こ いりの はこを いっぱいに して！」' + (cust.size === 12 ? '(1ダース)' : '');
-    if (!first) sayWords(cust.size + 'こ ください');
+    const box = need === cust.size, tx = need + 'こ ' + (box ? 'いりの はこ' : '') ;
+    $('bubble').innerHTML = '<b>' + need + '</b>こ ください！';
+    $('say').textContent = 'ちょうどの かずに なったら、おきゃくさんを おしてね';
+    $('streak').textContent = streak ? 'ぴったり ' + streak + 'かい れんぞく！' : '';
+    if (!first) sayWords(need + 'こ ください');
   }
   function sayWords(t) {
     if (!voiceOn || !window.speechSynthesis) return;
@@ -126,29 +165,46 @@
 
   function addEgg() {
     if (busy) return false;
-    fill++;
+    if (fill >= MAXF) { $('say').textContent = 'もう おけないよ。ならんだ ドーナツを おして へらそう'; return false; }
+    fill++; lastLay = Date.now();
     const num = $('num'); num.classList.remove('bump'); void num.offsetWidth; num.classList.add('bump');
-    const s = cust.size;
-    if (fill === s) {                                              // いっぱい！ おきゃくさんに わたす
-      busy = true; sParty(); partyUntil = Date.now() + 900;
-      $('say').textContent = 'いっぱい！ ' + cust.name + 'に わたそう';
-      render(true); speak(fill);
-      const el = $('cust'); el.classList.remove('in'); void el.offsetWidth; el.classList.add('dance');
-      setTimeout(() => {
-        for (let i = 0; i < 6; i++) tone(1568 + (i % 2) * 300, i * 0.07, 0.12, 'triangle', 0.12);   // チャリン
-        sold.push(s); fill = 0; el.classList.remove('dance'); void el.offsetWidth; el.classList.add('out');
-        $('bubble').textContent = 'ありがとう！';
-        render();
-      }, 1000);
-      setTimeout(() => { cust = pickCust(cust); busy = false; showCust(); render(); }, 1600);
-      return true;
-    }
     sFinger(Math.min(fill, 10));
-    if (fill === 10 && s > 10) $('say').textContent = 'ゆびが たりない！ あしの ゆびも つかおう';
-    else $('say').textContent = s - fill === 1 ? 'あと 1こで ' + s + 'こ！' : (fill <= 10 ? 'ゆびが ' : 'あしの ゆびも あわせて ') + fill + 'ほん';
+    // ぴったりかは、おしえない(かずを くらべるのが ゲーム)。かずを よんで、いまの かずだけ つたえる
+    $('say').textContent = fill <= 10 ? 'いま ' + fill + 'こ。ゆびが ' + fill + 'ほん' : 'いま ' + fill + 'こ。あしの ゆびも つかったよ';
     render(true); speak(fill);
     return true;
   }
+  // 「どうぞ」: かずが ぴったりなら うれる。たりない・おおいは おしえてくれる
+  let lastLay = 0;
+  function give() {
+    if (busy) return;
+    if (Date.now() - lastLay < 450) return;                           // れんだ ちゅうの まちがいタップで うれて しまわない
+    const c = $('cust');
+    if (fill === need) {
+      busy = true; sParty(); partyUntil = Date.now() + 900; streak++;
+      $('say').textContent = 'ぴったり！ ' + cust.name + 'に わたしたよ'; render(true); speak(fill);
+      fx($('play'), 'ok', cust, 'ありがとう！', 'ぴったり ' + need + 'こ');
+      $('streak').textContent = 'ぴったり ' + streak + 'かい れんぞく！';
+      c.classList.remove('in'); void c.offsetWidth; c.classList.add('dance');
+      const s = fill;
+      setTimeout(() => {
+        for (let i = 0; i < 6; i++) tone(1568 + (i % 2) * 300, i * 0.07, 0.12, 'triangle', 0.12);   // チャリン
+        sold.push(s); fill = 0; c.classList.remove('dance'); void c.offsetWidth; c.classList.add('out');
+        $('bubble').textContent = 'ありがとう！'; render();
+      }, 1000);
+      setTimeout(() => { cust = pickCust(cust); need = pickNeed(cust); busy = false; showCust(); render(); }, 1600);
+      return;
+    }
+    streak = 0; $('streak').textContent = '';
+    tone(220, 0, 0.25, 'sine', 0.3, 0.7);
+    c.classList.remove('in', 'dance'); void c.offsetWidth; c.classList.add('dance');
+    const msg = fill < need ? 'まだ たりないよ！ もっと ほしい' : 'おおいよ！ ならんだ ドーナツを おして へらしてね';
+    $('say').textContent = cust.name + '「' + msg + '」'; $('bubble').innerHTML = '<b>' + need + '</b>こ ください！';
+    sayWords(fill < need ? 'まだ たりないよ' : 'おおいよ');
+    fx($('play'), 'ng', cust, fill < need ? 'たりないよ…' : 'おおいよ…', 'いま ' + fill + 'こ ・ ほしいのは ' + need + 'こ');
+  }
+  // おきゃくさんの ちゅうもん: その おきゃくさんの はこの おおきさ(6・10・12)
+  function pickNeed(c) { return c.size; }                                  // おきゃくさんごとに、ほしい はこは きまっている(くまさん10・うさぎさん6・ユニコーンさん12)
 
   function chick() {                                                // ときどき ひよこが あそびに くる(かずとは かんけい ない)
     const c = document.createElement('span'); c.className = 'chick'; c.textContent = '🐥';
@@ -159,6 +215,8 @@
     setTimeout(() => c.remove(), 2400);
   }
 
+  // オーブンの まどに、やけた ドーナツを ならべる(からっぽに みえない ように)
+  (function () { const g = document.querySelector('.ovenglow'); if (!g) return; g.innerHTML = [0, 1, 2].map((i) => '<g transform="translate(' + (37 + i * 22) + ' 71)">' + donut(i + 2).replace('<svg ', '<svg style="width:22px;height:22px" width="22" height="22" ') + '</g>').join(''); })();
   // ---- え を おす(オーブン = ドーナツが やける、おみせ = おきゃくさんが ちゅうもんを もういちど いう) ----
   const hen = $('hen');
   function hitAnim(el) { el.classList.remove('hit'); void el.offsetWidth; el.classList.add('hit'); }
@@ -175,59 +233,94 @@
   let holdT = null, holdI = null, speed = 200;
   function stopHold() { clearTimeout(holdT); clearTimeout(holdI); holdT = holdI = null; }
   function loop() { lay(); speed = Math.max(70, speed * 0.9); holdI = setTimeout(loop, speed); }
-  hen.addEventListener('pointerdown', (e) => { e.preventDefault(); lay(); speed = 200; holdT = setTimeout(loop, 450); });
+  hen.addEventListener('pointerdown', (e) => { e.preventDefault(); lay(); });   // おしっぱなしで ふえる しくみは なし(れんだで クリアできないように)
   ['pointerup', 'pointerleave', 'pointercancel'].forEach((t) => hen.addEventListener(t, stopHold));
   hen.addEventListener('click', (e) => { if (e.detail === 0) lay(); });   // キーボード(Enter・スペース)
   hen.addEventListener('contextmenu', (e) => e.preventDefault());
-  $('shop').addEventListener('click', () => { hitAnim($('shop')); if (!busy) sayWords(cust.name + '。' + cust.size + 'こ ください'); });
-  $('reset').onclick = () => { stopHold(); fill = 0; sold = []; busy = false; partyUntil = 0; cust = CUST[0]; showCust(true); render(); };
+  $('plate').addEventListener('click', (e) => { if (busy || fill <= 0) return; fill--; tone(300, 0, 0.1, 'sine', 0.15); render(); speak(fill); });   // ならんだ ドーナツを おすと へる
+  document.addEventListener('click', (e) => { if (!e.target.closest('#spill')) return; if (busy || fill <= 0) return; fill--; tone(300, 0, 0.1, 'sine', 0.15); render(); speak(fill); });   // はこから はみだした ドーナツも おすと へる
+  $('cust').addEventListener('click', give); $('shop').addEventListener('click', give);   // おきゃくさんを おして わたす
+  $('reset').onclick = () => { stopHold(); fill = 0; sold = []; busy = false; partyUntil = 0; cust = CUST[0]; need = cust.size; streak = 0; showCust(true); render(); };
   $('voice').onclick = () => { voiceOn = !voiceOn; $('voice').textContent = voiceOn ? '🗣 こえ あり' : '🤐 こえ なし'; if (!voiceOn && window.speechSynthesis) speechSynthesis.cancel(); };
-  // ---- たべちゃう くまさん: 1こ ある(1)と、なにも ない(0)の ちがい ----
-  let eBox = 10, eOver = 2, eBusy = false;
+  // ---- たべちゃう くまさん: 「のこりを ○こに して、ストップ！」。たべすぎると しっぱい ----
+  let eBox = 10, eOver = 2, eBusy = false, eTarget = 10, eLock = false, eStreak = 0;
   $('eBear').innerHTML = custSvg(CUST[0]);
   $('eCmp1').innerHTML = donut(0);
-  function eRender(gone) {                                         // gone = 'over' | 'box'(いま たべた ところ)
+  function eRender() {
     const n = eBox + eOver;
     $('eNum').textContent = n; $('eYomi').textContent = yomi(n);
+    $('eHands').innerHTML = handsSvg(n, 13);
     $('eBoxN').textContent = eBox; $('eOverN').textContent = eOver;
     $('eGrid').innerHTML = '';
     for (let i = 0; i < 10; i++) { const sl = document.createElement('span'); sl.className = 'eslot'; if (i < eBox) sl.innerHTML = '<span class="tdn">' + donut(i) + '</span>'; $('eGrid').appendChild(sl); }
     $('eOver').innerHTML = '';
     for (let i = 0; i < eOver; i++) { const e = document.createElement('span'); e.className = 'tdn'; e.innerHTML = donut(i + 3); $('eOver').appendChild(e); }
     $('eCmp').hidden = n !== 0;
+    $('eTgt').textContent = eTarget; $('eStreak').textContent = eStreak ? 'ぴったり ' + eStreak + 'かい れんぞく！' : '';
+  }
+  function eNew() {                                                // あたらしい もんだい: いまの かずより すくない もくひょうを えらぶ
+    eBox = 10; eOver = 1 + Math.floor(Math.random() * 3); const n = eBox + eOver;
+    const pool = [10, 8, 7, 5, 3, 2, 1, 0].filter((t) => t < n && t !== eTarget); eTarget = pool[Math.floor(Math.random() * pool.length)];
+    eLock = false; eBusy = false; eRender();
+    $('eSay').textContent = 'ドーナツを おして たべさせて、のこりが ' + eTarget + 'こに なったら くまさんを おしてね';
+    sayWords('のこりを ' + yomi(eTarget) + 'こに しよう');
   }
   function eat() {
-    if (eBusy) return;
-    if (eBox + eOver === 0) { $('eSay').textContent = 'もう ない！ 「おかわり」を おしてね'; return; }
+    if (eBusy || eLock) return;
+    if (eBox + eOver === 0) return;
     eBusy = true;
     const el = eOver > 0 ? $('eOver').lastElementChild : $('eGrid').children[eBox - 1].firstElementChild;
     if (el) el.classList.add('eaten');
-    const b = $('eBear'); b.classList.remove('chew'); void b.offsetWidth; b.classList.add('chew');
+    const b = $('eBear'); $('eFinger').style.display = 'none'; b.classList.remove('chew'); void b.offsetWidth; b.classList.add('chew');
     tone(300, 0, 0.08, 'sine', 0.2); tone(260, 0.14, 0.08, 'sine', 0.2);   // もぐもぐ
     setTimeout(() => {
       if (eOver > 0) eOver--; else eBox--;
       const n = eBox + eOver;
       eRender();
-      let t;
-      if (n === 10) t = 'はみだしが なくなった。はこ 1つと、はみだし 0こ。だから 10';
-      else if (n === 1) t = 'あと 1こ！ まだ 1こ ある';
-      else if (n === 0) { t = 'もう ない！ なにも ない ときは 0'; sParty(); }
-      else t = eOver > 0 ? 'はみだしを たべた' : 'はこの ドーナツを たべた。のこり ' + n + 'こ';
-      $('eSay').textContent = t; speak(n);
+      if (n < eTarget) {                                           // たべすぎ
+        eLock = true; eStreak = 0; eRender(); tone(200, 0, 0.35, 'sine', 0.3, 0.6);
+        fx($('eHost'), 'ng', CUST[0], 'たべすぎだよ！', 'おやに おこられた');
+        $('eSay').textContent = 'たべすぎだよ、おやに おこられた';
+        sayWords('たべすぎだよ'); setTimeout(eNew, 2200);
+      } else {
+        let t = 'のこり ' + n + 'こ。' + eTarget + 'こまで あと ' + (n - eTarget) + 'こ';
+        if (n === eTarget) t = 'のこり ' + n + 'こ。ほしかった かずかな？ そうなら くまさんを おしてね';
+        else if (n === 10 && eTarget < 10) t += '(はこ 1つと はみだし 0こ。だから 10)';
+        else if (n === 1 && eTarget < 1) t += '';
+        $('eSay').textContent = t; speak(n);
+      }
       eBusy = false;
     }, 320);
   }
-  $('eBear').onclick = eat;
-  $('eMore').onclick = () => { eBox = 10; eOver = 1 + Math.floor(Math.random() * 3); eBusy = false; eRender(); $('eSay').textContent = 'おかわり！ くまさんを おすと、1こ たべるよ'; };
-  eOver = 1 + Math.floor(Math.random() * 3); eRender();
+  function eStop() {
+    if (eBusy || eLock) return;
+    const n = eBox + eOver;
+    if (n === eTarget) {
+      eLock = true; eStreak++; eRender(); sParty();
+      const bb = $('eBear'); bb.classList.remove('full', 'chew'); void bb.offsetWidth; bb.classList.add('full'); setTimeout(() => bb.classList.remove('full'), 2100);   // まんぷくで おどる
+      fx($('eHost'), 'ok', CUST[0], eStreak >= 2 ? 'すごいね！' : 'ぴったり！', eStreak >= 2 ? 'おやが ほめてくれた(' + eStreak + 'かい れんぞく)' : 'のこり ' + n + 'こ');
+      $('eSay').textContent = (eStreak >= 2 ? 'おや「すごいね！」 ' : '') + 'ぴったり！ くまさんは まんぷく。のこり ' + n + 'こ' + (n === 0 ? '(なにも ない ときは 0)' : '');
+      sayWords(eStreak >= 2 ? 'すごいね。ぴったり' : 'ぴったり');
+      setTimeout(eNew, 2200);
+    } else {
+      eStreak = 0; eRender();                                       // まだ たべる かずが すくない: おおげさな はんのうは しない。くまが もっと たべたそうに ゆれるだけ
+      const b = $('eBear'); b.classList.remove('hungry'); void b.offsetWidth; b.classList.add('hungry');
+      tone(520, 0, 0.12, 'sine', 0.1); tone(440, 0.14, 0.16, 'sine', 0.1);
+      $('eSay').textContent = 'くまさんは まだ たべたそう。いま ' + n + 'こ。' + eTarget + 'こに したい';
+    }
+  }
+  $('eBear').onclick = eStop;                                       // くまさんを おす = ストップ(これで きめる)
+  $('eHost').addEventListener('click', (e) => { if (e.target.closest('.ebox, .eover')) eat(); });   // はこ・はみだしの わく ぜんぶが おせる(ドーナツに ぴったり あてなくて いい)
+  eTarget = 5; eNew();
 
   // 10こ いりの はこ: ふたを あけて、なかの 10こ(5こ×2れつ)が みえる かたち。したに「10」
   const box10 = (cls) => '<span class="tbox10' + (cls ? ' ' + cls : '') + '"><span class="g">' + Array.from({ length: 10 }, (_, i) => '<span class="tdn">' + donut(i) + '</span>').join('') + '</span><span class="lb">10</span></span>';
-  // ---- おうようへん: いわれた かずを、10こ いりの はこと ばらで そろえる。そろったら ドーナツ パーティー ----
-  let tBox = 0, tOne = 0, tTimer = null, target = 23, partying2 = false;
+  // ---- ドーナツパーティー: いわれた かずを、10こ いりの はこと ばらで そろえる。そろったら ドーナツ パーティー ----
+  let tBox = 0, tOne = 0, tTimer = null, target = 23, partying2 = false, tLevel = 0;   // tLevel: パーティーを ひらいた かい。おおきいほど おおきな かずが でる
   const n2 = () => tBox * 10 + tOne;
   function newTarget(silent) {
-    let t; do { t = 10 + Math.floor(Math.random() * 50); } while (t === target);
+    const base = Math.min(10 + tLevel * 5, 90);                  // クリアするたびに、でる かずの ちゅうしんが 5ずつ おおきくなる(10〜99)
+    let t; do { t = Math.min(99, base + Math.floor(Math.random() * 10)); } while (t === target);
     target = t; tBox = 0; tOne = 0;
     $('tgT').textContent = Math.floor(t / 10); $('tgO').textContent = t % 10;
     tRender(); tSay('「' + t + 'こ ちょうだい！」 はこと ドーナツを おして そろえよう'); if (!silent) sayWords(yomi(t) + 'こ ちょうだい');
@@ -260,7 +353,7 @@
     speak(n);
   }
   function party() {                                               // みんなで ドーナツ パーティー
-    partying2 = true; tSay('ぴったり ' + target + 'こ！');
+    partying2 = true; tLevel++; tSay('ぴったり ' + target + 'こ！');
     // はこが おおいほど、なかまが ふえる(はこの かず+1にん、さいていでも 2にん)
     const members = Math.max(2, tBox + 1);
     let crew = '';
@@ -275,7 +368,37 @@
     $('pLay').innerHTML = lay;
     $('party').hidden = false;
     const box = $('party'), colors = ['#ffb3d9', '#c9b3ff', '#a8eadf', '#fff0a0', '#ffc9a8', '#b3dcff'];
-    for (let i = 0; i < 40; i++) {
+    // ---- かずが おおきいほど はでに(30だい: かみふぶき ふえる / 50だい いじょう: はなび と ドーナツタワー(はこの かずだけ たかく)) ----
+    // 10の くらいが あがるごとに、1つずつ ふえる: 20だい かみふぶき / 30だい はなび / 40だい はなび おおく / 50だい タワー / 60だい おおきな ドーナツ / 80だい ながれぼし
+    const lv = Math.floor(target / 10), fwN = lv < 3 ? 0 : lv === 3 ? 2 : lv === 4 ? 4 : lv < 9 ? 5 : 7;
+    // ドーナツタワー(50だい いじょう): はこの かずだけ ドーナツが つみあがる。かずが おおきいほど たかい
+    $('pSpecial').hidden = lv < 5; $('pSpecial').textContent = 'ドーナツタワー ' + tBox + 'だん！';
+    if (lv >= 5) [6, null].forEach((left, side) => {
+      const tw = document.createElement('div'); tw.className = 'ptower'; if (side) tw.style.right = '6px'; else tw.style.left = '6px';
+      for (let k = 0; k < tBox; k++) { const d = document.createElement('div'); d.className = 'ptd'; d.style.animationDelay = (0.2 + k * 0.18) + 's'; d.innerHTML = donut(k + side * 3); tw.appendChild(d); }
+      box.appendChild(tw);
+    });
+    if (lv >= 6) {                                                // おおきな ドーナツが ぽんと でてくる(かずが おおきいほど おおきい)
+      const bd = document.createElement('div'); bd.className = 'bigd'; const sz = 80 + (Math.min(lv, 9) - 6) * 20; bd.style.width = bd.style.height = sz + 'px'; bd.style.marginLeft = (-sz / 2) + 'px'; bd.innerHTML = donut(target); box.appendChild(bd);
+    }
+    if (lv >= 8) for (let k = 0; k < (lv === 8 ? 3 : 6); k++) {    // キラキラ ドーナツの ながれぼし
+      const st = document.createElement('div'); st.className = 'shoot'; st.innerHTML = '<span class="tail"></span>' + donut(k + 1);
+      st.style.top = (4 + (k * 37) % 30) + '%'; st.style.animationDelay = (0.5 + k * 0.7) + 's'; box.appendChild(st);
+    }
+    if (fwN > 0) {                                                 // はなび
+      const fc = ['#ff6fb5', '#ffd23f', '#6ad1ff', '#9d7bff', '#7be0a5', '#ff9a4c'];
+      for (let b = 0; b < fwN; b++) setTimeout(() => {
+        if ($('party').hidden) return;
+        const cx = 15 + Math.random() * 70, cy = 12 + Math.random() * 35, col = fc[b % 6];
+        for (let k = 0; k < 16; k++) {
+          const p = document.createElement('span'); p.className = 'fw'; const a = k / 16 * Math.PI * 2, r = 50 + Math.random() * 30;
+          p.style.left = cx + '%'; p.style.top = cy + '%'; p.style.background = col; p.style.setProperty('--dx', Math.cos(a) * r + 'px'); p.style.setProperty('--dy', Math.sin(a) * r + 'px');
+          box.appendChild(p);
+        }
+        tone(180 + Math.random() * 60, 0, 0.12, 'sawtooth', 0.12, 0.4); clap(0.04);       // ドーン
+      }, 300 + b * 520);
+    }
+    for (let i = 0; i < 40 + (lv >= 2 ? 40 : 0); i++) {
       const c = document.createElement('span'); c.className = 'confetti';
       c.style.left = (Math.random() * 100) + '%'; c.style.background = colors[i % 6]; c.style.animationDelay = (Math.random() * 0.8) + 's';
       box.appendChild(c);
@@ -283,7 +406,7 @@
     [523.3, 659.3, 784, 659.3, 784, 1046.5, 880, 1046.5].forEach((f, i) => tone(f, i * 0.16, 0.22, 'triangle', 0.15));   // パーティーの メロディ
     for (let i = 0; i < 6; i++) clap(0.1 + i * 0.32);
     sayWords('ぴったり ' + yomi(target) + '。ドーナツ パーティー');
-    setTimeout(() => { $('party').hidden = true; box.querySelectorAll('.confetti').forEach((c) => c.remove()); partying2 = false; newTarget(); }, 5000);
+    setTimeout(() => { $('party').hidden = true; box.querySelectorAll('.confetti, .fw, .ptower, .bigd, .shoot').forEach((c) => c.remove()); partying2 = false; newTarget(); }, 5000);
   }
   $('tAddBox').onclick = () => {
     if (partying2 || tTimer) return;
@@ -309,6 +432,6 @@
   target = 0; newTarget(true);
 
   if (window.speechSynthesis) speechSynthesis.getVoices();
-  showCust(true);
+  need = pickNeed(cust); showCust(true);
   render();
 })();
