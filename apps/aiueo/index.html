@@ -6,36 +6,59 @@
 <title>あいうえおシンセ | kimpilla</title>
 <link rel="stylesheet" href="../../style.css">
 <style>
-  .play { background: linear-gradient(180deg, #eef6ff 0%, #f6efff 100%); color: #3a3550; border-radius: 22px; padding: 8px 8px 12px; margin: 8px 0; border: 3px solid #cfe0f7; font-family: "Hiragino Maru Gothic ProN", "Yu Gothic", system-ui, sans-serif; }
+  .play { display: flex; flex-direction: column; position: relative; height: calc(100vh - 62px); height: calc(100svh - 62px); min-height: 460px; background: linear-gradient(180deg, #eef6ff 0%, #f6efff 100%); color: #3a3550; border-radius: 22px; padding: 8px 8px 12px; margin: 8px 0; border: 3px solid #cfe0f7; font-family: "Hiragino Maru Gothic ProN", "Yu Gothic", system-ui, sans-serif; }
   .play button { font-family: inherit; margin: 0; touch-action: manipulation; }
-  h1 { margin: 14px 0 0; }
-  .top { display: flex; align-items: center; gap: 10px; }
-  .bot { width: 70px; flex: none; }
+  h1 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }   /* ひょうだいは、がめんには だす ばしょが ないので、よみあげ用だけ */
+  .top { display: flex; align-items: center; gap: 10px; flex: none; padding: 2px 4px 4px; }
+  .bot { width: 52px; flex: none; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  .bot.pop img { animation: pop .25s ease-out; }
+  @keyframes pop { 0% { transform: scale(1); } 40% { transform: scale(1.18) rotate(-5deg); } 100% { transform: scale(1); } }
   .bot img { width: 100%; display: block; }
   .bot.sing { animation: sing .12s ease-in-out 6 alternate; }
   @keyframes sing { from { transform: rotate(-6deg) translateY(0); } to { transform: rotate(6deg) translateY(-6px); } }
   .now { flex: 1; min-width: 0; }
-  .now .k { font-size: 44px; font-weight: bold; line-height: 1; color: #5a4fcf; }
+  .now .k { font-size: 34px; font-weight: bold; line-height: 1; color: #5a4fcf; }
   .now .n { font-size: 14px; color: #6b6590; }
-  .mode { display: flex; gap: 4px; }
+  .mode { display: flex; flex-direction: column; gap: 4px; }
   .chip { font-size: 12px; padding: 5px 9px; border-radius: 999px; border: 2px solid #cfe0f7; background: #fff; color: #3a3550; font-weight: bold; }
   .chip:hover:not(:disabled) { background: #fff; color: #3a3550; }
+  .chip:disabled { opacity: .4; }
+  .chip.rec, .chip.rec:hover:not(:disabled) { border-color: #e53e3e; background: #ffe3e3; color: #c53030; }
   .chip.sel, .chip.sel:hover:not(:disabled) { border-color: #7a6cf0; background: #ece9ff; }
-  /* 50おん(みぎの れつから: あ・か・さ…) */
-  .kana { display: grid; grid-template-columns: repeat(11, minmax(0, 1fr)); direction: rtl; gap: 2px; margin-top: 8px; }
-  .kk { direction: ltr; aspect-ratio: 1 / 1; border-radius: 10px; border: 0; background: #fff; box-shadow: 0 2px 0 #c9d6ee; font-size: clamp(14px, 4.6vw, 24px); font-weight: bold; color: #3a3550; padding: 0; min-width: 0; border-radius: 8px; }
+  /* 50おん(1ぎょう 5もじ。うえから あ・か・さ…) */
+  .kana { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(30, minmax(0, 1fr)); grid-template-rows: repeat(10, minmax(0, 1fr)); gap: 4px; margin-top: 4px; padding: 0 2px; }
+  .kk { height: 100%; border-radius: 12px; border: 0; background: #fff; box-shadow: 0 3px 0 #c9d6ee; font-size: clamp(18px, 4.4vh, 30px); font-size: clamp(18px, 4.4svh, 30px); line-height: 1; font-weight: bold; color: #3a3550; padding: 0; min-width: 0; touch-action: manipulation; }
   .kk:hover:not(:disabled) { background: #fff; color: #3a3550; }
-  .kk:active, .kk.on { transform: translateY(2px); box-shadow: 0 0 0 #c9d6ee; background: #ffe9a8; }
+  .kk:active, .kk.on { transform: translateY(3px); box-shadow: 0 0 0 #c9d6ee; background: #ffe9a8; }
   .kk.blank { visibility: hidden; }
-  /* たかさ(ドレミ) */
-  .keys { display: grid; grid-template-columns: repeat(8, 1fr); gap: 3px; margin-top: 8px; }
-  .key { border: 0; border-radius: 10px; padding: 10px 0 6px; font-size: 14px; font-weight: bold; color: #fff; text-shadow: 0 1px 1px #0004; box-shadow: 0 3px 0 #0002; }
+  /* たかさ(ドレミ): がめんの したに くっついて、いつでも おせる */
+  .keysbar { flex: none; padding: 6px 2px 2px; margin-top: 4px; }
+  .keys { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; }
+  .key { border: 0; border-radius: 12px; padding: 14px 0 12px; font-size: 16px; font-weight: bold; color: #fff; text-shadow: 0 1px 1px #0004; box-shadow: 0 4px 0 #0002; min-width: 0; }
   .key:hover:not(:disabled) { color: #fff; }
-  .key.sel { outline: 3px solid #3a3550; outline-offset: -3px; }
-  .key:active { transform: translateY(2px); box-shadow: none; }
+  .key.sel { outline: 4px solid #3a3550; outline-offset: -4px; }
+  .key:active { transform: translateY(3px); box-shadow: none; }
   .hint { font-size: 12px; color: #6b6590; text-align: center; margin-top: 6px; }
   .credit { font-size: 11px; color: var(--muted); }
-  @media (prefers-reduced-motion: reduce) { .bot.sing { animation: none; } }
+  @media (prefers-reduced-motion: reduce) { .bot.sing, .bot.pop img { animation: none; } }
+  header { padding-top: 8px; padding-bottom: 6px; }
+  .kk.mod { font-size: clamp(16px, 3.6svh, 24px); letter-spacing: 2px; background: #ffe9a8; color: #7a4b00; box-shadow: 0 3px 0 #e0c46a; }
+  .kk.mod.sel { background: #ffb347; color: #fff; box-shadow: 0 3px 0 #d98a1e; }
+  .kk.dim { opacity: .25; pointer-events: none; }
+  .bot.open img { outline: 3px solid #7a6cf0; border-radius: 12px; }
+  .bot.pop img { animation: pop .25s ease-out; }
+  @keyframes pop { 0% { transform: scale(1); } 40% { transform: scale(1.18) rotate(-5deg); } 100% { transform: scale(1); } }
+  /* かおを おすと でる つまみ */
+  .panel { display: none; position: absolute; left: 8px; right: 8px; top: 74px; z-index: 5; background: #fffffff2; border: 3px solid #cfe0f7; border-radius: 18px; padding: 6px 10px 8px; box-shadow: 0 8px 24px #3a355033; }
+  .panel.show { display: block; }
+  .panel h3 { margin: 0 0 6px; font-size: 14px; color: #5a4fcf; display: flex; justify-content: space-between; align-items: center; }
+  .panel .x { border: 0; background: none; font-size: 22px; color: #6b6590; padding: 0 6px; }
+  .panel .x:hover:not(:disabled) { background: none; color: #6b6590; }
+  #presets { display: flex; flex-wrap: nowrap; gap: 4px; margin-bottom: 4px; } #presets .chip { font-size: 11px; padding: 6px 2px; flex: 1 1 0; min-width: 0; white-space: nowrap; }
+  .knob { display: grid; grid-template-columns: 62px 1fr 62px; align-items: center; gap: 6px; padding: 1px 0; font-size: 12px; color: #6b6590; }
+  .knob .r { text-align: left; } .knob .l { text-align: right; }
+  .knob input[type=range] { width: 100%; height: 26px; }
+  #mMsg { font-size: 13px; color: #6b6590; min-height: 1.4em; }
 </style>
 <script src="../../audio-unlock.js?v=2"></script>
 </head>
@@ -48,25 +71,27 @@
 <h1>あいうえおシンセ</h1>
 <div class="play">
   <div class="top">
-    <div class="bot" id="bot"><img src="img/robot.svg" alt="ロボット"></div>
+    <div class="bot" id="bot" role="button" aria-label="おんしょくの つまみを ひらく"><img src="img/robot.svg" alt="ロボット"></div>
     <div class="now"><div class="k" id="nowK">あ</div><div class="n" id="nowN">たかさ: ド</div></div>
-    <div class="mode"><button type="button" class="chip sel" id="mRobot">ロボット</button><button type="button" class="chip" id="mPlain">ふつう</button></div>
+    <div class="mode"><button type="button" class="chip" id="bRec">● ろくおん</button><button type="button" class="chip" id="bPlay" disabled>▶ さいせい</button></div>
   </div>
+  <div class="panel" id="panel"><h3><span>おんしょく(うごかして、もじを おしてね)</span><button type="button" class="x" id="panelX" aria-label="とじる">✕</button></h3><div id="presets"></div><div id="knobs"></div></div>
   <div class="kana" id="kana"></div>
-  <div class="keys" id="keys"></div>
-  <div class="hint">もじを おすと ロボットが うたうよ。したの いろの ボタンで たかさが かわるよ。</div>
+  <div class="keysbar"><div class="keys" id="keys"></div></div>
 </div>
 
 <h2>おとなの人へ</h2>
 <ul class="small">
 <li>文字を押すと、その文字の声を「ボコーダー」に通して、下の色のボタンで選んだ高さのロボット声で鳴らす。色のボタンを押すと、最後の文字をその高さで鳴らし直すので、ボタンを順に押すと歌える。</li>
-<li>ボコーダーのしくみ: 声を高さごとに18の帯に分けて、それぞれの帯の大きさの変化(どの響きが強いか)を取り出し、のこぎり波(シンセの音)の同じ帯の大きさをそれに合わせて動かす。声の「あ」「い」などの響きが、シンセの音にうつる。サ行の「シュッ」のような高い息の音は、元の声から少しだけ足している。「ふつう」にすると、元の声をそのまま鳴らす。</li>
+<li>ロボットの顔を押すと「おんしょくのつまみ」が開く。ブーン↔ささやき(ノイズの量)、まるい↔ざらざら(高い倍音の量)、ひとり↔みんな(少しずらした音と1オクターブ下を重ねる)、まっすぐ↔ふるえる(ビブラート)、ひとつ↔ドミソ(和音を足す)、なし↔やまびこ(エコー)。どれもボコーダーの「声に当てる元の音」の変え方で、声の形そのものは変わらない。つまみを離すと、最後の文字で鳴る。上のボタン(ロボット・ささやき…)は、つまみの組み合わせの見本。</li>
+<li>ボコーダーのしくみ: 声を高さごとに18の帯に分けて、それぞれの帯の大きさの変化(どの響きが強いか)を取り出し、のこぎり波(シンセの音)の同じ帯の大きさをそれに合わせて動かす。声の「あ」「い」などの響きが、シンセの音にうつる。子音(サ行の「シュッ」、カ・タ行の破裂音など)が聞き取りやすいよう、元の声の高い部分(約2kHz以上)を、そのまま混ぜている(混ぜ具合は、子音の高域の強さを測って決めた)。</li>
+<li>「゛゜小」ボタンは、ケータイと同じ使い方。文字を押したあとにこのボタンを押すたび、か→が→か…、は→ば→ぱ→は…、つ→づ→っ→つ、や→ゃ→や…のように、濁音・半濁音・小さい文字に変わって鳴る。小さい文字は、元の声を短く切って鳴らす。濁音・半濁音の声は元になる声を作れないので、清音の声を加工している(最初の0.09秒だけ息の音を消してブーンと鳴らし、「ぱ」は小さな破裂音を足す)。本物の濁音ではないので、聞こえ方は耳で確かめてほしい。文字を連打したときは、前の声を止めて新しい声だけを鳴らす。</li>
 <li>声は、無料の音声合成ソフト VOICEVOX の「ずんだもん」で、1文字ずつ作ってページに置いたもの(は・へが「わ」「え」と読まれないよう、カタカナで作った。「を」は「お」と同じ音)。音は、AIは耳で確かめていない。</li>
 </ul>
 <p class="credit" id="diag">しらべる: 版 v7(もじを おすと、ここに こえの ながさが でる)</p>
 <p class="credit">声: VOICEVOX:ずんだもん(<a href="https://voicevox.hiroshiba.jp/">VOICEVOX</a>)/ イラスト: Microsoft「Fluent Emoji」(MITライセンス。<a href="img/LICENSE-fluentui-emoji.txt">ライセンス文</a>)</p>
 </main>
 <footer>kimpilla</footer>
-<script src="aiueo.js?v=7"></script>
+<script src="aiueo.js?v=9"></script>
 </body>
 </html>
