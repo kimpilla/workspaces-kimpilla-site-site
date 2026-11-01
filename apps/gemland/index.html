@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ほうせきの くにの ぼうけん | kimpilla</title>
+<link rel="stylesheet" href="../../style.css">
+<style>
+  html, body { touch-action: manipulation; -webkit-tap-highlight-color: transparent; overscroll-behavior: none; }
+  .play { display: flex; flex-direction: column; height: calc(100vh - 84px); height: calc(100svh - 84px); min-height: 460px; background: #efe6dc; color: #3a3550; border-radius: 22px; padding: 8px 8px 10px; margin: 8px 0; border: 3px solid #cdb9a3; font-family: "Hiragino Maru Gothic ProN", "Yu Gothic", system-ui, sans-serif; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+  .play button { font-family: inherit; margin: 0; touch-action: manipulation; }
+  h1 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .top { display: flex; align-items: center; gap: 6px; flex: none; padding: 0 2px 6px; }
+  .stg { display: flex; gap: 5px; flex: 1; min-width: 0; }
+  .stg button { flex: 1; min-width: 0; font-size: 13px; font-weight: bold; padding: 6px 0; border-radius: 999px; border: 2px solid #bcd6f5; background: #fff; color: #3a3550; }
+  .stg button:hover:not(:disabled) { background: #fff; color: #3a3550; }
+  .stg button.sel, .stg button.sel:hover:not(:disabled) { border-color: #7a6cf0; background: #ece9ff; }
+  #cnt { flex: none; font-size: 15px; font-weight: bold; color: #5a4fcf; min-width: 62px; text-align: right; }
+  #again0 { flex: none; font-size: 15px; padding: 5px 10px; border-radius: 999px; border: 2px solid #bcd6f5; background: #fff; color: #3a3550; }
+  #again0:hover:not(:disabled) { background: #fff; color: #3a3550; }
+  .stagewrap { position: relative; flex: 1; min-height: 0; border-radius: 16px; overflow: hidden; border: 3px solid #a58c74; background: #2a211d; }
+  canvas#gc { display: block; width: 100%; height: 100%; touch-action: none; }
+  #clear { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; flex-direction: column; gap: 10px; background: rgba(255,255,255,.55); text-align: center; }
+  #clear.show { display: flex; }
+  #clear .t { font-size: 26px; font-weight: bold; color: #5a4fcf; text-shadow: 0 2px 0 #fff; }
+  #clear .s { font-size: 16px; color: #3a3550; }
+  #clear .row { display: flex; gap: 10px; }
+  #clear button { font-size: 17px; font-weight: bold; padding: 12px 20px; border-radius: 999px; border: 3px solid #7a6cf0; background: #fff; color: #3a3550; }
+  #clear button:hover:not(:disabled) { background: #fff; color: #3a3550; }
+  #clear button.go { background: #7a6cf0; color: #fff; }
+  #clear button.go:hover:not(:disabled) { background: #7a6cf0; color: #fff; }
+  .keysbar { flex: none; padding: 8px 0 0; }
+  .keys { display: grid; grid-template-columns: repeat(var(--n, 8), 1fr); gap: 4px; }
+  .key { border: 0; border-radius: 16px; height: clamp(96px, 17svh, 150px); padding: 0; font-size: clamp(16px, 2.6svh, 24px); border-radius: 12px; font-weight: bold; color: #fff; text-shadow: 0 1px 1px #0004; box-shadow: 0 4px 0 #0002; min-width: 0; }
+  .key { white-space: nowrap; }
+  .key:hover:not(:disabled) { color: #fff; }
+  .key:active, .key.on { transform: translateY(3px); box-shadow: none; }
+  .key.off { display: none; }
+  .key.hint { animation: hint .7s ease-in-out infinite alternate; outline: 4px solid #3a3550; outline-offset: -4px; }
+  @keyframes hint { from { transform: translateY(0) scale(1); } to { transform: translateY(-5px) scale(1.07); } }
+  .credit { font-size: 11px; color: var(--muted); }
+  @media (prefers-reduced-motion: reduce) { .key.hint { animation: none; } }
+</style>
+<script src="../../audio-unlock.js?v=2"></script>
+</head>
+<body>
+<header>
+  <a class="home" href="../../index.html">kimpilla</a>
+  <nav><a href="../../music.html">音楽</a> <a href="../../apps.html">アプリ</a> <a href="../../memo.html">メモ</a></nav>
+</header>
+<main>
+<h1>ほうせきの くにの ぼうけん</h1>
+<div class="play">
+  <div class="top"><div class="stg" id="stg"></div><div id="cnt"></div><button type="button" id="again0" aria-label="はじめから">⟲</button></div>
+  <div class="stagewrap">
+    <canvas id="gc"></canvas>
+    <div id="clear"><div class="t" id="clT">ステージクリア!</div><div class="s" id="clS"></div><div class="row"><button type="button" id="clAgain">もういちど</button><button type="button" class="go" id="clNext">つぎへ ▶</button></div></div>
+  </div>
+  <div class="keysbar"><div class="keys" id="keys"></div></div>
+</div>
+<h2>おとなの人へ(なにが起きているか)</h2>
+<ul class="small">
+<li><b>ルール</b>: ぷにまるは自動で右へ進む。下の8つの色のボタン(ド〜上のド)を押すと、その高さまでジャンプする。光っているボタンの色の宝石に届くと取れる。宝石の前では止まって待つので、時間切れや失敗はない。どうくつの出口(光が差し込むアーチ)に着くとステージクリア。</li>
+<li><b>音の高さ = ジャンプの高さ</b>: ボタンを押すと、その音が鳴ってジャンプする。高い音ほど高く跳ぶ。宝石も色と音の名前が書いてあるので、「高い音=高い場所」を体で覚えられる。</li>
+<li><b>宝石を取ったとき</b>: ステージ1〜3は、ドからその宝石の音まで、スケール(ドレミ…)を駆け上がって鳴る。高い宝石ほど、長いスケールになる。ステージ4・5は曲(きらきらぼし・ちょうちょう)なので、1音ずつ鳴って、取っていくと曲になる。</li>
+<li><b>ステージ</b>: 1=ドミソだけ(使えるボタンも3つ)、2=ドレミファソ、3=ドレミファソラシド(上り下り)、4=きらきらぼし、5=ちょうちょう。ステージ1・2は、次に取る宝石のボタンがずっと光る。3以降は、しばらく迷うと光る。</li>
+<li><b>今後</b>: ステージを増やす案(黒鍵の半音、敵や仕掛け、好きな曲づくり)。</li>
+<li>音は、AIが耳で確かめていない。</li>
+</ul>
+</main>
+<footer>kimpilla</footer>
+<script src="gemland.js"></script>
+</body>
+</html>
