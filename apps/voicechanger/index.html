@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ワクワクボイスチェンジャー | kimpilla</title>
+<link rel="stylesheet" href="../../style.css">
+<style>
+  .vcw { max-width: 520px; margin: 0 auto; }
+  .vcw button { font-family: inherit; font-weight: bold; margin: 0; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+  .vcw .card { background: #fff6dc; border: 3px solid #ffd66b; border-radius: 22px; padding: 14px 14px 16px; margin: 0 0 14px; }
+  .vcw h2.st { font-size: 17px; margin: 0 0 8px; color: #7a4b00; }
+  .vcw h2.st span { display: inline-block; width: 26px; height: 26px; line-height: 26px; text-align: center; border-radius: 50%; background: #ff9a3c; color: #fff; margin-right: 6px; font-size: 15px; }
+  .vcw .lead { font-size: 13.5px; color: #8a6a3a; margin: 0 0 8px; }
+  /* ① ろくおん */
+  .rechead { display: flex; align-items: center; gap: 12px; }
+  .hero { width: 86px; flex: none; } .hero svg { width: 100%; display: block; overflow: visible; } .hero.bob svg { animation: bob 2.4s ease-in-out infinite; }
+  @keyframes bob { 50% { transform: translateY(-5px); } }
+  .recbtn { position: relative; flex: 1; height: 86px; border-radius: 43px; border: 0; background: radial-gradient(circle at 30% 25%, #ff8a8a, #e53e3e 60%, #b92020); color: #fff; font-size: 18px; box-shadow: 0 6px 0 #8f1c1c; display: flex; align-items: center; justify-content: center; gap: 10px; user-select: none; -webkit-user-select: none; touch-action: none; }
+  .vcw .recbtn:hover, .vcw .recbtn:focus { background: radial-gradient(circle at 30% 25%, #ff8a8a, #e53e3e 60%, #b92020); color: #fff; }
+  .recbtn:active, .recbtn.on { transform: translateY(5px); box-shadow: 0 1px 0 #8f1c1c; }
+  .recbtn svg { width: 34px; height: 34px; }
+  .recbtn.on::after { content: ''; position: absolute; inset: -7px; border-radius: 50px; border: 4px solid #ff6b6b; animation: rg .8s ease-out infinite; }
+  @keyframes rg { from { transform: scale(.96); opacity: 1; } to { transform: scale(1.06, 1.2); opacity: 0; } }
+  .msg { min-height: 2.4em; margin: 10px 0 0; font-weight: bold; font-size: 14.5px; color: #7a4b00; text-align: center; display: flex; align-items: center; justify-content: center; }
+  .sample { display: block; margin: 6px auto 0; border: 3px solid #fff; border-radius: 16px; background: #ffffffcc; color: #5a3d00; font-size: 13px; padding: 6px 14px; box-shadow: 0 3px 0 #0002; }
+  .vcw .sample:hover { background: #fff; color: #5a3d00; }
+  /* ② なみ */
+  .wavebox { position: relative; height: 120px; border-radius: 16px; background: #2b2150; overflow: hidden; touch-action: none; cursor: crosshair; user-select: none; -webkit-user-select: none; }
+  .wavebox canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .wavebox .empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #c9bff5; font-size: 14px; text-align: center; padding: 0 12px; pointer-events: none; }
+  .row2 { display: grid; grid-template-columns: 1.1fr 1fr; gap: 8px; margin-top: 10px; }
+  .btn { border: 3px solid #fff; border-radius: 16px; background: #ffffffcc; color: #5a3d00; font-size: 15px; padding: 11px 4px; box-shadow: 0 4px 0 #0002; }
+  .vcw .btn:hover:not(:disabled) { background: #fff; color: #5a3d00; } .btn:disabled { opacity: .45; } .btn:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 1px 0 #0002; }
+  .btn.go { background: #4cc77a; color: #fff; border-color: #fff; } .vcw .btn.go:hover:not(:disabled) { background: #4cc77a; color: #fff; } .btn.go.on { background: #e5503e; }
+  .vcw .btn.cut { background: #ff9a3c; color: #fff; } .vcw .btn.cut:hover:not(:disabled) { background: #ff9a3c; color: #fff; }
+  .slicerow { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 0; } .slb { width: 44px; height: 44px; border: 3px solid #fff; border-radius: 12px; color: #fff; font-size: 19px; text-shadow: 0 1px 1px #0004; box-shadow: 0 3px 0 #0002; padding: 0; } .vcw .slb:hover { color: #fff; filter: none; } .slb.on { transform: translateY(-3px); box-shadow: 0 6px 0 #0003; outline: 3px solid #ff9a3c; }
+  .row3 { display: grid; grid-template-columns: 1fr 1.3fr 1fr; gap: 6px; margin-top: 10px; } .row3 .btn { padding: 11px 2px; font-size: 14px; }
+  .nb { position: absolute; right: -4px; top: -6px; min-width: 20px; height: 20px; line-height: 17px; border-radius: 10px; background: #fff; border: 2px solid #ff9a3c; color: #c2570c; font-size: 12px; font-weight: bold; text-align: center; box-sizing: border-box; padding: 0 3px; }
+  .editing { font-size: 13px; margin: 8px 0 0; color: #8a6a3a; text-align: center; min-height: 1.4em; }
+  .editing b { color: #e5503e; }
+  /* ③ つまみ */
+  .mikan { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 10px; align-items: center; } .mikan small { font-size: 12.5px; color: #8a6a3a; margin-right: 2px; }
+  .knob .sl { display: flex; align-items: center; gap: 4px; } .knob .sl input { flex: 1; min-width: 0; } .knob .em { font-size: 22px; line-height: 1; flex: none; }
+  .chip svg { width: 36px; height: 18px; flex: none; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; border: 3px solid #fff; border-radius: 999px; background: #ffffffcc; color: #5a3d00; font-size: 13px; padding: 5px 11px; box-shadow: 0 3px 0 #0002; } .vcw .chip:hover { background: #fff; color: #5a3d00; } .chip:active { transform: translateY(2px); box-shadow: none; }
+  .knob { margin: 0 0 6px; padding: 4px 8px; border-radius: 14px; background: #ffffff88; display: flex; gap: 10px; align-items: center; } .knob .kb { flex: 1; min-width: 0; } .knob .kv { width: 76px; height: 40px; flex: none; }
+  .knob .nm { display: flex; justify-content: space-between; font-size: 14px; font-weight: bold; color: #5a3d00; } .knob .nm i { font-style: normal; font-weight: normal; font-size: 12px; color: #8a6a3a; }
+  .knob input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 38px; background: transparent; margin: 0; touch-action: pan-y; }
+  .knob input[type=range]::-webkit-slider-runnable-track { height: 16px; border-radius: 8px; background: var(--tr); border: 2px solid #fff; box-shadow: 0 2px 0 #0002; }
+  .knob input[type=range]::-moz-range-track { height: 12px; border-radius: 8px; background: var(--tr); border: 2px solid #fff; }
+  .knob input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 36px; height: 36px; border-radius: 50%; margin-top: -11px; background: var(--th); border: 4px solid #fff; box-shadow: 0 3px 0 #0003; }
+  .knob input[type=range]::-moz-range-thumb { width: 28px; height: 28px; border-radius: 50%; background: var(--th); border: 4px solid #fff; box-shadow: 0 3px 0 #0003; }
+  .swrow { display: flex; gap: 8px; align-items: center; margin-top: 4px; }
+  .sw { flex: 1; border: 3px solid #fff; border-radius: 16px; background: #ffffffcc; color: #5a3d00; font-size: 14.5px; padding: 10px 4px; box-shadow: 0 3px 0 #0002; } .vcw .sw:hover { background: #fff; color: #5a3d00; } .sw.on, .vcw .sw.on:hover { background: #7be0a5; color: #123; border-color: #3fbf7c; }
+  /* ④ ぐるぐる */
+  .boardwrap { position: relative; width: 100%; max-width: 360px; margin: 0 auto; aspect-ratio: 1; touch-action: none; user-select: none; -webkit-user-select: none; }
+  .board { position: absolute; inset: 0; border-radius: 50%; background: radial-gradient(circle, #fff 0 18%, #fff3d0 18% 50%, #ffe7f3 50% 100%); border: 4px solid #ffd66b; overflow: visible; }
+  .board .gr { position: absolute; border-radius: 50%; border: 2px dashed #ffb86b88; pointer-events: none; }
+  .board .sweep { position: absolute; left: 50%; top: 50%; width: 3px; height: 50%; margin-left: -1.5px; transform-origin: 50% 0; background: linear-gradient(180deg, #ff9a3c, #ff9a3c00); pointer-events: none; opacity: 0; } .board.run .sweep { opacity: 1; }
+  .board .sweep { transform: rotate(180deg); opacity: .5; } .board.run .sweep { opacity: 1; }
+  .board .ctr { position: absolute; left: 50%; top: 50%; width: 22%; margin: -11% 0 0 -11%; pointer-events: none; } .ctr svg { width: 100%; display: block; overflow: visible; }
+  .frag { position: absolute; width: 0; height: 0; padding: 0; border: 0; background: none; cursor: grab; touch-action: none; }
+  .frag > div { position: absolute; left: 0; top: 0; transform: translate(-50%, -50%); }
+  .frag svg { display: block; width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 3px 0 #0003); }
+  .frag.sel > div::before { content: ''; position: absolute; inset: -7px; border-radius: 50%; border: 4px solid #ff9a3c; }
+  .frag.pop > div { animation: pop .35s ease-out; } @keyframes pop { 30% { transform: translate(-50%, -50%) scale(1.35); } }
+  .frag.drag { cursor: grabbing; z-index: 5; }
+  .boardnote { display: flex; justify-content: space-between; font-size: 12px; color: #8a6a3a; max-width: 360px; margin: 6px auto 0; }
+  .punch { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-top: 12px; }
+  .pbtn { height: 56px; font-size: 26px; border: 3px solid #f0c27a; border-radius: 16px; background: #fff7e8; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; padding: 0; cursor: pointer; }
+  .pbtn.on { background: #ffb347; border-color: #e07b00; transform: scale(.93); }
+  .brow { display: grid; grid-template-columns: 1.2fr 1fr; gap: 8px; margin-top: 10px; }
+  .spd { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 13px; color: #5a3d00; } .spd input { flex: 1; }
+  .vkeys { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; margin: 4px 0 8px; }
+  .vkey { border: 0; border-radius: 12px; height: 92px; padding: 0; font-size: 17px; color: #fff; text-shadow: 0 1px 1px #0004; box-shadow: 0 4px 0 #0002; min-width: 0; white-space: nowrap; } .vcw .vkey:hover:not(:disabled) { color: #fff; filter: none; } .vkey:disabled { opacity: .45; } .vkey:active:not(:disabled), .vkey.on { transform: translateY(3px); box-shadow: none; filter: brightness(1.12); }
+  .octrow { display: flex; gap: 6px; align-items: center; margin: 0 0 10px; } .octrow small { font-size: 12.5px; color: #8a6a3a; } .vkey.cur { outline: 4px solid #fff; box-shadow: 0 0 0 3px #ff9a3c; } .chip.on, .vcw .chip.on:hover { background: #ffe0b0; border-color: #ff9a3c; }
+  .fpanel { margin: 10px 0 0; padding: 10px 10px 8px; border-radius: 18px; background: #fff; border: 3px solid #ff9a3c; } .fpanel[hidden] { display: none; } .ftitle { font-weight: bold; color: #c2570c; font-size: 14.5px; margin: 0 0 6px; text-align: center; }
+  .hint { text-align: center; font-size: 13px; color: #8a6a3a; margin: 8px 0 0; min-height: 1.4em; }
+  @media (prefers-reduced-motion: reduce) { .hero.bob svg, .recbtn.on::after, .frag.pop > div { animation: none; } }
+  .knob .sl { flex: 1; }
+  .vcw .knob .kv, .vcw .knob .nm, .vcw .chip svg { display: none; }   /* つまみの え・もじは いらない(えもじで つたわる) */
+</style>
+</head>
+<body>
+<header>
+  <a class="home" href="../../index.html">kimpilla</a>
+  <nav><a href="../../music.html">音楽</a> <a href="../../apps.html">アプリ</a> <a href="../../memo.html">メモ</a></nav>
+</header>
+<main>
+<h1>ワクワクボイスチェンジャー</h1>
+<p class="lead2 small">じぶんの こえを「ねんど」みたいに こねて、ぐるぐる ばんに ならべて あそぼう。</p>
+<div class="vcw">
+
+<div class="card">
+  <h2 class="st"><span>1</span>こえを いれて、えらぼう</h2>
+  <div class="rechead">
+    <div class="hero bob" id="hero"></div>
+    <button type="button" class="recbtn" id="rec" aria-label="おしている あいだ ろくおん"><svg viewBox="0 0 40 40" aria-hidden="true"><rect x="14" y="3" width="12" height="22" rx="6" fill="#fff"/><path d="M8 18 a12 12 0 0 0 24 0 M20 30 v7 M13 37 h14" stroke="#fff" stroke-width="3.5" fill="none" stroke-linecap="round"/></svg><span>おしながら<br>しゃべる</span></button>
+  </div>
+  <div class="msg" id="msg">あかい ボタンを おしながら、こえを いれてね</div>
+  <button type="button" class="sample" id="sample">マイクが なくても → みほんの こえ「あいうえお」</button>
+  <p class="lead" style="margin:12px 0 6px">こえの はじと おわりの いらない ところを、ゆびで なぞって けずろう。(つまみの こうかは かけない、もとの こえで ならすよ。「さかさま」で なみが ひっくりかえるよ)</p>
+  <div class="wavebox" id="wavebox"><canvas id="wave"></canvas><div class="empty" id="wempty">ここに こえの なみが でるよ</div></div>
+  <div class="row2" style="grid-template-columns:1fr 1fr"><button type="button" class="btn go playbtn dry" disabled>▶ ならす</button><button type="button" class="btn revbtn">◀ さかさま</button></div>
+</div>
+
+<div class="card">
+  <h2 class="st"><span>2</span>つまみで こえを かえよう</h2>
+  <p class="lead">「ならす」で ならしながら つまみを うごかすと、すぐ かわるよ。(ばんの かけらを タップして えらぶと、その かけらだけの エフェクトに なるよ)</p>
+  <div class="editing" id="editing2" style="margin:0 0 8px"></div>
+  <button type="button" class="btn go playbtn" disabled style="width:100%;margin-bottom:10px">▶ ならす</button>
+  <div id="knobs"></div>
+  <button type="button" class="sw" id="reset" style="width:100%;margin-top:6px">もとに もどす</button>
+</div>
+
+<div class="card">
+  <h2 class="st"><span>3</span>ボコーダーで こえを うたわせよう</h2>
+  <p class="lead">キーを おすと、しゃべった こえが ドレミで うたうよ。そのまま「かけらにする」と、ボコーダーの こえが ばんに ならぶよ(ばんの そとほど たかい うたごえ)。ボコーダーの あとに、2ばんの つまみも かかるよ。</p>
+  <button type="button" class="sw vocsw" style="width:100%;margin:0 0 8px">🎤 ボコーダー OFF</button>
+  <div class="vkeys" id="vkeys"></div>
+  <div class="octrow"><small>たかさ:</small><button type="button" class="chip voct" data-o="-1">ひくい</button><button type="button" class="chip voct on" data-o="0">ふつう</button><button type="button" class="chip voct" data-o="1">たかい</button></div>
+  <div id="vknobs"></div>
+</div>
+
+<div class="card">
+  <h2 class="st"><span>4</span>かけらに して、ぐるぐる ばんに ならべよう</h2>
+  <p class="lead">① なみを タップすると「きりめ」が はいって、1・2・3… と かけらに わかれるよ(きりめを タップすると けせる。ドラッグで うごかせる)。② ばんごうを おして ならして、「ばんに おく」で ばんに ならべる。③ ゆびで すきな ところへ うごかす(そとほど たかい こえ)。④ 「まわす」を おすと、せんが ぐるぐる まわって、かけらに さわると おとが なるよ。</p>
+  <div class="wavebox" id="wavebox2"><canvas id="wave2"></canvas><div class="empty" id="wempty2">こえを いれると、ここに なみが でるよ</div></div>
+  <div class="slicerow" id="slicerow"></div>
+  <div class="row3"><button type="button" class="btn go playbtn" disabled>▶ ならす</button><button type="button" class="btn cut" id="cut" disabled>ばんに おく</button><button type="button" class="btn" id="cutall" disabled>ぜんぶ おく</button></div>
+  <div class="editing" id="editing"></div>
+  <div class="boardwrap" id="bw" style="margin-top:12px"><div class="board" id="board"><div class="gr" style="inset:18%"></div><div class="gr" style="inset:34%"></div><div class="gr" style="inset:2%"></div><div class="sweep" id="sweep"></div><div class="ctr" id="ctr"></div></div></div>
+  <div class="boardnote"><span>なか = ひくい</span><span>そと = たかい</span></div>
+  <div id="fpanel" class="fpanel" hidden>
+    <div class="ftitle">えらんだ かけらの エフェクト</div>
+    <div id="fknobs"></div>
+    <div class="swrow"><button type="button" class="sw revbtn">◀ さかさま</button><button type="button" class="sw vocsw">🎤 ボコーダー OFF</button></div>
+    <button type="button" class="sw" id="fdone" style="width:100%;margin-top:6px">おわり (あたらしい こえに もどる)</button>
+  </div>
+  <div class="punch" id="punch">
+    <button type="button" class="pbtn" data-k="loop" aria-label="ずっと ループ" title="ずっと ループ">🔁</button>
+    <button type="button" class="pbtn" data-k="stut" aria-label="ちかちか" title="ちかちか">⚡</button>
+    <button type="button" class="pbtn" data-k="uni" aria-label="かさね" title="かさね">👯</button>
+    <button type="button" class="pbtn" data-k="up" aria-label="オクターブ うえ" title="オクターブ うえ">⬆️</button>
+    <button type="button" class="pbtn" data-k="dn" aria-label="オクターブ した" title="オクターブ した">⬇️</button>
+    <button type="button" class="pbtn" data-k="rev" aria-label="さかさま" title="さかさま">🔄</button>
+    <button type="button" class="pbtn" data-k="scr" aria-label="スクラッチ" title="スクラッチ">🌀</button>
+  </div>
+  <div class="brow"><button type="button" class="btn go" id="run">▶ まわす</button><button type="button" class="btn" id="del" disabled>えらんだ かけらを けす</button></div>
+  <div class="spd"><span>🐢</span><input type="range" id="spd" min="0" max="100" value="55"><span>🐇</span></div>
+  <div class="hint" id="bhint">かけらを タップすると、おとが なって つまみに でるよ。ゆびで うごかせるよ。</div>
+</div>
+
+</div>
+<h2>おとなの人へ</h2>
+<ul class="small">
+<li>ぐるぐる ばんの下の絵文字ボタン(パンチイン)は、押している間だけ効果がかかり、離すと元に戻る(ループ・ちかちか・かさね・オクターブ上下・さかさま・スクラッチ)。複数を同時に押せる。</li>
+<li>赤いボタンを押している間だけマイクで録音する(最大6秒)。録音した声の波形が出て、指でなぞった範囲だけを切り取れる。音色の「正解」や固定の変身は用意していない。つまみ(たかさ・ゆれ・エコー・ひずみ・ロボット・こもり・おおきさ)と「さかさま」を、自分で好きなだけ動かして音を作る遊び。
+<li>波形は2か所ある。1番は、声の前後の不要な部分を削る(元の声で聞ける)。4番は、削ったあとの声に「きりめ」を入れて、1・2・3…とかけらに分ける(サンプラーのチョップと同じ)。番号を押すとその部分が鳴り、「ばんに おく」で円盤に置く(「ぜんぶ おく」で全部)。「ならす」は選んだ範囲をくり返し鳴らし続ける。鳴らしながらつまみを動かすと、音がその場で変わる。気に入ったら「かけらにする」で円盤に置ける。かけらは円盤の上のどこにでも置けて、回る針が通ったときに鳴る(置いた角度 = 鳴る時間、中心からの距離 = 高さ)。かけらごとに、つまみの設定を別々に持てる。
+<li>「みほんの こえ」は、あいうえおシンセと同じ「VOICEVOX:ずんだもん」の声(あ・い・う・え・お)。
+<li>「ボコーダー」は、声を18本の周波数の帯に分け、帯ごとの大きさでのこぎり波(キーの高さ)の同じ帯を動かして、しゃべった声をドレミで歌わせる。あいうえおシンセと同じ仕組み。「ハモり」は3度・5度上の音を重ね、「ぶんしん」はわずかにずらした音を重ね、「いき」はノイズを混ぜる。
+<li>録音した声は、このページの中で鳴らすだけで、どこにも送らない・保存しない(ページを閉じると消える)。マイクの許可を、最初に1回聞かれる。ヘッドホンを使うと、スピーカーの音を拾わずに遊べる。
+</ul>
+</main>
+<footer>kimpilla</footer>
+<script src="../../audio-unlock.js?v=2"></script>
+<script src="voicechanger.js?v=21"></script>
+</body>
+</html>

@@ -22,8 +22,8 @@
   const NOTES = [['ド', 261.63, '#ff6b6b'], ['レ', 293.66, '#ff9f43'], ['ミ', 329.63, '#f7c948'], ['ファ', 349.23, '#6bd68c'], ['ソ', 392.0, '#4ecdc4'], ['ラ', 440.0, '#5b9cff'], ['シ', 493.88, '#9b7bff'], ['ド', 523.25, '#ff7ac4']];
   let note = 0, last = 0, lastV = 0, lastCut = 0;
   // ---- おんしょくの つまみ(0〜100)。ぜんぶ ボコーダーの「もとの おと」の しゅるい ----
-  const PAR = { breath: 0, bright: 63, thick: 0, vib: 0, harm: 0 };
-  const PRESETS = [['ロボット', { breath: 0, bright: 63, thick: 0, vib: 0, harm: 0 }], ['ささやき', { breath: 100, bright: 63, thick: 0, vib: 0, harm: 0 }], ['コーラス', { breath: 0, bright: 63, thick: 70, vib: 0, harm: 0 }], ['ハーモニー', { breath: 0, bright: 55, thick: 0, vib: 0, harm: 75 }], ['ふるえ', { breath: 0, bright: 63, thick: 0, vib: 70, harm: 0 }]];
+  const PAR = { normal: 1, breath: 0, bright: 63, thick: 0, vib: 0, harm: 0 };   // normal=1: ボコーダーを とおさない ふつうの こえ
+  const PRESETS = [['🙂', 'ふつう', { normal: 1 }], ['🤖', 'ロボット', { normal: 0, breath: 0, bright: 63, thick: 0, vib: 0, harm: 0 }], ['👻', 'ささやき', { normal: 0, breath: 100, bright: 63, thick: 0, vib: 0, harm: 0 }], ['🧚', 'コーラス', { normal: 0, breath: 0, bright: 63, thick: 70, vib: 0, harm: 0 }], ['🌈', 'ハーモニー', { normal: 0, breath: 0, bright: 55, thick: 0, vib: 0, harm: 75 }], ['🦄', 'ふるえ', { normal: 0, breath: 0, bright: 63, thick: 0, vib: 70, harm: 0 }]];   // [えもじ, なまえ(よみあげ用), ねだん]
   const VP = { ssF: 2800, ssG: 0.5, noiseG: 0.2, envF: 90, dryF: 2000, dryG: 0.5, Q: 5 };   // ボコーダーの ちょうせい(こえの かたさ・しし(子音)の とおりやすさ)
   window.__aiueoVP = VP;
   // ---- ボコーダー(こえを 18の たかさの おびに わけて、おびごとの おおきさで のこぎりなみを うごかす) ----
@@ -113,7 +113,17 @@
     const b = await load(i);
     if (my !== gen) return;                                                // よみこみを まっている あいだに つぎが おされた
     if (cur) { try { cur.stop(); } catch (e) { /* もう おわっている */ } }
-    const s = ac.createBufferSource(); s.buffer = b; cur = s; s.connect(voc.modIn);
+    const s = ac.createBufferSource(); s.buffer = b; cur = s;
+    if (PAR.normal) {                                                     // ふつうの こえ: ボコーダーを とおさずに そのまま。たかさの キーで、こえの たかさが かわる(ソ=もとの こえ)
+      const rate = NOTES[note][1] / 392, ng = ac.createGain(), t0 = ac.currentTime + 0.005; ng.gain.value = 1.15; s.playbackRate.value = rate; s.connect(ng); ng.connect(master);
+      voc.out.gain.cancelScheduledValues(t0); voc.out.gain.setValueAtTime(0, t0);
+      s.start(t0); if (cut) s.stop(t0 + Math.min(b.duration, cut) / rate);
+      s.onended = () => { if (cur === s) cur = null; try { ng.disconnect(); } catch (e) { /* */ } };
+      if (rec && recEv.length < 200) recEv.push({ i, v, cut, n: note, p: Object.assign({}, PAR) });
+      const bot0 = $('bot'); bot0.classList.remove('sing'); void bot0.offsetWidth; bot0.classList.add('sing');
+      return;
+    }
+    s.connect(voc.modIn);
     const t = ac.currentTime + 0.005, dur = cut ? Math.min(b.duration, cut) : b.duration;
     s.start(t); if (cut) s.stop(t + dur);
     if (v) {                                                               // だくおん・はんだくおん: さいしょの 0.09びょうは、いきの おと(子音の ノイズ)を けして、ブーンと ならす
@@ -138,13 +148,16 @@
     const ch = COLS[c][r] || ' ', b = document.createElement('button'); b.type = 'button';
     if (ch === ' ') { b.className = 'kk blank'; b.tabIndex = -1; b.setAttribute('aria-hidden', 'true'); }
     else if (ch === 'M') {
-      b.className = 'kk mod'; b.textContent = '゛゜小'; b.setAttribute('aria-label', 'だくてん・はんだくてん・ちいさい もじ');
-      b.addEventListener('pointerdown', (e) => { e.preventDefault(); ensure(); nextVar(); b.classList.add('on'); setTimeout(() => b.classList.remove('on'), 150); });
+      b.className = 'kk mod'; b.innerHTML = '<span>゛</span><span>゜</span><span>小</span>'; b.setAttribute('aria-label', 'だくてん・はんだくてん・ちいさい もじ');
+      b.addEventListener('pointerdown', (e) => { e.preventDefault(); ensure(); setMode((fmode + 1) % 4); });
       tiles.push({ b, mod: true });
     } else {
       b.className = 'kk'; b.textContent = ch;
       const i = KANA.indexOf(ch);
-      const go = () => { baseCh = ch; varIdx = 0; paintMod(); $('nowK').textContent = ch; play(i, 0); b.classList.add('on'); setTimeout(() => b.classList.remove('on'), 150); };
+      const go = () => {
+        const v = fmode === 1 ? V1[ch] : fmode === 2 ? V2[ch] : fmode === 3 ? SM[ch] : ch; if (!v) return;
+        $('nowK').textContent = v; play(i, fmode === 1 ? 1 : fmode === 2 ? 2 : 0, fmode === 3 ? SMCUT[SM[ch]] : 0); b.classList.add('on'); setTimeout(() => b.classList.remove('on'), 150);
+      };
       b.addEventListener('pointerdown', (e) => { e.preventDefault(); go(); });
       b.addEventListener('click', (e) => { if (e.detail === 0) go(); });   // キーボード
       tiles.push({ b, ch, i });
@@ -152,13 +165,15 @@
     b.style.gridColumn = 'span ' + (COLS[c][r] === 'M' ? 12 : 6);   // もじは 6(ほかの ぎょうと おなじ)、゛゜小 は のこりの 12
     $('kana').appendChild(b);
   }
-  function paintMod() { const t = tiles.find((x) => x.mod); if (t) t.b.classList.toggle('dim', !(baseCh && VARS[baseCh])); }
-  function nextVar() {                                                   // ケータイの ように: か → が → か … / は → ば → ぱ → は … / つ → づ → っ → つ
-    const l = VARS[baseCh]; if (!l) return;
-    varIdx = (varIdx + 1) % l.length; const [chr, v, cut] = l[varIdx];
-    $('nowK').textContent = chr; play(KANA.indexOf(baseCh), v, cut);
+  let fmode = 0;                                                         // 0=ふつう 1=゛(だくてん) 2=゜(はんだくてん) 3=小(ちいさい もじ)。ボタンを おすたびに すすむ
+  function setMode(m) {
+    fmode = m;
+    tiles.forEach((t) => {
+      if (t.mod) { [...t.b.children].forEach((s, j) => s.classList.toggle('cur', j === m - 1)); t.b.classList.toggle('sel', m > 0); return; }
+      const v = m === 1 ? V1[t.ch] : m === 2 ? V2[t.ch] : m === 3 ? SM[t.ch] : t.ch;
+      t.b.textContent = v || t.ch; t.b.classList.toggle('dim', !v);
+    });
   }
-  paintMod();
   const showInfo = () => { $('nowN').textContent = 'たかさ: ' + NOTES[note][0]; };
   NOTES.forEach(([name, , color], k) => {
     const b = document.createElement('button'); b.type = 'button'; b.className = 'key' + (k === note ? ' sel' : '');
@@ -176,16 +191,18 @@
   // ---- かおを おすと おんしょくの つまみ ----
   const panel = $('panel');
   const sliders = {};
-  PRESETS.forEach(([name, vals]) => {
-    const b = document.createElement('button'); b.type = 'button'; b.className = 'chip'; b.textContent = name;
-    b.addEventListener('click', () => { Object.assign(PAR, { echo: PAR.echo || 0 }, vals); syncKnobs(); ensure(); applyPar(); play(last, lastV, lastCut); });
+  const preBtns = [];
+  const paintPre = (k) => preBtns.forEach((x, j) => x.classList.toggle('sel', j === k));
+  PRESETS.forEach(([emoji, name, vals], k) => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'chip pre' + (k === 0 ? ' sel' : ''); b.textContent = emoji; b.setAttribute('aria-label', name); preBtns.push(b);
+    b.addEventListener('click', () => { Object.assign(PAR, { echo: PAR.echo || 0 }, vals); syncKnobs(); paintPre(k); ensure(); applyPar(); play(last, lastV, lastCut); });
     $('presets').appendChild(b);
   });
   [['breath', 'ブーン', 'ささやき'], ['bright', 'まるい', 'ざらざら'], ['thick', 'ひとり', 'みんな'], ['vib', 'まっすぐ', 'ふるえる'], ['harm', 'ひとつ', 'ドミソ'], ['echo', 'なし', 'やまびこ']].forEach(([key, l, r]) => {
     const row = document.createElement('div'); row.className = 'knob';
     row.innerHTML = '<span class="l">' + l + '</span><input type="range" min="0" max="100" step="1"><span class="r">' + r + '</span>';
     const inp = row.querySelector('input'); inp.value = PAR[key] || 0; sliders[key] = inp;
-    inp.addEventListener('input', () => { PAR[key] = +inp.value; if (ac) applyPar(); });
+    inp.addEventListener('input', () => { PAR[key] = +inp.value; if (key !== 'echo') { PAR.normal = 0; paintPre(-1); } if (ac) applyPar(); });
     inp.addEventListener('change', () => { ensure(); applyPar(); play(last, lastV, lastCut); });   // はなした ときに、さいごの もじで きかせる
     $('knobs').appendChild(row);
   });

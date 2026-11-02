@@ -100,8 +100,8 @@
       const b = Math.min(N - 1, Math.floor((i % G) * N / G)) + N * Math.min(N - 1, Math.floor(Math.floor(i / G) * N / G));
       tot[b]++; if (covered[i]) { hit[b]++; all++; }
     }
-    if (all / targetCount < 0.6) return false;
-    for (let b = 0; b < N * N; b++) if (tot[b] >= targetCount * 0.03 && hit[b] / tot[b] < 0.35) return false;
+    if (all / targetCount < 0.5) return false;                      // ぜんたいの はんぶんを なぞれたら
+    for (let b = 0; b < N * N; b++) if (tot[b] >= targetCount * 0.08 && hit[b] / tot[b] < 0.12) return false;   // おおきな くかくで、ほとんど なぞっていない ところが あるときだけ だめ
     return true;
   }
   function check() { if (!solved && done1()) reward(); }

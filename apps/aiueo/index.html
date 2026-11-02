@@ -44,6 +44,7 @@
   header { padding-top: 8px; padding-bottom: 6px; }
   .kk.mod { font-size: clamp(16px, 3.6svh, 24px); letter-spacing: 2px; background: #ffe9a8; color: #7a4b00; box-shadow: 0 3px 0 #e0c46a; }
   .kk.mod.sel { background: #ffb347; color: #fff; box-shadow: 0 3px 0 #d98a1e; }
+  .kk.mod span { opacity: .45; padding: 0 3px; } .kk.mod span.cur { opacity: 1; font-size: 1.25em; }
   .kk.dim { opacity: .25; pointer-events: none; }
   .bot.open img { outline: 3px solid #7a6cf0; border-radius: 12px; }
   .bot.pop img { animation: pop .25s ease-out; }
@@ -54,7 +55,7 @@
   .panel h3 { margin: 0 0 6px; font-size: 14px; color: #5a4fcf; display: flex; justify-content: space-between; align-items: center; }
   .panel .x { border: 0; background: none; font-size: 22px; color: #6b6590; padding: 0 6px; }
   .panel .x:hover:not(:disabled) { background: none; color: #6b6590; }
-  #presets { display: flex; flex-wrap: nowrap; gap: 4px; margin-bottom: 4px; } #presets .chip { font-size: 11px; padding: 6px 2px; flex: 1 1 0; min-width: 0; white-space: nowrap; }
+  #presets { display: flex; flex-wrap: nowrap; gap: 6px; margin: 4px 0 6px; } #presets .chip { font-size: 26px; line-height: 1; padding: 6px 2px; flex: 1 1 0; min-width: 0; border-radius: 16px; border-width: 3px; }
   .knob { display: grid; grid-template-columns: 62px 1fr 62px; align-items: center; gap: 6px; padding: 1px 0; font-size: 12px; color: #6b6590; }
   .knob .r { text-align: left; } .knob .l { text-align: right; }
   .knob input[type=range] { width: 100%; height: 26px; }
@@ -75,7 +76,8 @@
     <div class="now"><div class="k" id="nowK">あ</div><div class="n" id="nowN">たかさ: ド</div></div>
     <div class="mode"><button type="button" class="chip" id="bRec">● ろくおん</button><button type="button" class="chip" id="bPlay" disabled>▶ さいせい</button></div>
   </div>
-  <div class="panel" id="panel"><h3><span>おんしょく(うごかして、もじを おしてね)</span><button type="button" class="x" id="panelX" aria-label="とじる">✕</button></h3><div id="presets"></div><div id="knobs"></div></div>
+  <div id="presets" role="group" aria-label="こえの いろ"></div>
+  <div class="panel" id="panel"><h3><span>おんしょく(うごかして、もじを おしてね)</span><button type="button" class="x" id="panelX" aria-label="とじる">✕</button></h3><div id="knobs"></div></div>
   <div class="kana" id="kana"></div>
   <div class="keysbar"><div class="keys" id="keys"></div></div>
 </div>
@@ -83,15 +85,16 @@
 <h2>おとなの人へ</h2>
 <ul class="small">
 <li>文字を押すと、その文字の声を「ボコーダー」に通して、下の色のボタンで選んだ高さのロボット声で鳴らす。色のボタンを押すと、最後の文字をその高さで鳴らし直すので、ボタンを順に押すと歌える。</li>
-<li>ロボットの顔を押すと「おんしょくのつまみ」が開く。ブーン↔ささやき(ノイズの量)、まるい↔ざらざら(高い倍音の量)、ひとり↔みんな(少しずらした音と1オクターブ下を重ねる)、まっすぐ↔ふるえる(ビブラート)、ひとつ↔ドミソ(和音を足す)、なし↔やまびこ(エコー)。どれもボコーダーの「声に当てる元の音」の変え方で、声の形そのものは変わらない。つまみを離すと、最後の文字で鳴る。上のボタン(ロボット・ささやき…)は、つまみの組み合わせの見本。</li>
+<li>声の色は、上の絵文字ボタンで選ぶ(🙂ふつう・🤖ロボット・👻ささやき・🧚コーラス・🌈ハーモニー・🦄ふるえ)。「ふつう」はボコーダーを通さない元の声で、下の色のボタンで声の高さが変わる(ソが元の高さ)。ただし、だくおん・はんだくおんは声のデータがないので、「ふつう」では元の文字の音のまま鳴る。ほかの5つはボコーダー。
+<li>ロボットの顔を押すと「おんしょくのつまみ」が開く。つまみを動かすと、ボコーダーの声になる。ブーン↔ささやき(ノイズの量)、まるい↔ざらざら(高い倍音の量)、ひとり↔みんな(少しずらした音と1オクターブ下を重ねる)、まっすぐ↔ふるえる(ビブラート)、ひとつ↔ドミソ(和音を足す)、なし↔やまびこ(エコー)。どれもボコーダーの「声に当てる元の音」の変え方で、声の形そのものは変わらない。つまみを離すと、最後の文字で鳴る。上のボタン(ロボット・ささやき…)は、つまみの組み合わせの見本。</li>
 <li>ボコーダーのしくみ: 声を高さごとに18の帯に分けて、それぞれの帯の大きさの変化(どの響きが強いか)を取り出し、のこぎり波(シンセの音)の同じ帯の大きさをそれに合わせて動かす。声の「あ」「い」などの響きが、シンセの音にうつる。子音(サ行の「シュッ」、カ・タ行の破裂音など)が聞き取りやすいよう、元の声の高い部分(約2kHz以上)を、そのまま混ぜている(混ぜ具合は、子音の高域の強さを測って決めた)。</li>
-<li>「゛゜小」ボタンは、ケータイと同じ使い方。文字を押したあとにこのボタンを押すたび、か→が→か…、は→ば→ぱ→は…、つ→づ→っ→つ、や→ゃ→や…のように、濁音・半濁音・小さい文字に変わって鳴る。小さい文字は、元の声を短く切って鳴らす。濁音・半濁音の声は元になる声を作れないので、清音の声を加工している(最初の0.09秒だけ息の音を消してブーンと鳴らし、「ぱ」は小さな破裂音を足す)。本物の濁音ではないので、聞こえ方は耳で確かめてほしい。文字を連打したときは、前の声を止めて新しい声だけを鳴らす。</li>
+<li>「゛゜小」ボタンを押すたびに、文字の表が「濁点がつく文字だけ(が・ざ・だ・ば…)」→「半濁点がつく文字だけ(ぱ・ぴ・ぷ・ぺ・ぽ)」→「小さい文字になる文字だけ(ぁ・っ・ゃ…)」→もとの表、と切りかわる。表には変化後の文字が出て、タップするとその音が鳴る。</li>
 <li>声は、無料の音声合成ソフト VOICEVOX の「ずんだもん」で、1文字ずつ作ってページに置いたもの(は・へが「わ」「え」と読まれないよう、カタカナで作った。「を」は「お」と同じ音)。音は、AIは耳で確かめていない。</li>
 </ul>
 <p class="credit" id="diag">しらべる: 版 v7(もじを おすと、ここに こえの ながさが でる)</p>
 <p class="credit">声: VOICEVOX:ずんだもん(<a href="https://voicevox.hiroshiba.jp/">VOICEVOX</a>)/ イラスト: Microsoft「Fluent Emoji」(MITライセンス。<a href="img/LICENSE-fluentui-emoji.txt">ライセンス文</a>)</p>
 </main>
 <footer>kimpilla</footer>
-<script src="aiueo.js?v=9"></script>
+<script src="aiueo.js?v=11"></script>
 </body>
 </html>

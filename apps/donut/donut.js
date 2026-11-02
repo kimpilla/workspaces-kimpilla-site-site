@@ -316,11 +316,11 @@
   // 10こ いりの はこ: ふたを あけて、なかの 10こ(5こ×2れつ)が みえる かたち。したに「10」
   const box10 = (cls) => '<span class="tbox10' + (cls ? ' ' + cls : '') + '"><span class="g">' + Array.from({ length: 10 }, (_, i) => '<span class="tdn">' + donut(i) + '</span>').join('') + '</span><span class="lb">10</span></span>';
   // ---- ドーナツパーティー: いわれた かずを、10こ いりの はこと ばらで そろえる。そろったら ドーナツ パーティー ----
-  let tBox = 0, tOne = 0, tTimer = null, target = 23, partying2 = false, tLevel = 0;   // tLevel: パーティーを ひらいた かい。おおきいほど おおきな かずが でる
+  let tBox = 0, tOne = 0, tTimer = null, target = 23, partying2 = false, tLevel = 0;   // tLevel: クリアした かい。15かいで 99まで ひろがる
   const n2 = () => tBox * 10 + tOne;
   function newTarget(silent) {
-    const base = Math.min(10 + tLevel * 5, 90);                  // クリアするたびに、でる かずの ちゅうしんが 5ずつ おおきくなる(10〜99)
-    let t; do { t = Math.min(99, base + Math.floor(Math.random() * 10)); } while (t === target);
+    const top = tLevel >= 15 ? 99 : 59;                          // 15かい クリアするまでは 10〜59、そのあとは 10〜99 の ランダム
+    let t; do { t = 10 + Math.floor(Math.random() * (top - 9)); } while (t === target);
     target = t; tBox = 0; tOne = 0;
     $('tgT').textContent = Math.floor(t / 10); $('tgO').textContent = t % 10;
     tRender(); tSay('「' + t + 'こ ちょうだい！」 はこと ドーナツを おして そろえよう'); if (!silent) sayWords(yomi(t) + 'こ ちょうだい');
