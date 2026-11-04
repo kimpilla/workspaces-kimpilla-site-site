@@ -252,10 +252,10 @@
         render(); setters[key] = render; drag(el, key, min, max, log, step, render); box.appendChild(el);
       }
     }
-    // 音量(右の大きなレバー)
-    const vw = $('volw'); vw.className = 'lvw';
-    vw.innerHTML = '<div class="lv"><div class="tr"></div><div class="tk"></div><div class="hd"></div></div><div class="kl">VOL<small>音量</small></div><output></output>';
-    const o = vw.querySelector('output'), render = () => { vw.querySelector('.hd').style.bottom = (p.volume * 100) + '%'; o.textContent = Math.round(p.volume * 100) + '%'; $('bVl').style.height = (p.volume * 100) + '%'; };
+    // 音量(小さなつまみ)
+    const vw = $('volw');
+    vw.innerHTML = '<div class="dial"><i></i></div><div class="kl">VOL<small>音量</small></div><output></output>';
+    const o = vw.querySelector('output'), render = () => { vw.querySelector('.dial').style.setProperty('--r', (-135 + 270 * p.volume) + 'deg'); o.textContent = Math.round(p.volume * 100) + '%'; };
     render(); setters.volume = render; drag(vw, 'volume', 0, 1, false, 0.01, render);
     // 波のかたちのスイッチ
     const WV = [['sine', 'SIN'], ['triangle', 'TRI'], ['sawtooth', 'SAW'], ['square', 'SQR']];
@@ -374,7 +374,7 @@
     drawScope(); drawSpec();
     $('lPw').classList.toggle('on', !!ctx && ctx.state === 'running'); $('lVo').classList.toggle('on', voices.size > 0);
     $('lEc').classList.toggle('on', e.mix > 0.05); $('lOv').classList.toggle('on', lvl > 0.8); $('lAc').classList.toggle('on', !!ACT);
-    $('bLv').style.height = (lvl * 100) + '%'; $('tT').textContent = Math.round(300 + lvl * 180 + (thrOn ? 60 : 0)) + 'K';
+    $('tT').textContent = Math.round(300 + lvl * 180 + (thrOn ? 60 : 0)) + 'K';
     requestAnimationFrame(frame);
   }
   const sc = $('scope'), sg = sc.getContext('2d'), sp = $('spec'), spg = sp.getContext('2d');

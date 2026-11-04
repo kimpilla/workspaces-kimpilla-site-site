@@ -18,11 +18,10 @@
   .win { position:relative; border-top:2px solid var(--c); border-bottom:2px solid var(--c); background:#010208; }
   #view { display:block; width:100%; height:clamp(230px,40vh,340px); touch-action:none; }
   .win:after { content:""; position:absolute; inset:0; background:repeating-linear-gradient(#0000 0 2px,#0004 3px); pointer-events:none; }
-  .dash { display:grid; grid-template-columns:1fr 118px; gap:10px; padding:12px 8px 0; }
+  .dash { display:grid; grid-template-columns:1fr; gap:10px; padding:12px 8px 0; }
   .box { position:relative; border:1px solid var(--ln); background:#0a121bcc; padding:22px 10px 10px; clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px); }
   .box>h3 { position:absolute; left:12px; top:5px; margin:0; font:500 9px Orbitron,monospace; letter-spacing:.16em; color:var(--c); }
   .box>h3 small { color:var(--mu); font:9px ui-monospace,monospace; letter-spacing:.06em; margin-left:6px; }
-  .sys { grid-column:1/3; }
   .btns { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
   .pbtn { position:relative; font:inherit; color:var(--k); border:1px solid var(--k); background:linear-gradient(#10202b,#08121a); padding:7px 2px 6px; min-height:74px; cursor:pointer; text-align:center; touch-action:none;
     box-shadow:inset 0 0 12px #0008; clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px); display:flex; flex-direction:column; align-items:center; gap:1px; }
@@ -90,12 +89,9 @@
       </div>
       <div class="haz"></div>
       <div class="help">HOLD <em>= 握っている間だけ(鍵盤もその音色になる)</em><br>HOLD 0.6s <em>= LOCK(手を離しても続く)</em><br>TAP LOCKED <em>= RELEASE</em></div>
-      <div class="row2"><div class="lamps" id="lamps"><span><i id="lPw"></i>PWR</span><span><i class="c" id="lVo"></i>VOICE</span><span><i class="y" id="lEc"></i>ECHO</span><span><i class="r" id="lOv"></i>OVL</span><span><i class="r" id="lAc"></i>FX</span></div><canvas class="scr" id="scope"></canvas></div>
+      <div class="row2"><div id="volw" class="kn"></div><div class="lamps" id="lamps"><span><i id="lPw"></i>PWR</span><span><i class="c" id="lVo"></i>VOICE</span><span><i class="y" id="lEc"></i>ECHO</span><span><i class="r" id="lOv"></i>OVL</span><span><i class="r" id="lAc"></i>FX</span></div><canvas class="scr" id="scope"></canvas></div>
     </section>
 
-    <section class="box thr"><h3>OUT<small>音量</small></h3>
-      <div class="thr"><div id="volw"></div><div class="bars"><div class="bar"><i id="bLv" style="height:0%"></i></div><div class="bar m"><i id="bVl" style="height:50%"></i></div></div></div>
-    </section>
 
     <section class="box sys"><h3>SYSTEM<small>装置(上下にドラッグ)</small></h3>
       <div class="grp"><p class="gt">OSC WAVE // 波のかたち</p><div class="tgs" id="tg1"></div><div class="tgs" id="tg2" style="margin-top:8px"></div></div>
