@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>おえかき おんがく | kimpilla</title>
+<link rel="stylesheet" href="../../style.css">
+<style>
+  .ok { background: #fbf8f1; color: #4a4038; border-radius: 22px; padding: 10px 10px 14px; margin: 8px 0; border: 3px solid #e8dfcc; font-family: "Hiragino Maru Gothic ProN", "Yu Gothic", system-ui, sans-serif; }
+  .ok button { font-family: inherit; font-weight: bold; margin: 0; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+  .pens { display: flex; gap: 8px; justify-content: center; margin: 2px 0 10px; flex-wrap: nowrap; }
+  .pen { flex: 1 1 0; max-width: 84px; height: 56px; border-radius: 18px; border: 4px solid transparent; font-size: 28px; line-height: 1; padding: 0; background: var(--c); box-shadow: 0 3px 0 rgba(0,0,0,.12); color: #fff; }
+  .pen.sel { border-color: #5b4a8a; transform: translateY(2px) scale(.96); box-shadow: 0 0 0 rgba(0,0,0,0); }
+  .pen.eraser { --c: #e9e3d6; }
+  .wrap { display: flex; gap: 4px; }
+  .labels { display: grid; grid-template-rows: repeat(8, 1fr); width: 36px; flex: none; }
+  .labels button { border: 0; background: #fff3e0; color: #7a4b00; font-size: 14px; border-radius: 8px; margin: 1px 0; padding: 0; min-height: 0; }
+  .labels button:active { background: #ffe0b0; }
+  .board { position: relative; flex: 1; display: grid; grid-template-columns: repeat(16, 1fr); grid-template-rows: repeat(8, 1fr); aspect-ratio: 2 / 1; background: #fffdf8; border-radius: 12px; border: 2px solid #e8dfcc; touch-action: none; user-select: none; -webkit-user-select: none; overflow: hidden; }
+  .c { border-right: 1px solid #f1eadb; border-bottom: 1px solid #f1eadb; position: relative; }
+  .c:nth-child(16n+4), .c:nth-child(16n+8), .c:nth-child(16n+12) { border-right: 2px solid #e6dcc4; }
+  .c.f { background: var(--c); border-radius: 6px; margin: 1px; border-color: transparent; box-shadow: inset 0 -3px 0 rgba(0,0,0,.10); }
+  .c.hit { animation: hit .22s ease-out; z-index: 2; }
+  @keyframes hit { 0% { transform: scale(1.5); filter: brightness(1.25); } 100% { transform: scale(1); filter: none; } }
+  .head { position: absolute; top: 0; bottom: 0; width: calc(100% / 16); background: rgba(255, 200, 70, .28); pointer-events: none; left: 0; display: none; border-left: 2px solid rgba(255, 170, 0, .6); border-right: 2px solid rgba(255, 170, 0, .6); }
+  .ctl { display: flex; gap: 8px; align-items: center; margin-top: 12px; }
+  .btn { border: 3px solid #e8a46a; background: #fff3e6; border-radius: 16px; height: 52px; min-width: 52px; font-size: 22px; padding: 0 14px; }
+  .btn.go { background: #7bd88f; border-color: #4fb868; color: #fff; flex: 1; font-size: 20px; }
+  .btn.go.on { background: #ff8a8a; border-color: #e55; }
+  .btn:disabled { opacity: .35; }
+  .spd { display: flex; align-items: center; gap: 6px; margin-top: 10px; font-size: 20px; } .spd input { flex: 1; height: 38px; touch-action: pan-y; }
+  .hint { text-align: center; font-size: 13px; color: #8a6a3a; margin: 8px 0 0; min-height: 18px; }
+  .credit { font-size: 11px; color: var(--muted); }
+  @media (prefers-reduced-motion: reduce) { .c.hit { animation: none; } }
+</style>
+<script src="../../audio-unlock.js?v=3"></script>
+</head>
+<body>
+<header>
+  <a class="home" href="../../index.html">kimpilla</a>
+  <nav><a href="../../music.html">音楽</a> <a href="../../apps.html">アプリ</a> <a href="../../memo.html">メモ</a></nav>
+</header>
+<main>
+<h1>おえかき おんがく</h1>
+<div class="ok">
+  <div class="pens" id="pens" role="group" aria-label="いろ(がっき)"></div>
+  <div class="wrap">
+    <div class="labels" id="labels"></div>
+    <div class="board" id="board"><div class="head" id="head"></div></div>
+  </div>
+  <div class="ctl">
+    <button type="button" class="btn go" id="play" aria-label="ならす">▶ ならす</button>
+    <button type="button" class="btn" id="undo" aria-label="ひとつ もどす" disabled>↩</button>
+    <button type="button" class="btn" id="clear" aria-label="ぜんぶ けす" disabled>🗑</button>
+  </div>
+  <div class="spd"><span>🐢</span><input type="range" id="spd" min="0" max="100" value="50" aria-label="はやさ"><span>🐇</span></div>
+  <div class="hint" id="hint">ゆびで なぞって、ブロックを ならべよう</div>
+</div>
+<h2>おとなの人へ</h2>
+<ul class="small">
+<li>お絵かきのように指でなぞると、なぞったマスにブロックが置かれる。横が時間(16マス)、縦が音の高さ(下から ド・レ・ミ・ファ・ソ・ラ・シ・ド)。「ならす」を押すと、光る縦の帯が左から右へ動いて、通ったブロックが鳴り、最後まで行くと最初に戻って繰り返す。</li>
+<li>色は楽器の種類(赤=ピアノ、青=ベル、黄=ふえ、緑=ベース。ベースは1オクターブ低い)。同じ時間(縦一列)に違う高さのブロックを重ねると、同時に鳴る(和音)。1つのマスには1色だけ置ける。</li>
+<li>なぞり始めたマスが今の色のブロックなら、なぞった所を消していく(同じ色をなぞると消しゴムになる)。ブロックに触れると、その音が1回鳴る。左の「ド・レ・ミ…」を押すと、その高さの音が鳴る。「🧽」(消しゴム)は、色に関係なく消す。「↩」で1つ前に戻る。絵はこの端末のブラウザに残る(ページの外には送られない)。</li>
+<li>音の高さは「ドレミファソラシド」の8音で、どこに置いても必ず合うわけではない(合わない音の重なりも出る)。点数や正解はなく、遊びだけ。音は、AIは耳で確かめていない。</li>
+</ul>
+</main>
+<footer>kimpilla</footer>
+<script src="oekaki.js?v=1"></script>
+</body>
+</html>

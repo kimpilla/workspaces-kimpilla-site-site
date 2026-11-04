@@ -243,12 +243,12 @@
   $('reset').onclick = () => { stopHold(); fill = 0; sold = []; busy = false; partyUntil = 0; cust = CUST[0]; need = cust.size; streak = 0; showCust(true); render(); };
   $('voice').onclick = () => { voiceOn = !voiceOn; $('voice').textContent = voiceOn ? '🗣 こえ あり' : '🤐 こえ なし'; if (!voiceOn && window.speechSynthesis) speechSynthesis.cancel(); };
   // ---- たべちゃう くまさん: 「のこりを ○こに して、ストップ！」。たべすぎると しっぱい ----
-  let eBox = 10, eOver = 2, eBusy = false, eTarget = 10, eLock = false, eStreak = 0;
+  let eBox = 10, eOver = 2, eBusy = false, eTarget = 10, eLock = false, eStreak = 0, eShowNum = true, eCountVoice = true;   // eShowNum: 「いま ○こ」の かずを みせる / eCountVoice: たべるたびに かずを よむ
   $('eBear').innerHTML = custSvg(CUST[0]);
   $('eCmp1').innerHTML = donut(0);
   function eRender() {
     const n = eBox + eOver;
-    $('eNum').textContent = n; $('eYomi').textContent = yomi(n);
+    $('eNum').textContent = eShowNum ? n : '？'; $('eYomi').textContent = eShowNum ? yomi(n) : '';
     $('eHands').innerHTML = handsSvg(n, 13);
     $('eBoxN').textContent = eBox; $('eOverN').textContent = eOver;
     $('eGrid').innerHTML = '';
@@ -287,7 +287,8 @@
         if (n === eTarget) t = 'のこり ' + n + 'こ。ほしかった かずかな？ そうなら くまさんを おしてね';
         else if (n === 10 && eTarget < 10) t += '(はこ 1つと はみだし 0こ。だから 10)';
         else if (n === 1 && eTarget < 1) t += '';
-        $('eSay').textContent = t; speak(n);
+        if (!eShowNum) t = 'もぐもぐ。のこりが ' + eTarget + 'こに なったら くまさんを おしてね';   // かずを かくす ときは、かずが わかる ぶんは だしない
+        $('eSay').textContent = t; if (eCountVoice) speak(n);
       }
       eBusy = false;
     }, 320);
@@ -306,9 +307,12 @@
       eStreak = 0; eRender();                                       // まだ たべる かずが すくない: おおげさな はんのうは しない。くまが もっと たべたそうに ゆれるだけ
       const b = $('eBear'); b.classList.remove('hungry'); void b.offsetWidth; b.classList.add('hungry');
       tone(520, 0, 0.12, 'sine', 0.1); tone(440, 0.14, 0.16, 'sine', 0.1);
-      $('eSay').textContent = 'くまさんは まだ たべたそう。いま ' + n + 'こ。' + eTarget + 'こに したい';
+      sayWords('まだ たべたい');                                      // くまさんの ことば(こえが あり の ときだけ)
+      $('eSay').textContent = eShowNum ? 'くまさんは まだ たべたそう。いま ' + n + 'こ。' + eTarget + 'こに したい' : 'くまさんは まだ たべたそう。' + eTarget + 'こに したい';
     }
   }
+  $('eShow').onclick = () => { eShowNum = !eShowNum; $('eShow').textContent = eShowNum ? '🔢 かず みえる' : '🙈 かず かくす'; $('eShow').setAttribute('aria-pressed', eShowNum ? 'false' : 'true'); eRender(); };
+  $('eCount').onclick = () => { eCountVoice = !eCountVoice; $('eCount').textContent = eCountVoice ? '🗣 かぞえる こえ あり' : '🤐 かぞえる こえ なし'; $('eCount').setAttribute('aria-pressed', eCountVoice ? 'false' : 'true'); if (!eCountVoice && window.speechSynthesis) speechSynthesis.cancel(); };
   $('eBear').onclick = eStop;                                       // くまさんを おす = ストップ(これで きめる)
   $('eHost').addEventListener('click', (e) => { if (e.target.closest('.ebox, .eover')) eat(); });   // はこ・はみだしの わく ぜんぶが おせる(ドーナツに ぴったり あてなくて いい)
   eTarget = 5; eNew();

@@ -13,9 +13,24 @@
       t: 'いちばん はやい こは 1ばん。つぎが 2ばん、3ばん。' },
     { id: 'clock', img: 'clock', q: 'よなか、ひづけが かわる ときは なんじ？', start: 0, unit: 'じ', kind: 'row', firstImg: 'moon',
       t: 'ひづけが かわる よなかは 0じ。それから 1じ、2じ…。' },
+    { id: 'stopwatch', img: 'stopwatch', q: 'ストップウォッチを おした ときは なんびょう？', start: 0, unit: 'びょう', kind: 'row',
+      t: 'おした ときは 0びょう。1びょう、2びょうと すすむよ。' },
+    { id: 'game', img: 'game', q: 'ゲームを はじめる まえの てんすうは？', start: 0, unit: 'てん', kind: 'row',
+      t: 'はじめる まえは 0てん。1てん、2てんと ふえるよ。' },
+    { id: 'purse', img: 'purse', q: 'おさいふに おかねが ないとき、なんえん？', start: 0, unit: 'えん', kind: 'row',
+      t: 'なにも ないときは 0えん。1えん、2えんと ふえるよ。' },
+    { id: 'scale', img: 'scale', q: 'はかりに なにも のせない とき、めもりは？', start: 0, unit: 'キロ', kind: 'row',
+      t: 'なにも のせない ときは 0。のせると 1キロ、2キロ。' },
+    { id: 'school', img: 'backpack', q: 'しょうがっこうに はいったら なんねんせい？', start: 1, unit: 'ねんせい', kind: 'row',
+      t: 'はいった ときは 1ねんせい。つぎの としは 2ねんせい。' },
+    { id: 'calendar', img: 'calendar', q: 'つきの いちばん はじめの ひは なんにち？', start: 1, unit: 'にち', kind: 'row',
+      t: 'つきの はじめは 1にち。つぎが 2にち、3にち。' },
+    { id: 'finger', img: 'finger', q: 'ゆびで かぞえるとき、「いち、に、さん」の さいしょは？', start: 1, unit: '', kind: 'row',
+      t: 'かぞえる ときは 1から。つぎが 2、3、4。' },
   ];
+  const ROUND = 4;                                                  // 1かいで こたえる もんだいの かず(0からと 1からを 2まいずつ)
   const src = (n) => 'img/' + n + '.svg';
-  let order = [], idx = 0, cur = null, busy = false, voiceOn = true;
+  let order = [], idx = 0, cur = null, busy = false, voiceOn = true, lastRound = [];
 
   function say(t) {
     if (!voiceOn || !window.speechSynthesis) return;
@@ -66,7 +81,12 @@
     say(cur.q);
   }
   function start() {
-    order = CARDS.map((_, i) => i).sort(() => Math.random() - 0.5); idx = 0;
+    const shuf = (a) => a.sort(() => Math.random() - 0.5);
+    const pickN = (s, k) => {                                       // まえの かいに でた カードは なるべく さける
+      const all = CARDS.map((c, i) => i).filter((i) => CARDS[i].start === s), fresh = all.filter((i) => !lastRound.includes(i));
+      return shuf(fresh.length >= k ? fresh : all).slice(0, k);
+    };
+    order = shuf([...pickN(0, ROUND / 2), ...pickN(1, ROUND / 2)]); idx = 0; lastRound = order.slice();
     $('in0').innerHTML = ''; $('in1').innerHTML = '';
     showCard();
   }

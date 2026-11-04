@@ -3,21 +3,7 @@
   const $ = (id) => document.getElementById(id);
   const KANA = 'あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわをん';   // voice/<ばんごう>.wav の じゅん
   // 50おんの ひょう(れつ = あ・か・さ…、みぎから。'' は あき)
-  const COLS = ['あいうえお', 'かきくけこ', 'さしすせそ', 'たちつてと', 'なにぬねの', 'はひふへほ', 'まみむめも', 'や ゆ よ', 'らりるれろ', 'わをんM'];   // M = 「゛゜小」ボタン(ケータイの ように、おすたびに だくおん・はんだくおん・ちいさい もじに かわる)。ぜんぶ 10ぎょう
-  const V1 = { か: 'が', き: 'ぎ', く: 'ぐ', け: 'げ', こ: 'ご', さ: 'ざ', し: 'じ', す: 'ず', せ: 'ぜ', そ: 'ぞ', た: 'だ', ち: 'ぢ', つ: 'づ', て: 'で', と: 'ど', は: 'ば', ひ: 'び', ふ: 'ぶ', へ: 'べ', ほ: 'ぼ' };
-  const V2 = { は: 'ぱ', ひ: 'ぴ', ふ: 'ぷ', へ: 'ぺ', ほ: 'ぽ' };
-  const SM = { あ: 'ぁ', い: 'ぃ', う: 'ぅ', え: 'ぇ', お: 'ぉ', つ: 'っ', や: 'ゃ', ゆ: 'ゅ', よ: 'ょ', わ: 'ゎ' };   // ちいさい もじ(みじかい こえで ならす)
-  const SMCUT = { っ: 0.14, ゃ: 0.2, ゅ: 0.2, ょ: 0.2, ぁ: 0.16, ぃ: 0.16, ぅ: 0.16, ぇ: 0.16, ぉ: 0.16, ゎ: 0.16 };
-  // ひとつの もじの 「かわりかた」(ケータイと おなじ じゅん): [もじ, だくおんの しゅるい(0/1/2), みじかさ(びょう。0 = そのまま)]
-  const VARS = {};
-  'あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわをん'.split('').forEach((ch) => {
-    const l = [[ch, 0, 0]];
-    if (ch === 'つ') l.push([SM[ch], 0, SMCUT[SM[ch]]]);       // ケータイと おなじ: つ → っ → づ
-    if (V1[ch]) l.push([V1[ch], 1, 0]);
-    if (V2[ch]) l.push([V2[ch], 2, 0]);
-    if (ch !== 'つ' && SM[ch]) l.push([SM[ch], 0, SMCUT[SM[ch]]]);
-    if (l.length > 1) VARS[ch] = l;
-  });
+  const COLS = ['あいうえお', 'かきくけこ', 'さしすせそ', 'たちつてと', 'なにぬねの', 'はひふへほ', 'まみむめも', 'や ゆ よ', 'らりるれろ', 'わをん'];   // M = 「゛゜小」ボタン(ケータイの ように、おすたびに だくおん・はんだくおん・ちいさい もじに かわる)。ぜんぶ 10ぎょう
   // こどもが うたう たかさ(まんなかの ド〜うえの ド)
   const NOTES = [['ド', 261.63, '#ff6b6b'], ['レ', 293.66, '#ff9f43'], ['ミ', 329.63, '#f7c948'], ['ファ', 349.23, '#6bd68c'], ['ソ', 392.0, '#4ecdc4'], ['ラ', 440.0, '#5b9cff'], ['シ', 493.88, '#9b7bff'], ['ド', 523.25, '#ff7ac4']];
   let note = 0, last = 0, lastV = 0, lastCut = 0;
@@ -115,7 +101,7 @@
     if (cur) { try { cur.stop(); } catch (e) { /* もう おわっている */ } }
     const s = ac.createBufferSource(); s.buffer = b; cur = s;
     if (PAR.normal) {                                                     // ふつうの こえ: ボコーダーを とおさずに そのまま。たかさの キーで、こえの たかさが かわる(ソ=もとの こえ)
-      const rate = NOTES[note][1] / 392, ng = ac.createGain(), t0 = ac.currentTime + 0.005; ng.gain.value = 1.15; s.playbackRate.value = rate; s.connect(ng); ng.connect(master);
+      const rate = 1, ng = ac.createGain(), t0 = ac.currentTime + 0.005; ng.gain.value = 1.15; s.playbackRate.value = rate; s.connect(ng); ng.connect(master);
       voc.out.gain.cancelScheduledValues(t0); voc.out.gain.setValueAtTime(0, t0);
       s.start(t0); if (cut) s.stop(t0 + Math.min(b.duration, cut) / rate);
       s.onended = () => { if (cur === s) cur = null; try { ng.disconnect(); } catch (e) { /* */ } };
@@ -126,12 +112,6 @@
     s.connect(voc.modIn);
     const t = ac.currentTime + 0.005, dur = cut ? Math.min(b.duration, cut) : b.duration;
     s.start(t); if (cut) s.stop(t + dur);
-    if (v) {                                                               // だくおん・はんだくおん: さいしょの 0.09びょうは、いきの おと(子音の ノイズ)を けして、ブーンと ならす
-      [[voc.ssG.gain, VP.ssG], [voc.dg && voc.dg.gain, VP.dryG], [voc.noiseG.gain, voc.noiseG.gain.value]].forEach(([p, val]) => {
-        if (!p) return; p.cancelScheduledValues(t); p.setValueAtTime(val * 0.03, t); p.setTargetAtTime(val, t + 0.09, 0.03);
-      });
-      if (v === 2) { const bs = ac.createBufferSource(), bp = ac.createBiquadFilter(), bg = ac.createGain(); bs.buffer = noiseBurst(); bp.type = 'bandpass'; bp.frequency.value = 1800; bp.Q.value = 0.8; bg.gain.value = 2.2; bs.connect(bp); bp.connect(bg); bg.connect(voc.modIn); bs.start(t); }
-    }
     const g = voc.out.gain;
     g.cancelScheduledValues(t); g.setValueAtTime(Math.max(g.value, 0), t); g.linearRampToValueAtTime(0.5, t + 0.01);
     g.setTargetAtTime(0, t + dur + 0.03, cut ? 0.015 : 0.04);
@@ -139,40 +119,22 @@
     if (rec && recEv.length < 200) recEv.push({ i, v, cut, n: note, p: Object.assign({}, PAR) });
     const bot = $('bot'); bot.classList.remove('sing'); void bot.offsetWidth; bot.classList.add('sing');
   }
-  const shown = (i, v, cut) => { const ch = KANA[i]; if (cut) return SM[ch] || ch; return v === 1 ? (V1[ch] || ch) : v === 2 ? (V2[ch] || ch) : ch; };
 
   // ---- もじの ひょう ----
-  let baseCh = '', varIdx = 0;                                           // さいごに おした もじ と、いま どの かわりかたか
   const tiles = [];
   for (let c = 0; c < COLS.length; c++) for (let r = 0; r < COLS[c].length; r++) {         // 1ぎょうずつ うえから したへ
     const ch = COLS[c][r] || ' ', b = document.createElement('button'); b.type = 'button';
     if (ch === ' ') { b.className = 'kk blank'; b.tabIndex = -1; b.setAttribute('aria-hidden', 'true'); }
-    else if (ch === 'M') {
-      b.className = 'kk mod'; b.innerHTML = '<span>゛</span><span>゜</span><span>小</span>'; b.setAttribute('aria-label', 'だくてん・はんだくてん・ちいさい もじ');
-      b.addEventListener('pointerdown', (e) => { e.preventDefault(); ensure(); setMode((fmode + 1) % 4); });
-      tiles.push({ b, mod: true });
-    } else {
+    else {
       b.className = 'kk'; b.textContent = ch;
       const i = KANA.indexOf(ch);
-      const go = () => {
-        const v = fmode === 1 ? V1[ch] : fmode === 2 ? V2[ch] : fmode === 3 ? SM[ch] : ch; if (!v) return;
-        $('nowK').textContent = v; play(i, fmode === 1 ? 1 : fmode === 2 ? 2 : 0, fmode === 3 ? SMCUT[SM[ch]] : 0); b.classList.add('on'); setTimeout(() => b.classList.remove('on'), 150);
-      };
+      const go = () => { $('nowK').textContent = ch; play(i, 0, 0); b.classList.add('on'); setTimeout(() => b.classList.remove('on'), 150); };
       b.addEventListener('pointerdown', (e) => { e.preventDefault(); go(); });
       b.addEventListener('click', (e) => { if (e.detail === 0) go(); });   // キーボード
       tiles.push({ b, ch, i });
     }
-    b.style.gridColumn = 'span ' + (COLS[c][r] === 'M' ? 12 : 6);   // もじは 6(ほかの ぎょうと おなじ)、゛゜小 は のこりの 12
+    b.style.gridColumn = 'span 6';
     $('kana').appendChild(b);
-  }
-  let fmode = 0;                                                         // 0=ふつう 1=゛(だくてん) 2=゜(はんだくてん) 3=小(ちいさい もじ)。ボタンを おすたびに すすむ
-  function setMode(m) {
-    fmode = m;
-    tiles.forEach((t) => {
-      if (t.mod) { [...t.b.children].forEach((s, j) => s.classList.toggle('cur', j === m - 1)); t.b.classList.toggle('sel', m > 0); return; }
-      const v = m === 1 ? V1[t.ch] : m === 2 ? V2[t.ch] : m === 3 ? SM[t.ch] : t.ch;
-      t.b.textContent = v || t.ch; t.b.classList.toggle('dim', !v);
-    });
   }
   const showInfo = () => { $('nowN').textContent = 'たかさ: ' + NOTES[note][0]; };
   NOTES.forEach(([name, , color], k) => {
@@ -192,7 +154,13 @@
   const panel = $('panel');
   const sliders = {};
   const preBtns = [];
-  const paintPre = (k) => preBtns.forEach((x, j) => x.classList.toggle('sel', j === k));
+  const paintPre = (k) => { preBtns.forEach((x, j) => x.classList.toggle('sel', j === k)); paintVoc(); };
+  function paintVoc() { const b = $('vocT'); if (!b) return; const on = !PAR.normal; const kb = document.querySelector('.keysbar'); if (kb) kb.classList.toggle('off', !on); b.textContent = on ? '🤖 ボコーダー ON' : '🙂 ボコーダー OFF'; b.classList.toggle('sel', on); b.setAttribute('aria-pressed', on ? 'true' : 'false'); }
+  $('vocT').addEventListener('click', () => {                           // ボコーダーの ON/OFF(つまみの あたいは そのまま)。さいごの もじで くらべられる
+    ensure(); PAR.normal = PAR.normal ? 0 : 1; paintVoc();
+    if (PAR.normal) paintPre(0); else paintPre(-1);
+    applyPar(); play(last, lastV, lastCut);
+  });
   PRESETS.forEach(([emoji, name, vals], k) => {
     const b = document.createElement('button'); b.type = 'button'; b.className = 'chip pre' + (k === 0 ? ' sel' : ''); b.textContent = emoji; b.setAttribute('aria-label', name); preBtns.push(b);
     b.addEventListener('click', () => { Object.assign(PAR, { echo: PAR.echo || 0 }, vals); syncKnobs(); paintPre(k); ensure(); applyPar(); play(last, lastV, lastCut); });
@@ -206,7 +174,7 @@
     inp.addEventListener('change', () => { ensure(); applyPar(); play(last, lastV, lastCut); });   // はなした ときに、さいごの もじで きかせる
     $('knobs').appendChild(row);
   });
-  PAR.echo = 0;
+  PAR.echo = 0; paintVoc();
   function syncKnobs() { Object.keys(sliders).forEach((k) => { sliders[k].value = PAR[k] || 0; }); }
   $('bot').addEventListener('pointerdown', (e) => {
     e.preventDefault(); ensure(); const open = panel.classList.toggle('show');
@@ -230,7 +198,7 @@
     recEv.forEach((e, n) => timers.push(setTimeout(() => {
       note = e.n; Object.assign(PAR, e.p); syncKnobs(); showInfo(); applyPar();
       document.querySelectorAll('.key').forEach((x, j) => x.classList.toggle('sel', j === note));
-      $('nowK').textContent = shown(e.i, e.v, e.cut); play(e.i, e.v, e.cut);
+      $('nowK').textContent = KANA[e.i]; play(e.i, 0, 0);
     }, n * STEP + 50)));
     timers.push(setTimeout(() => { stopPlayback(); note = keep.note; Object.assign(PAR, keep.par); syncKnobs(); showInfo(); applyPar(); document.querySelectorAll('.key').forEach((x, j) => x.classList.toggle('sel', j === note)); }, (recEv.length - 1) * STEP + 1500));
   });
@@ -239,5 +207,5 @@
   // さきに こえを よみこんでおく(さいしょに さわった とき)
   document.addEventListener('pointerdown', () => { ensure(); KANA.split('').forEach((_, i) => load(i).catch(() => {})); }, { once: true });
   window.__aiueoBuild = buildVocoder;                              // たしかめよう(オフラインで ならして みる)
-  window.__aiueo = { PAR, play, applyPar, V1, V2, get ac() { return ac; }, get voc() { return voc; }, VP };
+  window.__aiueo = { PAR, play, applyPar, get ac() { return ac; }, get voc() { return voc; }, VP };
 })();

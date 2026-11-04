@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>クリスタルの おうかん | kimpilla</title>
+<link rel="stylesheet" href="../../style.css">
+<style>
+  html, body { touch-action: manipulation; -webkit-tap-highlight-color: transparent; overscroll-behavior: none; }
+  .play { display: flex; flex-direction: column; height: calc(100vh - 84px); height: calc(100svh - 84px); min-height: 460px; background: #efe6dc; color: #3a3550; border-radius: 22px; padding: 8px 8px 10px; margin: 8px 0; border: 3px solid #cdb9a3; font-family: "Hiragino Maru Gothic ProN", "Yu Gothic", system-ui, sans-serif; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+  .play button { font-family: inherit; margin: 0; touch-action: manipulation; }
+  h1 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .top { display: flex; align-items: center; gap: 6px; flex: none; padding: 0 2px 6px; }
+  #cnt { flex: none; font-size: 15px; font-weight: bold; color: #5a4fcf; min-width: 62px; text-align: right; }
+  #again0 { flex: none; font-size: 15px; padding: 5px 10px; border-radius: 999px; border: 2px solid #bcd6f5; background: #fff; color: #3a3550; }
+  #again0:hover:not(:disabled) { background: #fff; color: #3a3550; }
+  .stagewrap { position: relative; flex: 1; min-height: 0; border-radius: 16px; overflow: hidden; border: 3px solid #a58c74; background: #2a211d; }
+  canvas#gc { display: block; width: 100%; height: 100%; touch-action: none; }
+  #clear { position: absolute; inset: 0; display: none; align-items: center; justify-content: flex-end; padding-bottom: 22px; box-sizing: border-box; flex-direction: column; gap: 10px; background: rgba(255,255,255,.35); text-align: center; }
+  #clear.show { display: flex; }
+  #clear .t { font-size: 26px; font-weight: bold; color: #5a4fcf; text-shadow: 0 2px 0 #fff; }
+  #clear .s { font-size: 16px; color: #3a3550; }
+  #clear .row { display: flex; gap: 10px; }
+  #clear button { font-size: 17px; font-weight: bold; padding: 12px 20px; border-radius: 999px; border: 3px solid #7a6cf0; background: #fff; color: #3a3550; }
+  #clear button:hover:not(:disabled) { background: #fff; color: #3a3550; }
+  #clear button.go { background: #7a6cf0; color: #fff; }
+  #clear button.go:hover:not(:disabled) { background: #7a6cf0; color: #fff; }
+  .credit { font-size: 11px; color: var(--muted); }
+
+  .jbar { flex: none; padding: 8px 0 0; }
+  #jump { width: 100%; height: clamp(96px, 17svh, 150px); border: 0; border-radius: 22px; background: #ffb43a; color: #fff; font-size: clamp(26px, 5svh, 40px); font-weight: bold; text-shadow: 0 2px 0 #0003; box-shadow: 0 6px 0 #d98a00; user-select: none; -webkit-user-select: none; touch-action: none; }
+  #jump:hover:not(:disabled) { background: #ffb43a; color: #fff; }
+  #jump:active, #jump.on { transform: translateY(5px); box-shadow: 0 1px 0 #d98a00; }
+  #snd { flex: none; font-size: 18px; padding: 4px 10px; border-radius: 999px; border: 2px solid #bcd6f5; background: #fff; color: #3a3550; }
+  #snd:hover:not(:disabled) { background: #fff; color: #3a3550; }
+</style>
+<script src="../../audio-unlock.js?v=3"></script>
+</head>
+<body>
+<header>
+  <a class="home" href="../../index.html">kimpilla</a>
+  <nav><a href="../../music.html">音楽</a> <a href="../../apps.html">アプリ</a> <a href="../../memo.html">メモ</a></nav>
+</header>
+<main>
+<h1>クリスタルの おうかん</h1>
+<div class="play">
+  <div class="top"><div class="stg" id="stg"></div><button type="button" id="snd" aria-label="こえ">🔊</button><button type="button" id="again0" aria-label="はじめから">⟲</button></div>
+  <div class="stagewrap">
+    <canvas id="gc"></canvas>
+    <div id="clear"><div class="t" id="clT">おうかんが できた!</div><div class="s" id="clS">クリスタルを 12こ あつめたよ</div><div class="row"><button type="button" id="clAgain">もういちど</button><button type="button" id="clNext" class="go">つぎの どうくつ</button></div></div>
+  </div>
+  <div class="jbar"><button type="button" id="jump">ジャンプ</button></div>
+</div>
+<h2>おとなの人へ(なにが起きているか)</h2>
+<ul class="small">
+<li><b>ルール</b>: ぷにまるは自動で右へ走る。「ジャンプ」(または画面)を押すとジャンプし、押し続けると少し高く跳ぶ。光るクリスタルに触れると取れて、「いち、に、さん…」と声で数える。12個取ると、上の王冠がクリスタルでいっぱいになって完成する。</li>
+<li><b>ジャンプ</b>: 空中でもう一度押すとダブルジャンプ。ばね台は、乗ると高く跳ぶ。置き方は数種類のパターンで、どれも「避けながら全部取れる」ように決めてある。</li>
+<li><b>ステージ</b>: 3つ。1=ジャンプと転がる岩だけ(まず「押すと跳んで取れる」を覚える)、2=ばね台と高い所のクリスタルを足す、3=コウモリ(下をくぐる)とダブルジャンプを足す。新しいものは、最初に安全な場所で1回見せて、ヒントも1回だけ出す。ステージ3のダブルジャンプは必須ではなく、取れなくても他で12個に届く。ステージごとの置き方は決まっていて、12個に届くまで繰り返す。</li>
+<li><b>やり直し</b>: ハートが0になると、そのステージの最初から、数も1からやり直す。毎回「いち、に、さん…」と1から数え直すのが、数を覚える練習になる。ハートはステージが変わるたびに満タンに戻る。</li>
+<li><b>敵</b>: コウモリ(空を飛ぶ)は、下をくぐる。転がる岩(地面)は、ジャンプで越える。当たるとハートが1つ減って、ぽよんと跳ね返される(取ったクリスタルは減らない)。ハート3つがなくなるとゲームオーバー。ハートは途中で拾って回復できる。上から踏むと敵をやっつけられて、踏むと高く跳ね上がる。点数や時間制限はない。</li>
+<li><b>12まで数える</b>: 取るたびに数字が1つずつ増え、王冠の枠も1つずつ埋まるので、数と量を一緒に見られる。クリスタルを取り逃しても、先にまた出てくるので、必ず12個に届く。</li>
+<li><b>音</b>: クリスタルを取ると、ドレミの音階で1音ずつ高くなる。声は、端末の日本語の読み上げ機能を使う(右上の🔊で切れる)。音は、AIが耳で確かめていない。</li>
+<li class="credit">王冠の形は、Noto Emoji(Google、Apache License 2.0)の王冠を、クリスタルの色に塗り替えて使っている。</li>
+</ul>
+</main>
+<footer>kimpilla</footer>
+<script src="crown.js"></script>
+</body>
+</html>

@@ -51,3 +51,7 @@ body:has(input[type=range]) input[type=text], body:has(canvas) input[type=text],
 pre, code { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
 input[type=range] { touch-action: pan-y; }
 html, body { overscroll-behavior-x: none; }
+
+/* iPad・iPhone: さわって あそぶ ページは、ピンチ・ダブルタップの ズームと、がめんの よこの ひっぱりを うけつけない(たて スクロールは そのまま) */
+body:has(button), body:has(canvas), body:has(input[type=range]) { touch-action: pan-y; overscroll-behavior: none; }
+html:has(button), html:has(canvas) { overscroll-behavior: none; }

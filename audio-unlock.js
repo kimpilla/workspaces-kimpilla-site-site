@@ -25,3 +25,17 @@
   ['pointerdown', 'touchend', 'click', 'keydown'].forEach((ev) => document.addEventListener(ev, unlock, { capture: true, passive: true }));
   document.addEventListener('visibilitychange', () => { if (!document.hidden) unlock(); });
 })();
+
+// さわって あそぶ ページで、iPad・iPhoneの ゆびの うごきで ズーム(ピンチ・ダブルタップ)や、
+// ページの よこすわいぷ(「もどる」「すすむ」)が おきないように する。
+// (ゆびを 4〜5ほん つかう OSの ジェスチャーや、ホームへ もどる スワイプは、ページからは ふせげない)
+(() => {
+  const hasUI = () => !!document.querySelector('button, canvas, input[type=range]');
+  const on = (t, f, o) => document.addEventListener(t, f, o);
+  ['gesturestart', 'gesturechange', 'gestureend'].forEach((t) => on(t, (e) => { if (hasUI()) e.preventDefault(); }, { passive: false }));   // Safariの ピンチ
+  on('touchmove', (e) => { if (e.touches && e.touches.length > 1 && hasUI()) e.preventDefault(); }, { passive: false });                     // 2ほんゆびの ズーム・スクロール
+  on('touchstart', (e) => {                                                                                                                    // がめんの ふちから はじまる スワイプ(もどる・すすむ)
+    const t = e.touches && e.touches[0]; if (!t || !hasUI()) return;
+    if (t.clientX < 18 || t.clientX > window.innerWidth - 18) e.preventDefault();
+  }, { passive: false });
+})();

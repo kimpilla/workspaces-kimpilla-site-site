@@ -149,6 +149,7 @@
   @keyframes twinkle { from { transform: scale(.5) rotate(0); } to { transform: scale(1.1) rotate(45deg); } }
   @keyframes tdrop { 0% { opacity: 0; transform: translateY(-40px); } 100% { opacity: 1; transform: translateY(0); } }
   @keyframes fall { to { transform: translateY(420px) rotate(540deg); } }
+  .eopts { display: flex; gap: 8px; justify-content: center; margin: 4px 0 6px; } .eopts .chip { min-height: 44px; font-size: 14px; }
   .ohead { font-size: 16px; margin: 22px 0 0; }
   .ten .tenrow { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .tcol { background: #fff; border: 3px solid #ffe3c6; border-radius: 16px; padding: 6px; display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 0; }
@@ -224,7 +225,7 @@
   @keyframes riseUp { from { transform: scaleY(.35); } to { transform: none; } }
   @media (prefers-reduced-motion: reduce) { .rise { animation: none; } }
 </style>
-<script src="../../audio-unlock.js?v=2"></script>
+<script src="../../audio-unlock.js?v=3"></script>
 </head>
 <body>
 <header>
@@ -261,6 +262,7 @@
 <h2 class="ohead">たべちゃう くまさん</h2>
 <div class="play eat" id="eHost">
   <div class="ehead"><div class="enum" aria-live="polite"><small>いま</small> <span id="eNum">12</span><small>こ</small> <span class="eyomi" id="eYomi">じゅうに</span></div><span class="earrow">▶</span><div class="etgt"><span class="want">のこり <b id="eTgt">5</b> こに！</span></div></div>
+  <div class="eopts"><button type="button" class="chip" id="eShow" aria-pressed="false">🔢 かず みえる</button><button type="button" class="chip" id="eCount" aria-pressed="false">🗣 かぞえる こえ あり</button></div>
   <div class="erow">
     <div class="ebox"><div class="tlab">10こ いりの はこ <b id="eBoxN">10</b>こ</div><div class="egrid" id="eGrid"></div></div>
     <div class="eover"><div class="tlab">はみだし <b id="eOverN">2</b>こ</div><div class="eol" id="eOver"></div><span class="finger" id="eFinger" aria-hidden="true">👆</span></div>
@@ -306,6 +308,6 @@
 
 </main>
 <footer>kimpilla</footer>
-<script src="donut.js"></script>
+<script src="donut.js?v=38"></script>
 </body>
 </html>
