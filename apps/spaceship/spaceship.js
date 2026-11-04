@@ -148,8 +148,11 @@
     syncBtns();
   }
   function syncBtns() {
+    const tg = $('mTog'); tg.classList.toggle('act', !!ACT); if (ACT) tg.style.setProperty('--k', PRE[ACT].col);
     document.querySelectorAll('.pbtn').forEach((b) => { b.classList.toggle('on', ACT === b.dataset.p); b.classList.toggle('lk', ACT === b.dataset.p && LOCKED); });
   }
+  $('mp').classList.add('hide');
+  $('mTog').addEventListener('click', () => { const o = $('mp').classList.toggle('hide'); $('mTog').classList.toggle('open', !o); });
   document.querySelectorAll('.pbtn').forEach((b) => {
     const name = b.dataset.p;
     b.addEventListener('pointerdown', (e) => {
