@@ -55,3 +55,10 @@ html, body { overscroll-behavior-x: none; }
 /* iPad・iPhone: さわって あそぶ ページは、ピンチ・ダブルタップの ズームと、がめんの よこの ひっぱりを うけつけない(たて スクロールは そのまま) */
 body:has(button), body:has(canvas), body:has(input[type=range]) { touch-action: pan-y; overscroll-behavior: none; }
 html:has(button), html:has(canvas) { overscroll-behavior: none; }
+
+/* アプリ一覧のサムネイル */
+ul.list li:has(> a.thumb) { display: flex; gap: 12px; align-items: flex-start; }
+a.thumb { flex: 0 0 120px; line-height: 0; }
+a.thumb img { width: 120px; height: 80px; object-fit: cover; border: 1px solid var(--line); border-radius: 6px; background: #fff; }
+ul.list li:has(> a.thumb) > div { flex: 1; min-width: 0; }
+@media (max-width: 420px) { a.thumb { flex-basis: 88px; } a.thumb img { width: 88px; height: 59px; } }
