@@ -151,18 +151,19 @@
     const tg = $('mTog'); tg.classList.toggle('act', !!ACT); if (ACT) tg.style.setProperty('--k', PRE[ACT].col);
     document.querySelectorAll('.pbtn').forEach((b) => { b.classList.toggle('on', ACT === b.dataset.p); b.classList.toggle('lk', ACT === b.dataset.p && LOCKED); });
   }
-  $('mp').classList.add('hide');
+  const hideMp = () => { $('mp').classList.add('hide'); $('mTog').classList.remove('open'); };
+  hideMp();
   $('mTog').addEventListener('click', () => { const o = $('mp').classList.toggle('hide'); $('mTog').classList.toggle('open', !o); });
   document.querySelectorAll('.pbtn').forEach((b) => {
     const name = b.dataset.p;
     b.addEventListener('pointerdown', (e) => {
       e.preventDefault(); b.setPointerCapture(e.pointerId); ensureAudio();
-      if (ACT === name && LOCKED) { stopPreset(); click(); return; }       // ロック中にさわると解除
+      if (ACT === name && LOCKED) { stopPreset(); click(); hideMp(); return; }       // ロック中にさわると解除
       activate(name); pressing = name;
       clearTimeout(lockTimer);
       lockTimer = setTimeout(() => { if (ACT === name && pressing === name) { LOCKED = true; click(); syncBtns(); } }, 600);
     });
-    const release = () => { clearTimeout(lockTimer); if (pressing === name) { pressing = null; if (!LOCKED && ACT === name) stopPreset(); } };
+    const release = () => { clearTimeout(lockTimer); if (pressing === name) { pressing = null; if (!LOCKED && ACT === name) stopPreset(); hideMp(); } };
     b.addEventListener('pointerup', release); b.addEventListener('pointercancel', release);
     b.addEventListener('contextmenu', (e) => e.preventDefault());
   });
