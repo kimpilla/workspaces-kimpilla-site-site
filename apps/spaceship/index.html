@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>宇宙船シンセ | kimpilla</title>
+<style>
+  :root { --bg:#070b16; --pl:#1b2236; --pl2:#11172a; --ln:#2c3a5c; --cy:#5cf0ff; --am:#ffb23d; --rd:#ff5a5a; --tx:#cfe6ff; --mu:#7d93b8; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { margin:0; background:var(--bg); color:var(--tx); }
+  body { font:12px/1.5 ui-monospace,"SFMono-Regular",Menlo,Consolas,"Hiragino Kaku Gothic ProN",monospace; padding:0 0 240px; -webkit-user-select:none; user-select:none;
+    background:radial-gradient(1.5px 1.5px at 20% 12%,#fff8,transparent),radial-gradient(1px 1px at 70% 30%,#fff7,transparent),radial-gradient(1.5px 1.5px at 40% 70%,#fff6,transparent),radial-gradient(1px 1px at 85% 80%,#fff7,transparent),radial-gradient(1px 1px at 10% 55%,#fff6,transparent),radial-gradient(ellipse at 50% -10%,#16264a,#070b16 60%); background-attachment:fixed; }
+  .wrap { max-width:820px; margin:0 auto; padding:0 max(12px,env(safe-area-inset-left)); }
+  header { display:flex; justify-content:space-between; align-items:center; padding:14px 0 10px; letter-spacing:.1em; }
+  header b { font-size:14px; color:var(--cy); text-shadow:0 0 10px #5cf0ff88; } header a { color:var(--mu); text-decoration:none; font-size:11px; }
+  .top { display:grid; grid-template-columns:1fr auto; gap:10px; align-items:stretch; }
+  .mon { position:relative; border:2px solid var(--ln); border-radius:12px; background:radial-gradient(#0a2a33,#031016); box-shadow:inset 0 0 30px #000,0 0 18px #5cf0ff22; overflow:hidden; }
+  #scope { display:block; width:100%; height:92px; }
+  .mon i { position:absolute; left:8px; top:5px; font-style:normal; font-size:10px; color:var(--cy); opacity:.8; letter-spacing:.1em; }
+  .lamps { display:grid; grid-template-columns:repeat(4,12px); gap:6px; align-content:center; padding:0 10px; border:2px solid var(--ln); border-radius:12px; background:var(--pl2); }
+  .lamps u { text-decoration:none; width:12px; height:12px; border-radius:50%; background:#2a1a1a; box-shadow:inset 0 1px 2px #000; } .lamps u.on { background:var(--am); box-shadow:0 0 8px var(--am); }
+  .lamps small { grid-column:1/-1; color:var(--mu); font-size:9px; letter-spacing:.1em; margin-top:2px; }
+  #panels { display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:12px; margin-top:12px; }
+  .panel { position:relative; border:1px solid var(--ln); border-radius:12px; padding:26px 12px 12px; background:linear-gradient(var(--pl),var(--pl2)); box-shadow:inset 0 1px 0 #fff1,0 4px 10px #0008; }
+  .panel:before,.panel:after { content:""; position:absolute; top:8px; width:7px; height:7px; border-radius:50%; background:radial-gradient(circle at 35% 30%,#8aa,#234); } .panel:before { left:10px; } .panel:after { right:10px; }
+  .panel h3 { position:absolute; left:0; right:0; top:5px; margin:0; text-align:center; font-size:10px; letter-spacing:.14em; color:var(--am); font-weight:400; }
+  .panel h3 small { color:var(--mu); margin-left:6px; letter-spacing:.06em; }
+  .dials { display:grid; grid-template-columns:repeat(auto-fill,minmax(68px,1fr)); gap:10px 6px; }
+  .dial { text-align:center; touch-action:none; outline:none; }
+  .ring { width:62px; height:62px; margin:0 auto; border-radius:50%; padding:5px; background:conic-gradient(from -135deg,var(--cy) calc(var(--s)*270deg),#202a44 0) ; -webkit-mask:radial-gradient(circle,#000 0,#000 100%); position:relative; }
+  .ring:before { content:""; position:absolute; inset:0; border-radius:50%; background:conic-gradient(from 135deg,#0b1020 0 90deg,transparent 0 360deg); } /* 下の切れ目 */
+  .knob { position:relative; width:100%; height:100%; border-radius:50%; background:radial-gradient(circle at 35% 28%,#6c7a99,#1a2036 70%); box-shadow:0 3px 5px #000a,inset 0 1px 0 #fff3; transform:rotate(var(--a)); z-index:1; }
+  .knob:after { content:""; position:absolute; left:50%; top:4px; width:3px; height:14px; margin-left:-1.5px; border-radius:2px; background:var(--am); box-shadow:0 0 6px var(--am); }
+  .dial:focus-visible .ring { outline:2px solid var(--am); outline-offset:2px; }
+  .dial b { display:block; font-weight:400; font-size:10px; margin-top:4px; letter-spacing:.04em; } .dial em { display:block; font-style:normal; font-size:8px; color:var(--mu); letter-spacing:.08em; }
+  .dial output { display:block; margin-top:2px; font-size:10px; color:var(--cy); background:#031016; border-radius:3px; padding:0 2px; min-height:15px; }
+  .wsel { margin-bottom:10px; } .wsel > b { display:block; font-weight:400; font-size:10px; color:var(--mu); margin-bottom:4px; letter-spacing:.06em; }
+  .wsel div { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; }
+  .wsel button { height:40px; border:1px solid var(--ln); border-radius:6px; background:#0b1020; color:var(--mu); padding:0; cursor:pointer; }
+  .wsel button.on { border-color:var(--cy); color:var(--cy); box-shadow:0 0 10px #5cf0ff44 inset,0 0 6px #5cf0ff44; }
+  .wsel svg { width:32px; height:20px; fill:none; stroke:currentColor; stroke-width:2; }
+  button.mt { font:inherit; color:var(--tx); background:linear-gradient(#2a3556,#161d33); border:1px solid var(--ln); border-radius:6px; padding:10px 14px; min-height:40px; cursor:pointer; box-shadow:0 2px 0 #000a; }
+  button.mt:active { transform:translateY(1px); }
+  .foot { margin:14px 0 0; display:flex; gap:10px; align-items:center; }
+  details { margin:12px 0; color:var(--mu); } details summary { cursor:pointer; padding:6px 0; } details li { margin:4px 0; }
+  #bar { position:fixed; left:0; right:0; bottom:0; z-index:5; background:linear-gradient(#141a2e,#0a0e1c); border-top:2px solid var(--ln); padding:8px max(10px,env(safe-area-inset-left)) max(12px,env(safe-area-inset-bottom)); box-shadow:0 -6px 20px #000a; }
+  #bar .in { max-width:820px; margin:0 auto; }
+  .oct { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; color:var(--mu); font-size:11px; }
+  #keys { position:relative; height:118px; touch-action:none; }
+  .key { position:absolute; top:0; }
+  .key.white { height:100%; background:linear-gradient(#e6efff,#b9c8e6); border:1px solid #5a6a90; border-radius:0 0 6px 6px; z-index:1; }
+  .key.black { height:60%; background:linear-gradient(#222a42,#080b16); border:1px solid #000; border-radius:0 0 5px 5px; z-index:2; }
+  .key span { position:absolute; bottom:4px; left:0; right:0; text-align:center; font-size:10px; color:#4a5a80; pointer-events:none; } .key.black span { color:#6b7da8; }
+  .key.on.white { background:linear-gradient(#a8f5ff,#4dd4e8); } .key.on.black { background:linear-gradient(#1a8d9c,#0d4650); }
+</style>
+<script src="../../audio-unlock.js?v=3"></script>
+</head>
+<body>
+<div class="wrap">
+  <header><b>◆ STARSHIP SYNTH</b><a href="../../apps.html">← 一覧</a></header>
+  <div class="top">
+    <div class="mon"><i>MAIN MONITOR</i><canvas id="scope"></canvas></div>
+    <div class="lamps" id="lamps"><u></u><u></u><u></u><u></u><u></u><u></u><u></u><u></u><small>VOICES</small></div>
+  </div>
+  <div id="panels"></div>
+  <div class="foot"><button class="mt" id="reset">初期設定に戻す</button><span style="color:var(--mu)">つまみは、上下になぞって回す</span></div>
+  <details><summary>それぞれの装置の意味</summary><ul>
+    <li><b>ジェネレーター</b>: 音のもとの波(OSC)。波の形を選び、2つ目の波(OSC2)を少しずらして重ねると厚くなる。サブは1オクターブ下の音。</li>
+    <li><b>ワープドライブ</b>: FM。もう1つの波で音の高さを細かく揺らす。深くすると金属や鐘のような音になる。</li>
+    <li><b>レーダー・フィルター</b>: 高い音を削る(明るさ)。クセを上げると境目がとがる。開き・閉じるで、押した瞬間だけ明るくできる。</li>
+    <li><b>スラスター</b>: 音の大きさの形(ADSR)。立ち上がり、ディケイ、サスティン、余韻。</li>
+    <li><b>エコー通信</b>: 音を遅らせて重ねる。くり返しを上げると、何度も返ってくる。</li>
+    <li>鍵盤は指でなぞってすべらせても弾ける。パソコンのキーは Z S X D C V … / Q 2 W 3 E R …。音が大きいので、最初は音量を下げてから。</li></ul></details>
+</div>
+<div id="bar"><div class="in">
+  <div class="oct"><button class="mt" id="octdown">◀ 低く</button><span id="octlabel"></span><button class="mt" id="octup">高く ▶</button></div>
+  <div id="keys"></div>
+</div></div>
+<script src="spaceship.js"></script>
+</body>
+</html>
