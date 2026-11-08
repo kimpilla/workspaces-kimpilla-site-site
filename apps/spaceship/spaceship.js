@@ -4,7 +4,7 @@
   const $ = (id) => document.getElementById(id);
 
   const DEFAULTS = { wave: 'sawtooth', wave2: 'sawtooth', volume: 0.5, fmRatio: 2, fmDepth: 400, cutoff: 2400, q: 4, attack: 0.01, decay: 1, sustain: 1, fEnv: 0, fDecay: 0.4,
-    osc2: 0, detune: 12, sub: 0, release: 0.4, delayTime: 0.35, feedback: 0.35, mix: 0.25, sweep: 0, sweepTime: 0.25, noise: 0, wobble: 0, wobbleRate: 5 };
+    osc2: 0, detune: 12, sub: 0, release: 0.4, delayTime: 0.35, feedback: 0.35, mix: 0.25, sweep: 0, sweepTime: 0.25, noise: 0, wobble: 0, wobbleRate: 5, arpRate: 6, arpSpan: 2 };
   const p = Object.assign({}, DEFAULTS);
 
   // ---- ミッション音(押している間だけ上書きする設定。drone=鳴りっぱなし、pulse=くり返し) ----
@@ -168,6 +168,42 @@
     b.addEventListener('contextmenu', (e) => e.preventDefault());
   });
 
+  // ---- 自動演奏: OFF / DRONE(一定の高さを鳴らし続ける) / ARP(押さえた鍵盤を順番に鳴らす) ----
+  let autoMode = 'off', droneNote = null, arpTimer = 0, arpIdx = 0;
+  const arpHeld = new Set();
+  function setDrone(n) { noteOff('a'); droneNote = n; noteOn('a', n); }
+  function stopDrone() { noteOff('a'); droneNote = null; }
+  function arpStep() {
+    if (!arpHeld.size) return;
+    const base0 = [...arpHeld].sort((a, b) => a - b), list = [];
+    for (let k = 0; k < Math.round(p.arpSpan); k++) base0.forEach((n) => list.push(n + 12 * k));
+    const n = list[arpIdx % list.length]; arpIdx++;
+    noteOff('arp'); noteOn('arp', n);
+    events.push({ type: 'arp', t: performance.now() / 1000 });
+    const iv = 1000 / p.arpRate; setTimeout(() => noteOff('arp'), iv * 0.6);
+    arpTimer = setTimeout(arpStep, iv);
+  }
+  function startArp() { if (arpTimer) return; arpIdx = 0; arpStep(); }
+  function stopArp() { clearTimeout(arpTimer); arpTimer = 0; noteOff('arp'); }
+  function press(n) {
+    if (autoMode === 'arp') { arpHeld.add(n); keyEl(n, true); ensureAudio(); startArp(); return; }
+    if (autoMode === 'drone') setDrone(n);
+    noteOn(n);
+  }
+  function release(n) {
+    if (autoMode === 'arp' || arpHeld.has(n)) { arpHeld.delete(n); keyEl(n, false); if (!arpHeld.size) stopArp(); return; }
+    noteOff(n);
+  }
+  function releaseAll() { for (const n of [...voices.keys()]) if (typeof n === 'number') noteOff(n); [...arpHeld].forEach((n) => keyEl(n, false)); arpHeld.clear(); stopArp(); }
+  function setAuto(m) {
+    if (autoMode === 'arp' && m !== 'arp') { [...arpHeld].forEach((n) => keyEl(n, false)); arpHeld.clear(); stopArp(); }
+    if (m !== 'drone') stopDrone();
+    autoMode = m; ensureAudio();
+    document.querySelectorAll('.seg').forEach((b) => b.classList.toggle('on', b.dataset.a === m));
+    $('mTog').classList.toggle('auto', m !== 'off');
+  }
+  document.querySelectorAll('.seg').forEach((b) => b.addEventListener('click', () => setAuto(b.dataset.a)));
+
   // ---- 鍵盤(2オクターブ) ----
   let base = 48;
   const PC = 'zsxdcvgbhnjmq2w3er5t6y7u';
@@ -194,25 +230,25 @@
   $('kb').addEventListener('pointerdown', (e) => {
     const k = e.target.closest('[data-note]'); if (!k) return;
     e.preventDefault(); $('kb').setPointerCapture(e.pointerId);
-    pointerNote.set(e.pointerId, +k.dataset.note); noteOn(+k.dataset.note);
+    pointerNote.set(e.pointerId, +k.dataset.note); press(+k.dataset.note);
   });
   $('kb').addEventListener('pointermove', (e) => {
     if (!pointerNote.has(e.pointerId)) return;
     const el = document.elementFromPoint(e.clientX, e.clientY), k = el && el.closest('[data-note]'); if (!k) return;
     const n = +k.dataset.note, old = pointerNote.get(e.pointerId);
-    if (n !== old) { noteOff(old); pointerNote.set(e.pointerId, n); noteOn(n); }
+    if (n !== old) { release(old); pointerNote.set(e.pointerId, n); press(n); }
   });
-  const kup = (e) => { if (pointerNote.has(e.pointerId)) { noteOff(pointerNote.get(e.pointerId)); pointerNote.delete(e.pointerId); } };
+  const kup = (e) => { if (pointerNote.has(e.pointerId)) { release(pointerNote.get(e.pointerId)); pointerNote.delete(e.pointerId); } };
   $('kb').addEventListener('pointerup', kup); $('kb').addEventListener('pointercancel', kup);
   const held = new Map();
   window.addEventListener('keydown', (e) => {
     if (e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
     const i = PC.indexOf(e.key.toLowerCase()); if (i < 0) return;
-    held.set(e.key.toLowerCase(), base + i); noteOn(base + i);
+    held.set(e.key.toLowerCase(), base + i); press(base + i);
   });
-  window.addEventListener('keyup', (e) => { const k = e.key.toLowerCase(); if (held.has(k)) { noteOff(held.get(k)); held.delete(k); } });
-  window.addEventListener('blur', () => { for (const n of [...voices.keys()]) if (typeof n === 'number') noteOff(n); held.clear(); if (ACT && !LOCKED) stopPreset(); });
-  const shift = (d) => { for (const n of [...voices.keys()]) if (typeof n === 'number') noteOff(n); base = Math.min(84, Math.max(24, base + d)); buildKeys(); };
+  window.addEventListener('keyup', (e) => { const k = e.key.toLowerCase(); if (held.has(k)) { release(held.get(k)); held.delete(k); } });
+  window.addEventListener('blur', () => { releaseAll(); held.clear(); if (ACT && !LOCKED) stopPreset(); });
+  const shift = (d) => { releaseAll(); base = Math.min(84, Math.max(24, base + d)); buildKeys(); };
   $('octdn').onclick = () => shift(-12); $('octup').onclick = () => shift(12);
 
   // ---- つまみ・レバー・スイッチ ----
@@ -224,6 +260,7 @@
     g2: [['osc2', 'OSC2 MIX', '2つ目の量', 0, 1, 0.01, false, (v) => v < 0.02 ? 'OFF' : Math.round(v * 100) + '%'], ['detune', 'DETUNE', 'ずらし', 0, 50, 0.5, false, f1(1, 'ct')], ['sub', 'SUB', '1オクターブ下', 0, 1, 0.01, false, (v) => v < 0.02 ? 'OFF' : Math.round(v * 100) + '%']],
     g3: [['sweep', 'PITCH SWP', '音程すべり', -3, 3, 0.05, false, (v) => Math.abs(v) < 0.05 ? 'OFF' : (v > 0 ? '↑' : '↓') + Math.abs(v).toFixed(1) + 'oct'], ['noise', 'NOISE', 'ノイズ', 0, 1, 0.01, false, (v) => v < 0.02 ? 'OFF' : Math.round(v * 100) + '%'], ['wobble', 'WOBBLE', 'うねり', 0, 1, 0.01, false, (v) => v < 0.02 ? 'OFF' : Math.round(v * 100) + '%']],
     g4: [['delayTime', 'ECHO TIME', '間隔', 0.05, 1.2, 0.01, false, f1(2, 's')], ['feedback', 'ECHO FDBK', 'くり返し', 0, 0.9, 0.01, false, (v) => Math.round(v * 100) + '%'], ['mix', 'ECHO MIX', '量', 0, 1, 0.01, false, (v) => Math.round(v * 100) + '%']],
+    g6: [['arpRate', 'ARP RATE', '速さ', 1, 20, 0.5, true, (v) => v.toFixed(1) + '/s'], ['arpSpan', 'ARP SPAN', '何オクターブ', 1, 3, 1, false, (v) => Math.round(v) + 'oct']],
     g5: [['attack', 'ATK', '立ち上がり', 0.001, 2, 0.001, true, f1(2, 's')], ['decay', 'DEC', '減っていく', 0.01, 3, 0.01, true, f1(2, 's')], ['sustain', 'SUS', '押している間', 0, 1, 0.01, false, (v) => Math.round(v * 100) + '%'], ['release', 'REL', '余韻', 0.01, 4, 0.01, true, f1(2, 's')]],
   };
   const setters = {};
@@ -359,6 +396,7 @@
         vg.beginPath(); vg.moveTo(sx + (tx - sx) * tl, H + (ty - H) * tl); vg.lineTo(sx + (tx - sx) * h, H + (ty - H) * h); vg.stroke(); vg.shadowBlur = 0;
         if (pr >= 1) { vg.fillStyle = 'rgba(255,200,230,' + (1 - (pr - 1) / 0.9) + ')'; vg.beginPath(); vg.arc(tx, ty, 6 + (pr - 1) * 40, 0, 7); vg.fill(); }
       }
+      if (ev.type === 'arp' && a < 0.35) { vg.strokeStyle = 'rgba(45,255,155,' + (1 - a / 0.35) * 0.7 + ')'; vg.lineWidth = 2; vg.beginPath(); vg.arc(px, py, R * (1.02 + a * 0.9), 0, 7); vg.stroke(); }
       if (ev.type === 'sonar') { for (let j = 0; j < 1 + Math.floor(e.feedback * 3); j++) { const aa = a - j * e.delayTime; if (aa < 0 || aa > 1.8) continue; vg.strokeStyle = 'rgba(155,208,255,' + (1 - aa / 1.8) * 0.6 + ')'; vg.lineWidth = 1.5; vg.beginPath(); vg.arc(px, py, aa * W * 0.45, 0, 7); vg.stroke(); } }
     }
     if (thrOn) { const g = vg.createLinearGradient(0, H, 0, H * 0.55); g.addColorStop(0, 'rgba(255,150,30,' + (0.35 + lvl * 0.4) + ')'); g.addColorStop(1, 'rgba(255,150,30,0)'); vg.fillStyle = g; vg.fillRect(0, H * 0.55, W, H * 0.45); }
@@ -371,6 +409,7 @@
     vg.font = '500 9px Orbitron,monospace'; vg.fillStyle = '#27e8ff';
     vg.fillText('FWD CAM 01   SPD ' + (0.1 + (spd / 4) * 0.89).toFixed(2) + 'c   HDG 214.7', 8, 14);
     if (ACT) { vg.textAlign = 'right'; vg.fillStyle = PRE[ACT].col; vg.fillText(PRE[ACT].code + (LOCKED ? '  ▮LOCK' : '  HOLD'), W - 8, 14); vg.textAlign = 'left'; }
+    if (autoMode !== 'off') { vg.textAlign = 'right'; vg.fillStyle = '#2dff9b'; vg.fillText('AUTO ' + autoMode.toUpperCase(), W - 8, ACT ? 26 : 14); vg.textAlign = 'left'; }
     vg.strokeStyle = 'rgba(39,232,255,.22)'; vg.lineWidth = 1; vg.beginPath(); vg.moveTo(cx - 16, cy); vg.lineTo(cx - 5, cy); vg.moveTo(cx + 5, cy); vg.lineTo(cx + 16, cy); vg.moveTo(cx, cy - 16); vg.lineTo(cx, cy - 5); vg.moveTo(cx, cy + 5); vg.lineTo(cx, cy + 16); vg.stroke();
     vg.restore();
 
@@ -402,5 +441,5 @@
   }
 
   buildKeys(); buildKnobs(); fit(); requestAnimationFrame(frame);
-  window.__ss = { p, E, get ACT() { return ACT; }, get LOCKED() { return LOCKED; }, voices, events, activate, stopPreset };
+  window.__ss = { p, E, setAuto, press, release, get autoMode() { return autoMode; }, arpHeld, get ACT() { return ACT; }, get LOCKED() { return LOCKED; }, voices, events, activate, stopPreset };
 })();
