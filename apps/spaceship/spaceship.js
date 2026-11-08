@@ -1,0 +1,406 @@
+// 宇宙船シンセ v2(Web Audio だけで作った、操縦席のシンセ)
+(function () {
+  'use strict';
+  const $ = (id) => document.getElementById(id);
+
+  const DEFAULTS = { wave: 'sawtooth', wave2: 'sawtooth', volume: 0.5, fmRatio: 2, fmDepth: 400, cutoff: 2400, q: 4, attack: 0.01, decay: 1, sustain: 1, fEnv: 0, fDecay: 0.4,
+    osc2: 0, detune: 12, sub: 0, release: 0.4, delayTime: 0.35, feedback: 0.35, mix: 0.25, sweep: 0, sweepTime: 0.25, noise: 0, wobble: 0, wobbleRate: 5 };
+  const p = Object.assign({}, DEFAULTS);
+
+  // ---- ミッション音(押している間だけ上書きする設定。drone=鳴りっぱなし、pulse=くり返し) ----
+  const PRE = {
+    laser: { code: 'LASER', col: '#ff2d8a', p: { wave: 'square', wave2: 'sawtooth', osc2: 0.3, sub: 0, cutoff: 7000, q: 6, sweep: -3, sweepTime: 0.2, release: 0.15, attack: 0.002, decay: 0.2, sustain: 0.2, mix: 0.2, delayTime: 0.12, feedback: 0.3, noise: 0, wobble: 0 }, pulse: { every: 0.34, len: 0.18, note: 84 } },
+    warp: { code: 'WARP', col: '#27e8ff', p: { wave: 'sawtooth', wave2: 'square', osc2: 0.4, sub: 0.5, cutoff: 3500, q: 8, sweep: 2.5, sweepTime: 1.1, attack: 0.3, decay: 1, sustain: 1, release: 1.2, mix: 0.45, feedback: 0.62, delayTime: 0.3, noise: 0, wobble: 0, fm: 'dial' }, pulse: { every: 2, len: 1.5, note: 36 } },
+    alert: { code: 'ALERT', col: '#ff4a4a', p: { wave: 'square', osc2: 0, sub: 0, cutoff: 2600, q: 3, wobble: 0.75, wobbleRate: 1.6, attack: 0.02, sustain: 0.8, release: 0.1, mix: 0.1, noise: 0, sweep: 0 }, drone: 74 },
+    comms: { code: 'COMMS', col: '#2dff9b', p: { wave: 'square', osc2: 0, sub: 0, cutoff: 3200, q: 2, attack: 0.001, sustain: 0.9, release: 0.03, mix: 0.25, delayTime: 0.15, feedback: 0.3, noise: 0, wobble: 0, sweep: 0, fm: 260, fmRatio: 3.5 }, pulse: { every: 1.1, len: 0.07, note: 88, double: true } },
+    thrust: { code: 'THRUST', col: '#ffb000', p: { wave: 'sawtooth', wave2: 'square', osc2: 0.6, sub: 1, cutoff: 420, q: 2, noise: 0.9, wobble: 0.12, wobbleRate: 9, attack: 0.4, sustain: 1, release: 0.6, mix: 0.05, sweep: 0 }, drone: 28 },
+    sonar: { code: 'SONAR', col: '#9bd0ff', p: { wave: 'sine', osc2: 0, sub: 0, cutoff: 5000, q: 0.5, attack: 0.003, decay: 1.2, sustain: 0, release: 0.6, mix: 0.7, feedback: 0.72, delayTime: 0.45, noise: 0, wobble: 0, sweep: 0 }, pulse: { every: 2.4, len: 0.05, note: 81 } },
+  };
+  let ACT = null, LOCKED = false, pressing = null, lockTimer = 0, pulseTimer = 0;
+  const events = [];                                              // 景色用の出来事(レーザー発射、ソナーなど)
+
+  // 実際に鳴らす設定 = つまみの設定 + ミッション音の上書き
+  function E() {
+    const o = Object.assign({}, p), pr = ACT && PRE[ACT];
+    if (pr) { Object.assign(o, pr.p); const f = pr.p.fm; o.fmDepth = f === 'dial' ? p.fmDepth : (typeof f === 'number' ? f : 0); }
+    else o.fmDepth = 0;                                           // WARP を押していない間は、FM は効かない
+    return o;
+  }
+
+  // ---- 音の経路: 声 → 出口 → [そのまま / エコー] → 音量 → コンプレッサー → スピーカー ----
+  let ctx = null, out, dry, wet, delay, fb, master, analyser, noiseBuf;
+  function ensureAudio() {
+    if (ctx) { if (ctx.state === 'suspended') ctx.resume(); return; }
+    ctx = new (window.AudioContext || window.webkitAudioContext)();
+    out = ctx.createGain(); dry = ctx.createGain(); wet = ctx.createGain();
+    delay = ctx.createDelay(2); fb = ctx.createGain();
+    master = ctx.createGain(); analyser = ctx.createAnalyser(); analyser.fftSize = 2048;
+    const comp = ctx.createDynamicsCompressor();
+    out.connect(dry); out.connect(delay); delay.connect(fb); fb.connect(delay); delay.connect(wet);
+    dry.connect(master); wet.connect(master); master.connect(comp); comp.connect(analyser); analyser.connect(ctx.destination);
+    noiseBuf = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
+    const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    applyGlobal();
+  }
+  const mixGains = (e) => { const s = 1 + e.osc2 + e.sub; return [1 / s, e.osc2 / s, e.sub / s]; };
+  function applyGlobal() {
+    if (!ctx) return;
+    const t = ctx.currentTime, e = E();
+    master.gain.setTargetAtTime(p.volume, t, 0.02);
+    delay.delayTime.setTargetAtTime(e.delayTime, t, 0.05);
+    fb.gain.setTargetAtTime(e.feedback, t, 0.02);
+    dry.gain.setTargetAtTime(1 - e.mix * 0.5, t, 0.02);
+    wet.gain.setTargetAtTime(e.mix, t, 0.02);
+    const g = mixGains(e);
+    for (const v of voices.values()) {
+      v.filter.frequency.setTargetAtTime(e.cutoff, t, 0.02);
+      v.filter.Q.setTargetAtTime(e.q, t, 0.02);
+      v.modGain.gain.setTargetAtTime(e.fmDepth, t, 0.02);
+      v.mod.frequency.setTargetAtTime(v.freq * e.fmRatio, t, 0.02);
+      v.osc.type = e.wave; v.osc2.type = e.wave2; v.osc2.detune.setTargetAtTime(e.detune, t, 0.02);
+      v.g1.gain.setTargetAtTime(g[0], t, 0.02); v.g2.gain.setTargetAtTime(g[1], t, 0.02); v.gs.gain.setTargetAtTime(g[2], t, 0.02);
+      v.gn.gain.setTargetAtTime(e.noise * 0.9, t, 0.02);
+      v.lfo.frequency.setTargetAtTime(e.wobbleRate, t, 0.02); v.lg.gain.setTargetAtTime(e.wobble * 700, t, 0.02);
+    }
+  }
+
+  // ---- 声(1音)。id は鍵盤なら音番号、ミッション音なら文字 ----
+  const voices = new Map();
+  const midiToHz = (n) => 440 * Math.pow(2, (n - 69) / 12);
+  function noteOn(id, midi) {
+    ensureAudio();
+    if (voices.has(id)) return;
+    midi = midi == null ? id : midi;
+    const e = E(), t = ctx.currentTime, freq = midiToHz(midi);
+    const osc = ctx.createOscillator(), mod = ctx.createOscillator(), modGain = ctx.createGain();
+    const osc2 = ctx.createOscillator(), sub = ctx.createOscillator(), g1 = ctx.createGain(), g2 = ctx.createGain(), gs = ctx.createGain();
+    const filter = ctx.createBiquadFilter(), amp = ctx.createGain();
+    const noise = ctx.createBufferSource(), gn = ctx.createGain(), lfo = ctx.createOscillator(), lg = ctx.createGain();
+    osc.type = e.wave; osc.frequency.value = freq;
+    osc2.type = e.wave2; osc2.frequency.value = freq; osc2.detune.value = e.detune;
+    sub.type = 'sine'; sub.frequency.value = freq / 2;
+    const mg = mixGains(e); g1.gain.value = mg[0]; g2.gain.value = mg[1]; gs.gain.value = mg[2];
+    mod.frequency.value = freq * e.fmRatio; modGain.gain.value = e.fmDepth;
+    mod.connect(modGain); modGain.connect(osc.frequency);
+    noise.buffer = noiseBuf; noise.loop = true; gn.gain.value = e.noise * 0.9; noise.connect(gn); gn.connect(filter);
+    lfo.frequency.value = e.wobbleRate; lg.gain.value = e.wobble * 700; lfo.connect(lg); lg.connect(osc.detune); lg.connect(osc2.detune); lg.connect(sub.detune);
+    filter.type = 'lowpass'; filter.frequency.value = e.cutoff; filter.Q.value = e.q;
+    amp.gain.setValueAtTime(0, t);
+    amp.gain.linearRampToValueAtTime(0.25, t + e.attack);
+    amp.gain.setTargetAtTime(0.25 * e.sustain, t + e.attack, Math.max(0.01, e.decay / 3));
+    if (e.fEnv > 0.05) {
+      const peak = Math.min(20000, e.cutoff * Math.pow(2, e.fEnv));
+      filter.frequency.setValueAtTime(e.cutoff, t);
+      filter.frequency.linearRampToValueAtTime(peak, t + e.attack + 0.005);
+      filter.frequency.setTargetAtTime(e.cutoff, t + e.attack + 0.005, e.fDecay / 3);
+    }
+    if (Math.abs(e.sweep) > 0.02) {                               // 音程すべり: 高い所から落ちる(−)/低い所から上がる(+)
+      const st = Math.pow(2, -e.sweep), T = e.sweepTime;
+      [[osc, freq], [osc2, freq], [sub, freq / 2], [mod, freq * e.fmRatio]].forEach(([o, f]) => {
+        o.frequency.setValueAtTime(Math.min(20000, f * st), t); o.frequency.exponentialRampToValueAtTime(f, t + T);
+      });
+    }
+    osc.connect(g1); osc2.connect(g2); sub.connect(gs); g1.connect(filter); g2.connect(filter); gs.connect(filter);
+    filter.connect(amp); amp.connect(out);
+    const off = Math.random() * 1.5;
+    [osc, osc2, sub, mod, lfo].forEach((o) => o.start(t)); noise.start(t, off);
+    voices.set(id, { osc, osc2, sub, g1, g2, gs, mod, modGain, filter, amp, gn, lfo, lg, noise, freq, midi });
+    keyEl(id, true);
+  }
+  function noteOff(id) {
+    const v = voices.get(id);
+    if (!v) return;
+    voices.delete(id);
+    const t = ctx.currentTime, rel = E().release;
+    v.amp.gain.cancelScheduledValues(t);
+    v.amp.gain.setValueAtTime(v.amp.gain.value, t);
+    v.amp.gain.linearRampToValueAtTime(0, t + rel);
+    [v.osc, v.osc2, v.sub, v.mod, v.lfo, v.noise].forEach((o) => { try { o.stop(t + rel + 0.05); } catch (e) { /* もう止まっている */ } });
+    keyEl(id, false);
+  }
+  function click() {                                              // ロックの「カチッ」
+    if (!ctx) return;
+    const t = ctx.currentTime, o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = 'square'; o.frequency.value = 1800; g.gain.setValueAtTime(0.06, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.03);
+    o.connect(g); g.connect(ctx.destination); o.start(t); o.stop(t + 0.04);
+  }
+
+  // ---- ミッション音の入り切り ----
+  function fire(name) {
+    const pr = PRE[name]; if (!pr || ACT !== name || !pr.pulse) return;
+    const q = pr.pulse, go = (delayMs) => setTimeout(() => {
+      if (ACT !== name) return;
+      noteOn('v', q.note); events.push({ type: name, t: performance.now() / 1000 });
+      setTimeout(() => noteOff('v'), q.len * 1000);
+    }, delayMs);
+    go(0); if (q.double) go(160);
+  }
+  function stopPreset() {
+    clearInterval(pulseTimer); noteOff('d'); noteOff('v');
+    ACT = null; LOCKED = false; applyGlobal(); syncBtns();
+  }
+  function activate(name) {
+    if (ACT) stopPreset();
+    ensureAudio(); ACT = name; LOCKED = false; applyGlobal();
+    const pr = PRE[name];
+    if (pr.drone) { noteOn('d', pr.drone); events.push({ type: name, t: performance.now() / 1000 }); }
+    if (pr.pulse) { fire(name); pulseTimer = setInterval(() => fire(name), pr.pulse.every * 1000); }
+    syncBtns();
+  }
+  function syncBtns() {
+    const tg = $('mTog'); tg.classList.toggle('act', !!ACT); if (ACT) tg.style.setProperty('--k', PRE[ACT].col);
+    document.querySelectorAll('.pbtn').forEach((b) => { b.classList.toggle('on', ACT === b.dataset.p); b.classList.toggle('lk', ACT === b.dataset.p && LOCKED); });
+  }
+  const hideMp = () => { $('mp').classList.add('hide'); $('mTog').classList.remove('open'); };
+  hideMp();
+  $('mTog').addEventListener('click', () => { const o = $('mp').classList.toggle('hide'); $('mTog').classList.toggle('open', !o); });
+  document.querySelectorAll('.pbtn').forEach((b) => {
+    const name = b.dataset.p;
+    b.addEventListener('pointerdown', (e) => {
+      e.preventDefault(); b.setPointerCapture(e.pointerId); ensureAudio();
+      if (ACT === name && LOCKED) { stopPreset(); click(); hideMp(); return; }       // ロック中にさわると解除
+      activate(name); pressing = name;
+      clearTimeout(lockTimer);
+      lockTimer = setTimeout(() => { if (ACT === name && pressing === name) { LOCKED = true; click(); syncBtns(); } }, 600);
+    });
+    const release = () => { clearTimeout(lockTimer); if (pressing === name) { pressing = null; if (!LOCKED && ACT === name) stopPreset(); hideMp(); } };
+    b.addEventListener('pointerup', release); b.addEventListener('pointercancel', release);
+    b.addEventListener('contextmenu', (e) => e.preventDefault());
+  });
+
+  // ---- 鍵盤(2オクターブ) ----
+  let base = 48;
+  const PC = 'zsxdcvgbhnjmq2w3er5t6y7u';
+  const WHITE = [0, 2, 4, 5, 7, 9, 11];
+  function buildKeys() {
+    const box = $('kb'); box.innerHTML = '';
+    const ww = 100 / 14; let wi = 0;
+    for (let i = 0; i < 24; i++) {
+      const n = base + i, isW = WHITE.includes(i % 12);
+      const k = document.createElement('div');
+      k.className = isW ? 'wk' : 'bk'; k.dataset.note = n;
+      if (isW) { k.style.left = (wi * ww) + '%'; k.style.width = ww + '%'; wi++; }
+      else { k.style.left = (wi * ww - ww * 0.3) + '%'; k.style.width = (ww * 0.6) + '%'; }
+      if (isW) k.innerHTML = '<span>' + PC[i].toUpperCase() + '</span>';
+      box.appendChild(k);
+    }
+    $('octl').textContent = 'OCT C' + (base / 12 - 1);
+  }
+  function keyEl(id, on) {
+    if (typeof id !== 'number') return;
+    const k = document.querySelector('[data-note="' + id + '"]'); if (k) k.classList.toggle('dn', on);
+  }
+  const pointerNote = new Map();
+  $('kb').addEventListener('pointerdown', (e) => {
+    const k = e.target.closest('[data-note]'); if (!k) return;
+    e.preventDefault(); $('kb').setPointerCapture(e.pointerId);
+    pointerNote.set(e.pointerId, +k.dataset.note); noteOn(+k.dataset.note);
+  });
+  $('kb').addEventListener('pointermove', (e) => {
+    if (!pointerNote.has(e.pointerId)) return;
+    const el = document.elementFromPoint(e.clientX, e.clientY), k = el && el.closest('[data-note]'); if (!k) return;
+    const n = +k.dataset.note, old = pointerNote.get(e.pointerId);
+    if (n !== old) { noteOff(old); pointerNote.set(e.pointerId, n); noteOn(n); }
+  });
+  const kup = (e) => { if (pointerNote.has(e.pointerId)) { noteOff(pointerNote.get(e.pointerId)); pointerNote.delete(e.pointerId); } };
+  $('kb').addEventListener('pointerup', kup); $('kb').addEventListener('pointercancel', kup);
+  const held = new Map();
+  window.addEventListener('keydown', (e) => {
+    if (e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
+    const i = PC.indexOf(e.key.toLowerCase()); if (i < 0) return;
+    held.set(e.key.toLowerCase(), base + i); noteOn(base + i);
+  });
+  window.addEventListener('keyup', (e) => { const k = e.key.toLowerCase(); if (held.has(k)) { noteOff(held.get(k)); held.delete(k); } });
+  window.addEventListener('blur', () => { for (const n of [...voices.keys()]) if (typeof n === 'number') noteOff(n); held.clear(); if (ACT && !LOCKED) stopPreset(); });
+  const shift = (d) => { for (const n of [...voices.keys()]) if (typeof n === 'number') noteOff(n); base = Math.min(84, Math.max(24, base + d)); buildKeys(); };
+  $('octdn').onclick = () => shift(-12); $('octup').onclick = () => shift(12);
+
+  // ---- つまみ・レバー・スイッチ ----
+  const toS = (v, min, max, log) => log ? Math.log(v / min) / Math.log(max / min) : (v - min) / (max - min);
+  const fromS = (s, min, max, log) => log ? min * Math.pow(max / min, s) : min + s * (max - min);
+  const f1 = (n, u) => (v) => v.toFixed(n) + u;
+  const ctlDefs = {
+    g1: [['cutoff', 'CUTOFF', '明るさ', 80, 12000, 1, true, (v) => Math.round(v) + 'Hz'], ['q', 'RESO', 'クセ', 0.1, 25, 0.1, false, f1(1, '')], ['fmDepth', 'WARP FM', 'ワープの強さ', 0, 2000, 1, false, (v) => Math.round(v)], ['fmRatio', 'FM RATIO', '比率', 0.5, 8, 0.5, false, (v) => '×' + v], ['fEnv', 'F-ENV', '押した瞬間の開き', 0, 6, 0.1, false, (v) => v < 0.05 ? 'OFF' : '+' + v.toFixed(1)], ['fDecay', 'F-DEC', '閉じる時間', 0.02, 3, 0.01, true, f1(2, 's')]],
+    g2: [['osc2', 'OSC2 MIX', '2つ目の量', 0, 1, 0.01, false, (v) => v < 0.02 ? 'OFF' : Math.round(v * 100) + '%'], ['detune', 'DETUNE', 'ずらし', 0, 50, 0.5, false, f1(1, 'ct')], ['sub', 'SUB', '1オクターブ下', 0, 1, 0.01, false, (v) => v < 0.02 ? 'OFF' : Math.round(v * 100) + '%']],
+    g3: [['sweep', 'PITCH SWP', '音程すべり', -3, 3, 0.05, false, (v) => Math.abs(v) < 0.05 ? 'OFF' : (v > 0 ? '↑' : '↓') + Math.abs(v).toFixed(1) + 'oct'], ['noise', 'NOISE', 'ノイズ', 0, 1, 0.01, false, (v) => v < 0.02 ? 'OFF' : Math.round(v * 100) + '%'], ['wobble', 'WOBBLE', 'うねり', 0, 1, 0.01, false, (v) => v < 0.02 ? 'OFF' : Math.round(v * 100) + '%']],
+    g4: [['delayTime', 'ECHO TIME', '間隔', 0.05, 1.2, 0.01, false, f1(2, 's')], ['feedback', 'ECHO FDBK', 'くり返し', 0, 0.9, 0.01, false, (v) => Math.round(v * 100) + '%'], ['mix', 'ECHO MIX', '量', 0, 1, 0.01, false, (v) => Math.round(v * 100) + '%']],
+    g5: [['attack', 'ATK', '立ち上がり', 0.001, 2, 0.001, true, f1(2, 's')], ['decay', 'DEC', '減っていく', 0.01, 3, 0.01, true, f1(2, 's')], ['sustain', 'SUS', '押している間', 0, 1, 0.01, false, (v) => Math.round(v * 100) + '%'], ['release', 'REL', '余韻', 0.01, 4, 0.01, true, f1(2, 's')]],
+  };
+  const setters = {};
+  function drag(el, key, min, max, log, step, render) {
+    let sy = 0, ss = 0, on = false;
+    el.addEventListener('pointerdown', (e) => { e.preventDefault(); el.setPointerCapture(e.pointerId); on = true; sy = e.clientY; ss = toS(p[key], min, max, log); });
+    el.addEventListener('pointermove', (e) => {
+      if (!on) return;
+      const s = Math.max(0, Math.min(1, ss + (sy - e.clientY) / 150));
+      let v = fromS(s, min, max, log); if (!log) v = Math.round(v / step) * step; v = Math.max(min, Math.min(max, v));
+      p[key] = v; render(); applyGlobal();
+    });
+    const up = () => { on = false; }; el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
+    el.addEventListener('dblclick', () => { p[key] = DEFAULTS[key]; render(); applyGlobal(); });
+  }
+  function buildKnobs() {
+    for (const g in ctlDefs) {
+      const box = $(g);
+      for (const [key, label, jp, min, max, step, log, fmt] of ctlDefs[g]) {
+        const el = document.createElement('div'); el.className = 'kn';
+        const lever = g === 'g5';
+        el.innerHTML = lever
+          ? '<div class="lv sm"><div class="tr"></div><div class="tk"></div><div class="hd"></div></div><div class="kl">' + label + '<small>' + jp + '</small></div><output></output>'
+          : '<div class="dial"><i></i></div><div class="kl">' + label + '<small>' + jp + '</small></div><output></output>';
+        const o = el.querySelector('output');
+        const render = () => {
+          const s = toS(p[key], min, max, log); o.textContent = fmt(p[key]);
+          if (lever) el.querySelector('.hd').style.bottom = (s * 100) + '%'; else el.querySelector('.dial').style.setProperty('--r', (-135 + 270 * s) + 'deg');
+        };
+        render(); setters[key] = render; drag(el, key, min, max, log, step, render); box.appendChild(el);
+      }
+    }
+    // 音量(小さなつまみ)
+    const vw = $('volw');
+    vw.innerHTML = '<div class="dial"><i></i></div><div class="kl">VOL<small>音量</small></div><output></output>';
+    const o = vw.querySelector('output'), render = () => { vw.querySelector('.dial').style.setProperty('--r', (-135 + 270 * p.volume) + 'deg'); o.textContent = Math.round(p.volume * 100) + '%'; };
+    render(); setters.volume = render; drag(vw, 'volume', 0, 1, false, 0.01, render);
+    // 波のかたちのスイッチ
+    const WV = [['sine', 'SIN'], ['triangle', 'TRI'], ['sawtooth', 'SAW'], ['square', 'SQR']];
+    [['tg1', 'wave', 'OSC1'], ['tg2', 'wave2', 'OSC2']].forEach(([id, key, name]) => {
+      const box = $(id); box.innerHTML = '<span class="t">' + name + '</span>';
+      WV.forEach(([w, l]) => {
+        const b = document.createElement('button'); b.className = 'tg' + (p[key] === w ? ' on' : ''); b.innerHTML = '<i></i>' + l;
+        b.onclick = () => { p[key] = w; box.querySelectorAll('.tg').forEach((x) => x.classList.toggle('on', x === b)); applyGlobal(); };
+        box.appendChild(b);
+      });
+    });
+  }
+
+  // ---- 窓(操縦席から見える景色) ----
+  const vc = $('view'), vg = vc.getContext('2d');
+  let W = 300, H = 260;
+  function fit() { const d = Math.min(window.devicePixelRatio || 1, 2); W = vc.clientWidth; H = vc.clientHeight; vc.width = W * d; vc.height = H * d; vg.setTransform(d, 0, 0, d, 0, 0); }
+  window.addEventListener('resize', fit);
+  const stars = Array.from({ length: 150 }, () => ({ x: Math.random() * 2 - 1, y: Math.random() * 2 - 1, z: Math.random() * 0.95 + 0.05 }));
+  const wf = (w, x) => { const f = x - Math.floor(x); return w === 'sine' ? Math.sin(2 * Math.PI * f) : w === 'triangle' ? (f < 0.5 ? 4 * f - 1 : 3 - 4 * f) : w === 'sawtooth' ? 2 * f - 1 : (f < 0.5 ? 1 : -1); };
+  let phase = 0, phase2 = 0, spd = 0.4, lvl = 0, pitchN = 0.3, last = performance.now() / 1000;
+  const tbuf = new Uint8Array(2048), fbuf = new Uint8Array(1024);
+
+  function planet(cx, cy, R, wave, cyc, ph, hue, haze, rim, alpha) {
+    const N = 44;
+    vg.save(); vg.globalAlpha = alpha;
+    vg.beginPath(); vg.arc(cx, cy, R, 0, 7); vg.clip();
+    vg.translate(cx, cy); vg.rotate(-0.35);
+    for (let i = 0; i < N; i++) {                                 // 縞模様 = 波のかたちそのもの
+      const y0 = -R + i * 2 * R / N, tt = (y0 + R / N) / R, v = wf(wave, tt * 0.5 * cyc + ph);
+      vg.fillStyle = 'hsl(' + (hue + v * 14) + ',' + (45 + (1 - haze) * 30) + '%,' + (50 + v * 18) + '%)';
+      vg.fillRect(-R - 2, y0, 2 * R + 4, 2 * R / N + 1);
+    }
+    vg.rotate(0.35); vg.translate(-cx, -cy);
+    const sh = vg.createRadialGradient(cx - R * 0.4, cy - R * 0.4, R * 0.2, cx, cy, R);
+    sh.addColorStop(0, 'rgba(0,0,0,0)'); sh.addColorStop(1, 'rgba(0,0,0,.78)'); vg.fillStyle = sh; vg.fillRect(cx - R, cy - R, 2 * R, 2 * R);
+    vg.fillStyle = 'rgba(10,16,40,' + (haze * 0.55) + ')'; vg.fillRect(cx - R, cy - R, 2 * R, 2 * R);
+    vg.restore();
+    vg.save(); vg.globalAlpha = alpha; vg.strokeStyle = 'hsla(' + (hue + 160) + ',100%,70%,' + rim + ')'; vg.shadowColor = 'hsl(' + (hue + 160) + ',100%,70%)'; vg.shadowBlur = 18 * rim;
+    vg.lineWidth = 1.5; vg.beginPath(); vg.arc(cx, cy, R, 0, 7); vg.stroke(); vg.restore();
+  }
+
+  function frame() {
+    const now = performance.now() / 1000, dt = Math.min(0.05, now - last); last = now;
+    const e = E();
+    if (analyser) {
+      analyser.getByteTimeDomainData(tbuf); let s = 0; for (let i = 0; i < 1024; i++) { const x = (tbuf[i] - 128) / 128; s += x * x; }
+      lvl += (Math.min(1, Math.sqrt(s / 1024) * 3.2) - lvl) * 0.25;
+    } else lvl *= 0.9;
+    let pm = 0, pc = 0; for (const [id, v] of voices) { if (typeof id === 'number') { pm += v.midi; pc++; } }
+    pitchN += ((pc ? Math.max(0, Math.min(1, (pm / pc - 30) / 60)) : 0.25) - pitchN) * 0.1;
+    const warpOn = ACT === 'warp', thrOn = ACT === 'thrust';
+    const goal = 0.35 + lvl * 1.2 + (warpOn ? 2.6 : 0) + (thrOn ? 1.2 : 0) + (ACT === 'laser' ? 0.3 : 0);
+    spd += (goal - spd) * 0.06;
+
+    vg.save();
+    if (thrOn) vg.translate((Math.random() - 0.5) * 3.2, (Math.random() - 0.5) * 3.2);
+    vg.fillStyle = '#010208'; vg.fillRect(-4, -4, W + 8, H + 8);
+    const cx = W / 2, cy = H / 2;
+    // 星(中心から手前へ流れる)
+    for (const s of stars) {
+      const pz = s.z + spd * dt * 0.3 * (1.5 + spd * 2);
+      s.z -= spd * dt * 0.3;
+      const k = H * 0.35, x = cx + s.x / s.z * k, y = cy + s.y / s.z * k;
+      if (s.z < 0.03 || x < -20 || x > W + 20 || y < -20 || y > H + 20) { s.x = Math.random() * 2 - 1; s.y = Math.random() * 2 - 1; s.z = 1; continue; }
+      const x0 = cx + s.x / pz * k, y0 = cy + s.y / pz * k, a = Math.min(1, (1 - s.z) * 1.3 + 0.1);
+      vg.strokeStyle = warpOn ? 'rgba(130,240,255,' + a + ')' : 'rgba(220,235,255,' + a + ')'; vg.lineWidth = 0.6 + (1 - s.z) * 1.2;
+      vg.beginPath(); vg.moveTo(x0, y0); vg.lineTo(x, y); vg.stroke();
+    }
+    // 惑星・衛星
+    const cn = Math.log(e.cutoff / 80) / Math.log(12000 / 80), hue = 20 + cn * 170, haze = 1 - cn, rim = Math.min(1, e.q / 25) * 0.9 + 0.08;
+    phase += dt * (0.05 + pitchN * 0.5 + lvl * 0.2); phase2 += dt * (0.05 + pitchN * 0.35);
+    const R = H * 0.2 * (1 + 0.06 * Math.sin(now * 0.3)) + lvl * H * 0.025;
+    let px = W * 0.64, py = H * 0.46;
+    if (warpOn) { px += Math.sin(now * 38) * (e.fmDepth / 400) * 1.6; py += Math.cos(now * 31) * (e.fmDepth / 400) * 1.2; }
+    if (e.osc2 > 0.02) planet(W * 0.24, H * 0.3, R * 0.42, e.wave2, 2.5, phase2, hue + 70, haze, rim * 0.6, 0.45 + e.osc2 * 0.5);
+    const moons = e.mix < 0.03 ? [] : Array.from({ length: 1 + Math.floor(e.feedback * 4) }, (_, i) => {
+      const a = now * (0.7 - i * 0.1) + i * 2.1, rx = R * (1.35 + e.delayTime * 0.9 * (i + 1) * 0.6), ry = rx * 0.28;
+      return { x: px + Math.cos(a) * rx, y: py + Math.sin(a) * ry - Math.cos(a) * rx * 0.12, back: Math.sin(a) < 0, r: R * 0.09 * (1 - i * 0.1), al: (0.3 + e.mix * 0.7) * (1 - i / 7) };
+    });
+    const dm = (m) => { vg.fillStyle = 'rgba(210,225,245,' + m.al + ')'; vg.beginPath(); vg.arc(m.x, m.y, m.r, 0, 7); vg.fill(); };
+    moons.filter((m) => m.back).forEach(dm);
+    planet(px, py, R, e.wave, 2.5, phase, hue, haze, rim, 1);
+    moons.filter((m) => !m.back).forEach(dm);
+
+    // ミッション音の演出
+    if (warpOn) {
+      for (let j = 0; j < 4; j++) { const pr = (now * 0.8 + j / 4) % 1; vg.strokeStyle = 'rgba(39,232,255,' + (1 - pr) * 0.4 + ')'; vg.lineWidth = 2; vg.beginPath(); vg.arc(cx, cy, pr * W * 0.7, 0, 7); vg.stroke(); }
+    }
+    for (let i = events.length - 1; i >= 0; i--) {
+      const ev = events[i], a = now - ev.t;
+      if (a > 2.4) { events.splice(i, 1); continue; }
+      if (ev.type === 'laser' && a < 0.35) {
+        const pr = a / 0.18, sx = ev.t % 2 > 1 ? W * 0.12 : W * 0.88, tx = px + Math.sin(ev.t * 9) * R * 0.5, ty = py + Math.cos(ev.t * 7) * R * 0.5;
+        const h = Math.min(1, pr), tl = Math.max(0, pr - 0.35);
+        vg.strokeStyle = '#ff2d8a'; vg.shadowColor = '#ff2d8a'; vg.shadowBlur = 14; vg.lineWidth = 3;
+        vg.beginPath(); vg.moveTo(sx + (tx - sx) * tl, H + (ty - H) * tl); vg.lineTo(sx + (tx - sx) * h, H + (ty - H) * h); vg.stroke(); vg.shadowBlur = 0;
+        if (pr >= 1) { vg.fillStyle = 'rgba(255,200,230,' + (1 - (pr - 1) / 0.9) + ')'; vg.beginPath(); vg.arc(tx, ty, 6 + (pr - 1) * 40, 0, 7); vg.fill(); }
+      }
+      if (ev.type === 'sonar') { for (let j = 0; j < 1 + Math.floor(e.feedback * 3); j++) { const aa = a - j * e.delayTime; if (aa < 0 || aa > 1.8) continue; vg.strokeStyle = 'rgba(155,208,255,' + (1 - aa / 1.8) * 0.6 + ')'; vg.lineWidth = 1.5; vg.beginPath(); vg.arc(px, py, aa * W * 0.45, 0, 7); vg.stroke(); } }
+    }
+    if (thrOn) { const g = vg.createLinearGradient(0, H, 0, H * 0.55); g.addColorStop(0, 'rgba(255,150,30,' + (0.35 + lvl * 0.4) + ')'); g.addColorStop(1, 'rgba(255,150,30,0)'); vg.fillStyle = g; vg.fillRect(0, H * 0.55, W, H * 0.45); }
+    if (ACT === 'alert') { vg.fillStyle = 'rgba(255,40,40,' + (Math.sin(now * 10) > 0 ? 0.28 : 0.06) + ')'; vg.fillRect(0, 0, W, H); vg.strokeStyle = '#ff2d2d'; vg.lineWidth = 4; vg.strokeRect(2, 2, W - 4, H - 4); }
+    if (ACT === 'comms') {
+      vg.fillStyle = 'rgba(45,255,155,.07)'; vg.fillRect(0, 0, W, H); const sy = (now * 80) % H; vg.fillStyle = 'rgba(45,255,155,.25)'; vg.fillRect(0, sy, W, 2);
+      if (Math.sin(now * 6) > -0.3) { vg.font = '700 11px Orbitron,monospace'; vg.fillStyle = '#2dff9b'; vg.textAlign = 'center'; vg.fillText('INCOMING TRANSMISSION', cx, H * 0.14); vg.textAlign = 'left'; }
+    }
+    // HUD
+    vg.font = '500 9px Orbitron,monospace'; vg.fillStyle = '#27e8ff';
+    vg.fillText('FWD CAM 01   SPD ' + (0.1 + (spd / 4) * 0.89).toFixed(2) + 'c   HDG 214.7', 8, 14);
+    if (ACT) { vg.textAlign = 'right'; vg.fillStyle = PRE[ACT].col; vg.fillText(PRE[ACT].code + (LOCKED ? '  ▮LOCK' : '  HOLD'), W - 8, 14); vg.textAlign = 'left'; }
+    vg.strokeStyle = 'rgba(39,232,255,.22)'; vg.lineWidth = 1; vg.beginPath(); vg.moveTo(cx - 16, cy); vg.lineTo(cx - 5, cy); vg.moveTo(cx + 5, cy); vg.lineTo(cx + 16, cy); vg.moveTo(cx, cy - 16); vg.lineTo(cx, cy - 5); vg.moveTo(cx, cy + 5); vg.lineTo(cx, cy + 16); vg.stroke();
+    vg.restore();
+
+    // 小さな計器(波形・スペクトル・ランプ・バー)
+    drawScope(); drawSpec();
+    $('lPw').classList.toggle('on', !!ctx && ctx.state === 'running'); $('lVo').classList.toggle('on', voices.size > 0);
+    $('lEc').classList.toggle('on', e.mix > 0.05); $('lOv').classList.toggle('on', lvl > 0.8); $('lAc').classList.toggle('on', !!ACT);
+    $('tT').textContent = Math.round(300 + lvl * 180 + (thrOn ? 60 : 0)) + 'K';
+    requestAnimationFrame(frame);
+  }
+  const sc = $('scope'), sg = sc.getContext('2d'), sp = $('spec'), spg = sp.getContext('2d');
+  function size(c) { const d = Math.min(window.devicePixelRatio || 1, 2), w = c.clientWidth * d, h = c.clientHeight * d; if (c.width !== w || c.height !== h) { c.width = w; c.height = h; } return d; }
+  function drawScope() {
+    const d = size(sc); sg.clearRect(0, 0, sc.width, sc.height);
+    sg.strokeStyle = '#2dff9b'; sg.lineWidth = 1.4 * d; sg.beginPath();
+    let start = 0; const n = 512;
+    if (analyser) for (let i = 1; i < n; i++) if (tbuf[i - 1] < 128 && tbuf[i] >= 128) { start = i; break; }
+    for (let i = 0; i < n; i++) { const v = analyser ? tbuf[start + i] : 128, x = i / (n - 1) * sc.width, y = (1 - v / 255) * sc.height; i ? sg.lineTo(x, y) : sg.moveTo(x, y); }
+    sg.stroke();
+  }
+  function drawSpec() {
+    const d = size(sp); spg.clearRect(0, 0, sp.width, sp.height);
+    if (analyser) analyser.getByteFrequencyData(fbuf);
+    const B = 56, bw = sp.width / B;
+    for (let i = 0; i < B; i++) {
+      const v = analyser ? fbuf[Math.floor(Math.pow(i / B, 2) * 360) + 1] / 255 : 0;
+      spg.fillStyle = i % 7 === 0 ? '#ff2d8a' : '#27e8ff'; spg.fillRect(i * bw + d, sp.height * (1 - v), bw - 2 * d, sp.height * v);
+    }
+  }
+
+  buildKeys(); buildKnobs(); fit(); requestAnimationFrame(frame);
+  window.__ss = { p, E, get ACT() { return ACT; }, get LOCKED() { return LOCKED; }, voices, events, activate, stopPreset };
+})();
