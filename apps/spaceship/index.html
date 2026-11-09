@@ -61,6 +61,8 @@
   .sqgrid { flex:1; display:grid; grid-template-columns:repeat(16,1fr); grid-template-rows:repeat(10,24px); gap:2px; touch-action:none; }
   .sqc { background:#0a141c; border:1px solid #16303c; } .sqc.b4 { border-left:2px solid #2a5a6a; } .sqc.on { background:var(--o); border-color:var(--o); box-shadow:0 0 6px var(--o); } .sqc.ph { outline:1px solid #fff; outline-offset:-1px; background:#16303c; } .sqc.on.ph { background:#fff; }
   .sqbar { margin-top:8px; }
+  #sqOpt select { font:11px ui-monospace,monospace; color:var(--c); background:#08121a; border:1px solid #3a6070; padding:6px 8px; border-radius:0; } #sqOpt.dim { opacity:.4; } #sqOpt select:disabled { color:var(--mu); }
+  .sqlab { grid-template-rows:none; }
   .btns { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
   .pbtn { position:relative; font:inherit; color:var(--k); border:1px solid var(--k); background:linear-gradient(#10202b,#08121a); padding:7px 2px 6px; min-height:74px; cursor:pointer; text-align:center; touch-action:none;
     box-shadow:inset 0 0 12px #0008; clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px); display:flex; flex-direction:column; align-items:center; gap:1px; }
@@ -150,7 +152,8 @@
       <canvas class="scr" id="spec"></canvas>
       <div class="tele">CORE TEMP <em id="tT">300K</em> &nbsp; SHLD <em>98%</em> &nbsp; LNK <em>OK</em></div>
     </section>
-    <section class="box seq"><details open><summary>SEQUENCE<b id="sqSrc" style="margin-left:8px"></b><small>ミッション音を押すと、その音の並びが出る。マスを押す・なぞるで直せる(AUTO を SEQ にすると、自分の並びが鳴る)</small></summary>
+    <section class="box seq"><details open><summary>SEQUENCE<b id="sqSrc" style="margin-left:8px"></b><small>ミッション音を押すと、その音の並びが出る。マスを押す・なぞるで直せる。音階・音域・長さは自分のパターンで選べる</small></summary>
+      <div id="sqOpt" style="display:flex;gap:6px;flex-wrap:wrap;margin:0 0 8px"><select id="sqScale" aria-label="音階"></select><select id="sqOct" aria-label="音域"></select><select id="sqLen" aria-label="長さ"></select></div>
       <div class="sqw"><div class="sqlab" id="sqLab"></div><div class="sqgrid" id="sqGrid"></div></div>
       <div class="sqbar" style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" id="sqClr" class="tgb" style="margin-left:0;width:auto;padding:8px 14px">🗑 ぜんぶ けす</button><button type="button" id="sqRst" class="tgb" style="margin-left:0;width:auto;padding:8px 14px">↩ もとに もどす</button></div>
     </details></section>
