@@ -372,6 +372,7 @@
   lfoView();
   $('play').onclick = play;
   $('stop').onclick = stop;
+  $('play2').onclick = play; $('stop2').onclick = stop;
   $('save').onclick = save;
   $('reshuffle').onclick = () => { reseed(); changed(); };
   $('random').onclick = () => {
