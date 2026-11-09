@@ -90,7 +90,8 @@
   .spd { display:flex; gap:10px 16px; align-items:center; flex-wrap:wrap; } .seq .spd .grid { flex:0 0 auto; } #sqDd { flex:1 1 150px; min-width:150px; display:flex; flex-direction:column; gap:6px; } #sqDd .dd { flex:none; }
   #g4 .dial:after { background:conic-gradient(from 20deg,#667,#dde 12%,#889 26%,#eef 40%,#667 55%,#ccd 70%,#778 85%,#667); box-shadow:0 3px 5px #000c, inset 0 0 0 1px #0a1218, inset 0 0 0 2px #ffffff55; } #g4 .dial i { background:#27e8ff; box-shadow:0 0 0 1px #04141c, 0 0 6px #27e8ff; }
   .plate { position:relative; padding:6px 3px 2px; border:1px solid #3a6070; border-radius:3px; box-shadow:0 2px 8px #000c, inset 0 1px 0 #ffffff30, inset 0 -1px 0 #0008; background:repeating-linear-gradient(90deg,#ffffff0a 0 1px,#0000 1px 3px),linear-gradient(180deg,#4a5862 0%,#2a343c 18%,#1b242b 55%,#26313a 100%); }
-  .plate .st { color:#c8e4ee; padding-left:10px; margin:2px 0 4px; } .gflow .osub.plate .grid .kn { flex-basis:48px; } .plate .sc { width:6px; height:6px; } .plate .sc:after { top:2.5px; }
+  .plate .st { display:flex; align-items:center; gap:6px; } .plate .led { width:7px; height:7px; border-radius:50%; background:#12301f; box-shadow:inset 0 0 2px #000; transition:background .15s, box-shadow .15s; } .plate .led.on { background:#2dff9b; box-shadow:0 0 6px #2dff9b, inset 0 0 2px #fff; }
+  .plate .st { color:#c8e4ee; padding-left:8px; margin:2px 0 4px; } .gflow .osub.plate .grid .kn { flex-basis:48px; } .plate .sc { width:6px; height:6px; } .plate .sc:after { top:2.5px; }
   #g3 .dial { zoom:.92; } #g3 .dial:after { background:repeating-radial-gradient(circle at 50% 50%,#0b1a16 0 3px,#1f6a48 3px 4px); box-shadow:0 2px 4px #000, inset 0 0 0 2px #05080b, inset 0 0 0 3px #2dff9b88; }
   .st { margin:6px 0 2px; font:500 7px Orbitron,monospace; letter-spacing:.14em; color:var(--mu); }
   /* ARP SPANのボタン: 金属のキー + 琥珀のLED */
@@ -205,7 +206,7 @@
         <div class="osubs"><div class="osub"><p class="st">OSC2</p><div class="grid" id="g2"></div></div>
         <div class="osub"><p class="st">FM</p><div class="grid" id="g7"></div></div>
         <div class="osbr"></div><div class="osub sm"><p class="st" aria-hidden="true" style="visibility:hidden">.</p><div class="grid" id="g3"></div></div>
-        <div class="osub sm plate"><i class="sc a"></i><i class="sc b"></i><i class="sc c"></i><i class="sc d"></i><p class="st">ECHO</p><div class="grid" id="g4"></div></div></div></div>
+        <div class="osub sm plate"><i class="sc a"></i><i class="sc b"></i><i class="sc c"></i><i class="sc d"></i><p class="st"><i class="led" id="ecLed"></i>ECHO</p><div class="grid" id="g4"></div></div></div></div>
       <div class="grp mpanel"><p class="gt"><i class="led"></i>FILTER<span>LOW PASS</span></p><i class="sc a"></i><i class="sc b"></i><i class="sc c"></i><i class="sc d"></i><div class="grid" id="g1"></div></div>
       <div class="grp"><p class="gt">ENVELOPE</p><div class="grid" id="g5"></div></div>
       </div>
