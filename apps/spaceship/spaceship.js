@@ -476,9 +476,12 @@
     const goal = 0.35 + lvl * 1.2 + (warpOn ? 2.6 : 0) + (thrOn ? 1.2 : 0) + (ACT === 'laser' ? 0.3 : 0);
     spd += (goal - spd) * 0.06;
 
+    // カットオフ: 画面全体の色味(低い=暗い赤橙、高い=明るい青緑)
+    const open = e.fEnv > 0.05 ? e.fEnv * 0.07 * Math.exp(-(now - onsetT) / Math.max(0.02, e.fDecay)) : 0;     // F-ENV・F-DEC: 鳴らした瞬間、もやが晴れて閉じていく
+    const cn = Math.max(0, Math.min(1, Math.log(e.cutoff / 80) / Math.log(12000 / 80) + open)), hue = 20 + cn * 170, haze = 1 - cn, rim = Math.min(1, e.q / 25) * 0.9 + 0.08;
     vg.save();
     if (thrOn) vg.translate((Math.random() - 0.5) * 3.2, (Math.random() - 0.5) * 3.2);
-    vg.fillStyle = '#010208'; vg.fillRect(-4, -4, W + 8, H + 8);
+    vg.fillStyle = 'hsl(' + hue + ',55%,' + (2 + cn * 3) + '%)'; vg.fillRect(-4, -4, W + 8, H + 8);
     const cx = W / 2, cy = H / 2;
     // 星(中心から手前へ流れる)
     for (const s of stars) {
@@ -487,7 +490,7 @@
       const k = H * 0.35, x = cx + s.x / s.z * k, y = cy + s.y / s.z * k;
       if (s.z < 0.03 || x < -20 || x > W + 20 || y < -20 || y > H + 20) { s.x = Math.random() * 2 - 1; s.y = Math.random() * 2 - 1; s.z = 1; continue; }
       const x0 = cx + s.x / pz * k, y0 = cy + s.y / pz * k, a = Math.min(1, (1 - s.z) * 1.3 + 0.1);
-      vg.strokeStyle = warpOn ? 'rgba(130,240,255,' + a + ')' : 'rgba(220,235,255,' + a + ')'; vg.lineWidth = 0.6 + (1 - s.z) * 1.2;
+      vg.strokeStyle = warpOn ? 'rgba(130,240,255,' + a + ')' : 'hsla(' + hue + ',70%,86%,' + a + ')'; vg.lineWidth = 0.6 + (1 - s.z) * 1.2;
       vg.beginPath(); vg.moveTo(x0, y0); vg.lineTo(x, y); vg.stroke();
     }
     if (e.noise > 0.02) {                                           // NOISE: 画面にざらつき
@@ -495,13 +498,15 @@
       for (let i = 0, n = Math.round(e.noise * 260); i < n; i++) vg.fillRect(Math.random() * W, Math.random() * H, 1.2, 1.2);
     }
     // 惑星・衛星
-    const open = e.fEnv > 0.05 ? e.fEnv * 0.07 * Math.exp(-(now - onsetT) / Math.max(0.02, e.fDecay)) : 0;     // F-ENV・F-DEC: 鳴らした瞬間、もやが晴れて閉じていく
-    const cn = Math.max(0, Math.min(1, Math.log(e.cutoff / 80) / Math.log(12000 / 80) + open)), hue = 20 + cn * 170, haze = 1 - cn, rim = Math.min(1, e.q / 25) * 0.9 + 0.08;
     phase += dt * (0.05 + pitchN * 0.5 + lvl * 0.2); phase2 += dt * (0.05 + pitchN * 0.35);
     const R = H * 0.2 * (1 + 0.06 * Math.sin(now * 0.3)) + lvl * H * 0.025;
     let px = W * 0.68, py = H * 0.42;
     if (warpOn) { px += Math.sin(now * 38) * (e.fmDepth / 400) * 1.6; py += Math.cos(now * 31) * (e.fmDepth / 400) * 1.2; }
-    if (e.osc2 > 0.02) planet(W * 0.24 + e.detune * 0.18, H * 0.3, R * 0.42, e.wave2, 2.5, phase2, hue + 70, haze, rim * 0.6, 0.45 + e.osc2 * 0.5);
+    const dOff = e.detune * 0.4;                                    // DETUNE: ずれた惑星と、元の位置の影
+    if (e.osc2 > 0.01) {                                            // OSC2 MIX: 2つ目の惑星が、量に合わせてフェードインする
+      if (dOff > 1) planet(W * 0.24, H * 0.3, R * 0.42, e.wave2, 2.5, phase2, hue + 70, haze, rim * 0.3, e.osc2 * 0.3);
+      planet(W * 0.24 + dOff, H * 0.3, R * 0.42, e.wave2, 2.5, phase2, hue + 70, haze, rim * 0.6, e.osc2 * 0.95);
+    }
     const moons = e.mix < 0.03 ? [] : Array.from({ length: 1 + Math.floor(e.feedback * 4) }, (_, i) => {
       const a = now * (0.7 - i * 0.1) + i * 2.1, rx = R * (1.35 + e.delayTime * 0.9 * (i + 1) * 0.6), ry = rx * 0.28;
       return { x: px + Math.cos(a) * rx, y: py + Math.sin(a) * ry - Math.cos(a) * rx * 0.12, back: Math.sin(a) < 0, r: R * 0.09 * (1 - i * 0.1), al: (0.3 + e.mix * 0.7) * (1 - i / 7) };
@@ -514,14 +519,12 @@
       gl.addColorStop(0, 'hsla(' + (hue + 160) + ',100%,65%,' + (envV * 0.32) + ')'); gl.addColorStop(1, 'hsla(' + (hue + 160) + ',100%,65%,0)');
       vg.fillStyle = gl; vg.fillRect(px - R * 2.2, py - R * 2.2, R * 4.4, R * 4.4);
     }
-    planet(px, py, R, e.wave, cyc, phase, hue, haze, rim, 1);
+    if (dOff > 1) planet(px, py, R, e.wave, cyc, phase, hue, haze, rim * 0.4, 0.3);   // 元の位置の影
+    planet(px + dOff, py, R, e.wave, cyc, phase, hue, haze, rim, 1);
     if (e.sub > 0.02) {                                             // SUB: 惑星の下側に重い影
       vg.save(); vg.beginPath(); vg.arc(px, py, R, 0, 7); vg.clip();
       const sg2 = vg.createLinearGradient(0, py - R * 0.1, 0, py + R); sg2.addColorStop(0, 'rgba(0,0,12,0)'); sg2.addColorStop(1, 'rgba(0,0,12,' + (e.sub * 0.85) + ')');
       vg.fillStyle = sg2; vg.fillRect(px - R, py - R, 2 * R, 2 * R); vg.restore();
-    }
-    if (e.detune > 0.5) {                                           // DETUNE: 縁の輪が2重にずれる
-      vg.strokeStyle = 'hsla(' + (hue + 160) + ',100%,70%,.55)'; vg.lineWidth = 1; vg.beginPath(); vg.arc(px + e.detune * 0.22, py - e.detune * 0.05, R, 0, 7); vg.stroke();
     }
     if (e.wobble > 0.02) {                                          // WOBBLE: 縁がうねる
       const wr = e.wobbleRate || 5; vg.strokeStyle = 'hsla(' + (hue + 160) + ',100%,75%,.8)'; vg.lineWidth = 1.2; vg.beginPath();
@@ -530,6 +533,7 @@
     }
     moons.filter((m) => !m.back).forEach(dm);
 
+    vg.fillStyle = 'hsla(' + hue + ',75%,50%,' + (0.1 + (1 - cn) * 0.1) + ')'; vg.fillRect(-4, -4, W + 8, H + 8);   // CUTOFF: 画面全体の色かぶり
     // ミッション音の演出
     if (warpOn) {
       for (let j = 0; j < 4; j++) { const pr = (now * 0.8 + j / 4) % 1; vg.strokeStyle = 'rgba(39,232,255,' + (1 - pr) * 0.4 + ')'; vg.lineWidth = 2; vg.beginPath(); vg.arc(cx, cy, pr * W * 0.7, 0, 7); vg.stroke(); }
