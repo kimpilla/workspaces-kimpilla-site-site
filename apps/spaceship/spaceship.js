@@ -458,6 +458,12 @@
         render(); setters[key] = render; drag(el, key, min, max, log, step, render); box.appendChild(el);
       }
     }
+    // PITCH・NOISE・WOBBLEの警告の蓋(押すと開く/閉じる。効果がかかっている間は、閉じても、蓋の上に ACTIVE が出る)
+    { const wb = $('wbox'), cv = $('wcov'), keys = ['sweep', 'noise', 'wobble'];
+      const mark = () => { const act = keys.some((k) => Math.abs(p[k]) >= 0.05 && !(k !== 'sweep' && p[k] < 0.02)); cv.querySelector('b').textContent = wb.classList.contains('open') ? (act ? '● ACTIVE' : 'OPEN') : (act ? '⚠ ACTIVE' : '⚠ WARNING'); };
+      cv.onclick = () => { wb.classList.toggle('open'); cv.setAttribute('aria-expanded', wb.classList.contains('open')); mark(); };
+      document.querySelectorAll('#g3 .kn').forEach((k) => k.addEventListener('pointerup', () => setTimeout(mark, 0)));
+      mark(); }
     // 音量(窓の左端の縦スライダー)
     const vs = $('vsl'), vf = vs.querySelector('.vf'), vk = vs.querySelector('.vk'), vo = vs.querySelector('output');
     const render = () => { const pc = Math.round(p.volume * 100); vf.style.height = pc + '%'; vk.style.bottom = 'calc(' + pc + '% - 4px)'; vo.textContent = pc; vs.setAttribute('aria-valuenow', pc); };
