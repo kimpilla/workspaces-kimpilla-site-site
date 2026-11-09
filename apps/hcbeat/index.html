@@ -138,6 +138,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 <p class="small" id="status"></p>
 
 <h2>並び</h2>
+<p class="small" id="clipBar"></p>
 <div class="scroll">
 <table class="blocks">
   <thead><tr><th>#</th><th>パターン</th><th>長さ</th><th>テンポ(はじめ → おわり)</th><th>回数</th><th></th></tr></thead>
@@ -577,8 +578,26 @@ function saveBlob(blob, filename, statusEl) {
     }
     return box;
   }
+  // ---- ブロックのコピー&ペースト(コピー: 中身ごと保持 / 貼る: パターンだけ上書き / 挿入: ブロックごと間に入れる) ----
+  let clip = null;
+  function pasteOver(b) {
+    if (!clip) return;
+    if (b.cust && !window.confirm('このブロックの編集内容は、貼ったもので置き換わります')) return;
+    delete b.cust; b.pat = clip.b.pat; if (clip.b.cust) b.cust = clonePat(clip.b.cust);
+    renderRows(); changed();
+  }
+  function renderClip() {
+    const bar = $('clipBar'); if (!bar) return; bar.innerHTML = '';
+    if (!clip) { bar.textContent = '各ブロックの「コピー」を押すと、そのブロックの中身を持てる。そのあと「貼る」(パターンだけ上書き)や「挿入」(そのブロックの後ろにブロックごと入れる)が出る。'; return; }
+    const t = document.createElement('span'); t.textContent = 'コピー中: ブロック' + clip.no + '「' + clip.b.pat + '」' + (clip.b.cust ? '(編集済み)' : '') + ' ';
+    bar.appendChild(t);
+    const mk = (label, fn) => { const x = document.createElement('button'); x.textContent = label; x.className = 'rowclear'; x.onclick = fn; bar.appendChild(x); };
+    mk('先頭に挿入', () => { blocks.unshift(copyBlock(clip.b)); renderRows(); changed(); });
+    mk('最後に挿入', () => { blocks.push(copyBlock(clip.b)); renderRows(); changed(); });
+    mk('コピーをやめる', () => { clip = null; renderRows(); });
+  }
   function renderRows() {
-    const tb = $('rows'); tb.innerHTML = ''; lastBlock = -1;
+    const tb = $('rows'); tb.innerHTML = ''; lastBlock = -1; renderClip();
     blocks.forEach((b, i) => {
       const tr = document.createElement('tr');
       const cell = (el, label) => { const td = document.createElement('td'); if (el) td.appendChild(el); if (label) td.dataset.label = label; tr.appendChild(td); return td; };
@@ -622,7 +641,7 @@ function saveBlob(blob, filename, statusEl) {
       cell(num(b.rep, 1, 64, (v) => { b.rep = v; changed(); }), '回数');
       const ops = cell(); ops.className = 'ops';
       const isOpen = openBlocks.has(b);
-      for (const [label, fn] of [[isOpen ? '閉じる' : '編集', () => { if (isOpen) openBlocks.delete(b); else openBlocks.add(b); renderRows(); }], ['↑', () => move(i, -1)], ['↓', () => move(i, 1)], ['複製', () => { blocks.splice(i + 1, 0, copyBlock(b)); renderRows(); changed(); }], ['×', () => { blocks.splice(i, 1); renderRows(); changed(); }]]) {
+      for (const [label, fn] of [[isOpen ? '閉じる' : '編集', () => { if (isOpen) openBlocks.delete(b); else openBlocks.add(b); renderRows(); }], ['↑', () => move(i, -1)], ['↓', () => move(i, 1)], ['複製', () => { blocks.splice(i + 1, 0, copyBlock(b)); renderRows(); changed(); }], ['コピー', () => { clip = { b: copyBlock(b), no: i + 1 }; renderRows(); }]].concat(clip ? [['貼る', () => pasteOver(b)], ['挿入', () => { blocks.splice(i + 1, 0, copyBlock(clip.b)); renderRows(); changed(); }]] : [], [['×', () => { blocks.splice(i, 1); renderRows(); changed(); }]])) {
         const bt = document.createElement('button'); bt.textContent = label; bt.onclick = fn; ops.appendChild(bt);
       }
       tb.appendChild(tr);
