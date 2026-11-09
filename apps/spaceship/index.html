@@ -85,6 +85,8 @@
   .gflow>.grp.oscg, .gflow>.frow { flex:1 1 100%; }
   .frow { display:flex; gap:8px; align-items:center; } .frow>.mpanel { flex:1 1 auto; min-width:0; }
   .rnd { flex:0 0 76px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; border:1px solid #3a6070; border-radius:3px; background:#0a121bcc; padding:8px 4px 12px; } .rnd .st { margin:0; color:#c8e4ee; }
+  .rseg { display:flex; gap:2px; width:100%; } .rseg .seg { padding:4px 0 3px; font-size:8px; letter-spacing:0; } .rundo { flex:none; width:40px; padding:4px 0 3px; font-size:13px; } .rundo:disabled { opacity:.35; cursor:default; }
+  .rnd { gap:7px; } .rnd .st { font-size:8px; }
   .rbox { position:relative; width:40px; height:40px; }
     .rbtn { width:100%; height:100%; border-radius:2px; cursor:pointer; touch-action:manipulation; border:1px solid #1a0505; background:linear-gradient(#e8382f,#b01510 60%,#8a0e0a); box-shadow:0 0 0 2px #4a5560, 0 0 0 3px #11181e, 0 2px 4px #000c, inset 0 1px 0 #ff9a90aa, inset 0 -2px 3px #0005; padding:0; } .rbtn:active { transform:translateY(1px); box-shadow:0 0 0 2px #4a5560, 0 0 0 3px #11181e, 0 0 1px #000c, inset 0 2px 4px #0008; }
   .rcov { position:absolute; left:-5px; right:-5px; top:-5px; height:calc(100% + 10px); border-radius:2px; cursor:pointer; touch-action:manipulation; border:1px solid #8a6a2a; padding:0; background:repeating-linear-gradient(-45deg,#6a5224d9 0 7px,#14100ad9 7px 14px); box-shadow:0 2px 6px #000c, inset 0 0 0 1px #000a; transition:height .3s, top .3s; }
@@ -219,7 +221,7 @@
         <div class="osub sm plate"><i class="sc a"></i><i class="sc b"></i><i class="sc c"></i><i class="sc d"></i><p class="st"><i class="led" id="ecLed"></i>ECHO</p><div class="grid" id="g4"></div></div></div></div>
       <div class="frow">
         <div class="grp mpanel"><p class="gt"><i class="led"></i>FILTER<span>LOW PASS</span></p><i class="sc a"></i><i class="sc b"></i><i class="sc c"></i><i class="sc d"></i><div class="grid" id="g1"></div></div>
-        <div class="rnd"><p class="st">RANDOM</p><div class="rbox" id="rbox"><button type="button" class="rbtn" id="rndBtn" aria-label="ランダム"></button><button type="button" class="rcov" id="rndCov" aria-label="ふたを開ける"></button></div></div>
+        <div class="rnd"><p class="st">RANGE</p><div class="rseg" id="rRange"><button type="button" class="seg" data-l="0">S</button><button type="button" class="seg on" data-l="1">M</button><button type="button" class="seg" data-l="2">L</button></div><p class="st">RANDOM</p><div class="rbox" id="rbox"><button type="button" class="rbtn" id="rndBtn" aria-label="ランダム"></button><button type="button" class="rcov" id="rndCov" aria-label="ふたを開ける"></button></div><p class="st">UNDO</p><button type="button" class="seg rundo" id="rndUndo" disabled>↩</button></div>
       </div>
       <div class="grp"><p class="gt">ENVELOPE</p><div class="grid" id="g5"></div></div>
       </div>
