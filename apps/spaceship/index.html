@@ -82,15 +82,14 @@
   .mpanel .dial:after { background:conic-gradient(from 20deg,#667,#dde 12%,#889 26%,#eef 40%,#667 55%,#ccd 70%,#778 85%,#667); box-shadow:0 3px 5px #000c, inset 0 0 0 1px #0a1218, inset 0 0 0 2px #ffffff55, inset 0 -2px 3px #0006; }
   .mpanel .dial i { background:#27e8ff; box-shadow:0 0 0 1px #04141c, 0 0 6px #27e8ff; }
   .seq .grid { display:flex; justify-content:flex-start; gap:4px 28px; align-items:center; } .seq .grid .kn { flex:0 0 auto; }
-  .gflow>.grp.oscg, .gflow>.grp.mpanel { flex:1 1 100%; }
-  .gflow>.grp.envg { flex:1 1 auto; } .gflow>.grp.echg { flex:1 1 auto; } .gflow .envg .grid .kn { flex:0 0 40px; } .gflow .echg .grid .kn { flex:0 0 48px; } .gflow .envg .grid, .gflow .echg .grid { justify-content:space-around; }
+  .gflow>.grp.oscg, .gflow>.grp.mpanel, .gflow>.grp.envg { flex:1 1 100%; }
   .osubs { display:flex; flex-wrap:wrap; gap:0 12px; align-items:flex-start; } .osub { flex:0 0 auto; } .osub.warn { flex-basis:100%; }
   .gflow .osub .grid { display:flex; flex-wrap:nowrap; justify-content:flex-start; gap:0 4px; } .oscg .dial { zoom:1.1; } .gflow .oscg .grid .kn { flex:0 0 58px; }
-  .osub.warn .dial { zoom:.95; } .gflow .osub.warn .grid .kn { flex-basis:52px; }
   .wbox { position:relative; display:flex; flex-direction:column; width:max-content; max-width:100%; }
-  .cover { position:absolute; inset:0; z-index:5; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; cursor:pointer; color:#fff; border:1px solid #8a6a2a; border-radius:2px; background:repeating-linear-gradient(-45deg,#6a5224 0 9px,#14100a 9px 18px); box-shadow:inset 0 0 0 1px #000a; touch-action:manipulation; font-family:Orbitron,monospace; padding:0; }
-  .cover b { font-size:10px; letter-spacing:.2em; background:#14100acc; padding:3px 10px; border:1px solid #8a6a2a; color:#d9a84a; font-weight:700; } .cover small { font:8px ui-monospace,monospace; background:#14100acc; padding:2px 8px; color:#b8975a; letter-spacing:.08em; }
-  .wbox.open .cover { display:none; }
+  .cover { position:absolute; inset:0; z-index:5; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; cursor:pointer; color:#fff; border:2px solid #ffb000; border-radius:2px; background:repeating-linear-gradient(-45deg,#ffb000 0 9px,#1a1206 9px 18px); box-shadow:0 0 10px #ffb00066, inset 0 0 0 1px #000a; transition:all .18s; touch-action:manipulation; font-family:Orbitron,monospace; padding:0; }
+  .cover b { font-size:11px; letter-spacing:.2em; background:#1a1206; padding:3px 10px; border:1px solid #ffb000; color:#ffb000; } .cover small { font:8px ui-monospace,monospace; background:#1a1206; padding:2px 8px; color:#ffcf7a; letter-spacing:.08em; }
+  .wbox.open .cover { position:relative; inset:auto; order:-1; height:16px; flex-direction:row; justify-content:flex-end; padding:0 6px; margin-bottom:4px; } .wbox.open .cover b { font-size:8px; padding:0 8px; border:0; } .wbox.open .cover small { display:none; }
+  .wbox.open .cover:after { content:"▲ CLOSE"; font:700 7px Orbitron,monospace; background:#1a1206; color:#ffcf7a; padding:1px 6px; margin-left:6px; }
   .st { margin:6px 0 2px; font:500 7px Orbitron,monospace; letter-spacing:.14em; color:var(--mu); }
   /* ARP SPANのボタン: 金属のキー + 琥珀のLED */
   .kn.sp .seg { position:relative; color:#0d1620; background:linear-gradient(90deg,#667,#dde 50%,#667); border:1px solid #fff6; border-radius:1px; box-shadow:0 2px 5px #000a, 0 0 6px #27e8ff33; padding:12px 2px 6px; font:700 10px Orbitron,monospace; }
@@ -203,10 +202,10 @@
       <div class="grp oscg"><p class="gt">OSC</p><div class="outrow"><div class="waves"><div class="tgs" id="tg1"></div><div class="tgs" id="tg2"></div></div></div>
         <div class="osubs"><div class="osub"><p class="st">OSC2</p><div class="grid" id="g2"></div></div>
         <div class="osub"><p class="st">FM</p><div class="grid" id="g7"></div></div>
-        <div class="osub warn"><p class="st">PITCH · NOISE · WOBBLE</p><div class="wbox" id="wbox"><div class="grid" id="g3"></div><button type="button" class="cover" id="wcov" aria-expanded="false"><b>⚠ WARNING</b><small>TAP TO OPEN</small></button></div></div></div></div>
+        <div class="osub warn"><p class="st">PITCH · NOISE · WOBBLE</p><div class="wbox" id="wbox"><div class="grid" id="g3"></div><button type="button" class="cover" id="wcov" aria-expanded="false"><b>⚠ WARNING</b><small>強い効果 / TAP TO OPEN</small></button></div></div></div></div>
       <div class="grp mpanel"><p class="gt"><i class="led"></i>FILTER<span>LOW PASS</span></p><i class="sc a"></i><i class="sc b"></i><i class="sc c"></i><i class="sc d"></i><div class="grid" id="g1"></div></div>
       <div class="grp envg"><p class="gt">ENVELOPE</p><div class="grid" id="g5"></div></div>
-      <div class="grp echg"><p class="gt">ECHO</p><div class="grid" id="g4"></div></div>
+      <div class="grp"><p class="gt">ECHO</p><div class="grid" id="g4"></div></div>
       </div>
       <canvas class="scr" id="spec"></canvas>
       <div class="tele">CORE TEMP <em id="tT">300K</em> &nbsp; SHLD <em>98%</em> &nbsp; LNK <em>OK</em></div>
