@@ -194,12 +194,12 @@
     sync(); return sync;
   }
   let autoMode = 'off', droneNote = null, arpTimer = 0, arpIdx = 0;
-  const arpHeld = new Set();
+  const arpHeld = new Set(), arpNotes = new Set();                // arpHeld=いま押している鍵盤、arpNotes=くり返し鳴らす音(離しても残る)
   function setDrone(n) { noteOff('a'); droneNote = n; noteOn('a', n); }
-  function stopDrone() { noteOff('a'); droneNote = null; }
+  function stopDrone() { noteOff('a'); }
   function arpStep() {
-    if (!arpHeld.size) return;
-    const base0 = [...arpHeld].sort((a, b) => a - b), list = [];
+    if (autoMode !== 'arp' || !arpNotes.size) return;
+    const base0 = [...arpNotes].sort((a, b) => a - b), list = [];
     for (let k = 0; k < Math.round(p.arpSpan); k++) base0.forEach((n) => list.push(n + 12 * k));
     const n = list[arpIdx % list.length]; arpIdx++;
     noteOff('arp'); noteOn('arp', n);
@@ -210,20 +210,25 @@
   function startArp() { if (arpTimer) return; arpIdx = 0; arpStep(); }
   function stopArp() { clearTimeout(arpTimer); arpTimer = 0; noteOff('arp'); }
   function press(n) {
-    if (autoMode === 'arp') { arpHeld.add(n); keyEl(n, true); ensureAudio(); startArp(); return; }
+    if (autoMode === 'arp') {                                      // 新しく押しはじめたら、くり返す音を入れ替える
+      if (!arpHeld.size) arpNotes.clear();
+      arpHeld.add(n); arpNotes.add(n); keyEl(n, true); ensureAudio(); startArp(); return;
+    }
     if (autoMode === 'drone') setDrone(n);
     noteOn(n);
   }
   function release(n) {
-    if (autoMode === 'arp' || arpHeld.has(n)) { arpHeld.delete(n); keyEl(n, false); if (!arpHeld.size) stopArp(); return; }
+    if (arpHeld.has(n)) { arpHeld.delete(n); keyEl(n, false); return; }
     noteOff(n);
   }
-  function releaseAll() { for (const n of [...voices.keys()]) if (typeof n === 'number') noteOff(n); [...arpHeld].forEach((n) => keyEl(n, false)); arpHeld.clear(); stopArp(); }
+  function releaseAll() { for (const n of [...voices.keys()]) if (typeof n === 'number') noteOff(n); [...arpHeld].forEach((n) => keyEl(n, false)); arpHeld.clear(); }
   let autoSync = null;
   function setAuto(m) {
-    if (autoMode === 'arp' && m !== 'arp') { [...arpHeld].forEach((n) => keyEl(n, false)); arpHeld.clear(); stopArp(); }
+    if (autoMode === 'arp' && m !== 'arp') { [...arpHeld].forEach((n) => keyEl(n, false)); arpHeld.clear(); arpNotes.clear(); stopArp(); }
     if (m !== 'drone') stopDrone();
     autoMode = m; ensureAudio();
+    if (m === 'drone') setDrone(droneNote == null ? base : droneNote);                 // 選んだだけで、一定の高さが鳴りはじめる
+    if (m === 'arp') { if (!arpNotes.size) [0, 3, 7].forEach((d) => arpNotes.add(base + d)); startArp(); }   // 選んだだけで、和音が順番に鳴りはじめる
     if (autoSync) autoSync();
     $('mTog').classList.toggle('auto', m !== 'off');
   }
@@ -463,5 +468,5 @@
   }
 
   buildKeys(); buildKnobs(); fit(); requestAnimationFrame(frame);
-  window.__ss = { p, E, setAuto, press, release, get autoMode() { return autoMode; }, arpHeld, get ACT() { return ACT; }, get LOCKED() { return LOCKED; }, voices, events, activate, stopPreset };
+  window.__ss = { p, E, setAuto, press, release, get autoMode() { return autoMode; }, arpHeld, arpNotes, get ACT() { return ACT; }, get LOCKED() { return LOCKED; }, voices, events, activate, stopPreset };
 })();
