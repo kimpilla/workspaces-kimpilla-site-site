@@ -288,6 +288,15 @@ function saveBlob(blob, filename, statusEl) {
     '3・3・2(クラッシュ+スネア+キック)': { K: 'X.....X.....X...', S: 'X.....X.....X...', C: 'X.....X.....X...' },
     '休み': {},
   };
+  // パターンを選んだときに入るテンポ(目安。あとから直せる。書いていないパターンは、いまのテンポのまま)
+  const PBPM = {
+    'ツービート': 200, 'ツービート(スネアとハイハット交互)': 200, 'ツービート(裏拍アクセント)': 200, 'ツービート(フロアタム)': 200,
+    'Dビート': 200, 'Dビート(フロアタム)': 200, 'Dビート(クラッシュ版)': 200, 'パスパス(スネア頭+オープンハット)': 200,
+    'ブラスト(交互)': 240, 'ハンマーブラスト': 240, 'ドコドコ(2バス)': 85,
+    'ハーフ(モッシュ)': 85, 'スロー16ビート(クラッシュ8分)': 50, '8ビート': 120, '8ビート(フロアタム)': 120,
+    'スネア連打(スネアだけ)': 140, 'スネア連打(タム回し)': 140, 'タム回し(スネア→ロー→フロア)': 140,
+    '決め(キメ)': 200, '3・3・2(クラッシュ+スネア+キック)': 200,
+  };
   const NAMES = Object.keys(PATTERNS);
   const PARTS = ['C', 'R', 'H', 'O', 'S', 'M', 'T', 'K'];            // 表の上から順(シンバルが上、キックが下)
   const PS = { C: 'クラ', R: 'ライ', H: 'ハイ', O: 'オプ', S: 'スネ', M: 'ロー', T: 'フロ', K: 'キク' };   // スマホ用の短い名前
@@ -619,7 +628,7 @@ function saveBlob(blob, filename, statusEl) {
       }
       sel.onchange = () => {
         if (b.cust && !window.confirm('このブロックの編集内容は捨てられます')) { sel.value = b.pat; return; }
-        delete b.cust; b.pat = sel.value; renderRows(); changed();
+        delete b.cust; b.pat = sel.value; if (PBPM[b.pat]) { b.bpm = PBPM[b.pat]; delete b.bpmEnd; } renderRows(); changed();
       };
       const pc = cell(sel, 'パターン');
       if (b.cust) {                                   // 編集済みの表示と、その場で元に戻すボタン
