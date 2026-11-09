@@ -70,6 +70,25 @@
   .dd li { padding:9px 8px 8px; font:700 9px Orbitron,monospace; letter-spacing:.1em; color:var(--mu); cursor:pointer; touch-action:manipulation; } .dd li.on { color:var(--g); background:#2dff9b1a; } .dd li:hover { color:var(--c); }
   .sqseg { display:flex; gap:4px; flex:1 1 130px; } .sqseg > span { align-self:center; font:8px Orbitron,monospace; color:var(--mu); letter-spacing:.1em; }
   .kn.sp { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; } .kn.sp .spbtn { display:flex; gap:4px; width:100%; } .kn.sp .seg { padding:8px 2px 7px; }
+  /* ---- FILTER: ラックの金属パネル風(ヘアラインのアルミ、琥珀の指針、LED、ネジ) ---- */
+  .mpanel { position:relative; padding:6px 10px 6px; border:1px solid #5a6268; border-radius:3px; box-shadow:0 2px 6px #000a, inset 0 1px 0 #fff8; background:repeating-linear-gradient(90deg,#ffffff10 0 1px,#0000 1px 3px),linear-gradient(180deg,#d3d8dc,#aab1b7 45%,#bcc2c7); }
+  .gflow>.grp.mpanel { flex:1 1 300px; }
+  .grp.mpanel>.gt { color:#14181b; border-bottom:2px solid #14181b; display:flex; align-items:center; gap:6px; font-weight:700; } .mpanel>.gt span { margin-left:auto; font-size:7px; }
+  .mpanel .led { width:7px; height:7px; border-radius:50%; background:#2dff9b; box-shadow:0 0 6px #2dff9b, inset 0 0 2px #fff; }
+  .mpanel .sc { position:absolute; width:8px; height:8px; border-radius:50%; background:radial-gradient(circle at 35% 30%,#f2f2f2,#7d858b 70%); box-shadow:0 0 0 1px #4a5258; } .mpanel .sc:after { content:""; position:absolute; left:1px; right:1px; top:3.5px; height:1px; background:#3a4046; transform:rotate(35deg); }
+  .mpanel .sc.a { left:3px; top:3px; } .mpanel .sc.b { right:3px; top:3px; } .mpanel .sc.c { left:3px; bottom:3px; } .mpanel .sc.d { right:3px; bottom:3px; }
+  .mpanel .grid { display:flex; flex-wrap:wrap; justify-content:space-around; align-items:flex-end; gap:6px 4px; padding:4px 0 6px; } .mpanel .grid .kn { flex:0 0 auto; }
+  .mpanel .kn.big .dial { zoom:1.55; } .mpanel .kn.big .kl { font-size:9px; } .mpanel .kn.big output { font-size:9px; }
+  .mpanel .dial:before { filter:brightness(0) opacity(.75); }
+  .mpanel .dial:after { background:conic-gradient(from 20deg,#e4e8eb,#8d969d,#f1f3f5,#79828a,#e4e8eb 50%,#8d969d 75%,#e4e8eb); box-shadow:0 2px 3px #0009, inset 0 0 0 1px #3a4046, inset 0 0 0 3px #c9ced2; }
+  .mpanel .dial i { background:#ff9a00; box-shadow:0 0 0 1px #3a2200, 0 0 4px #ff9a0099; }
+  .mpanel .kl { color:#14181b; } .mpanel .kn output { color:#5a2e00; font-weight:700; }
+  .osubs { display:flex; flex-wrap:wrap; gap:0 10px; } .osub { flex:0 0 auto; } .osub .grid { flex-wrap:nowrap; }
+  .st { margin:6px 0 2px; font:500 7px Orbitron,monospace; letter-spacing:.14em; color:var(--mu); }
+  /* ARP SPANのボタン: 金属のキー + 琥珀のLED */
+  .kn.sp .seg { position:relative; color:#14181b; background:linear-gradient(180deg,#e6eaed,#a3abb1); border:1px solid #4a5258; border-radius:2px; box-shadow:0 2px 3px #000a, inset 0 1px 0 #fff9; padding:12px 2px 6px; font:700 10px Orbitron,monospace; }
+  .kn.sp .seg:before { content:""; position:absolute; top:4px; left:50%; width:5px; height:5px; margin-left:-2.5px; border-radius:50%; background:#5a3a14; box-shadow:inset 0 0 1px #000; }
+  .kn.sp .seg.on { background:linear-gradient(180deg,#9aa2a8,#c3c9ce); box-shadow:inset 0 2px 3px #0008; border-color:#ff9a00; color:#14181b; } .kn.sp .seg.on:before { background:#ff9a00; box-shadow:0 0 6px #ff9a00; }
   #sqOpt.dim { opacity:.4; pointer-events:none; }
   .sqlab { grid-template-rows:none; }
   .btns { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
@@ -174,10 +193,11 @@
 
     <section class="box sys"><h3>SYSTEM<small>DRAG ▲▼</small></h3>
       <div class="gflow">
-      <div class="grp"><p class="gt">OSC // WAVEFORM</p><div class="outrow"><div class="waves"><div class="tgs" id="tg1"></div><div class="tgs" id="tg2"></div></div></div></div>
-      <div class="grp"><p class="gt">FILTER / FM</p><div class="grid" id="g1"></div></div>
-      <div class="grp"><p class="gt">OSC MIX</p><div class="grid" id="g2"></div></div>
-      <div class="grp"><p class="gt">SPECIAL</p><div class="grid" id="g3"></div></div>
+      <div class="grp mpanel"><p class="gt"><i class="led"></i>FILTER<span>LOW PASS</span></p><i class="sc a"></i><i class="sc b"></i><i class="sc c"></i><i class="sc d"></i><div class="grid" id="g1"></div></div>
+      <div class="grp"><p class="gt">OSC</p><div class="outrow"><div class="waves"><div class="tgs" id="tg1"></div><div class="tgs" id="tg2"></div></div></div>
+        <div class="osubs"><div class="osub"><p class="st">OSC2</p><div class="grid" id="g2"></div></div>
+        <div class="osub"><p class="st">FM</p><div class="grid" id="g7"></div></div>
+        <div class="osub"><p class="st">PITCH · NOISE · WOBBLE</p><div class="grid" id="g3"></div></div></div></div>
       <div class="grp"><p class="gt">AUTO // RATE · SPAN</p><div class="grid" id="g6"></div></div>
       <div class="grp"><p class="gt">ECHO</p><div class="grid" id="g4"></div></div>
       <div class="grp"><p class="gt">ENVELOPE</p><div class="grid" id="g5"></div></div>

@@ -412,7 +412,8 @@
   const fromS = (s, min, max, log) => log ? min * Math.pow(max / min, s) : min + s * (max - min);
   const f1 = (n, u) => (v) => v.toFixed(n) + u;
   const ctlDefs = {
-    g1: [['cutoff', 'CUTOFF', '明るさ', 80, 12000, 1, true, (v) => Math.round(v) + 'Hz'], ['q', 'RESO', 'クセ', 0.1, 25, 0.1, false, f1(1, '')], ['fmDepth', 'WARP FM', 'ワープの強さ', 0, 2000, 1, false, (v) => Math.round(v)], ['fmRatio', 'FM RATIO', '比率', 0.5, 8, 0.5, false, (v) => '×' + v], ['fEnv', 'F-ENV', '押した瞬間の開き', 0, 6, 0.1, false, (v) => v < 0.05 ? 'OFF' : '+' + v.toFixed(1)], ['fDecay', 'F-DEC', '閉じる時間', 0.02, 3, 0.01, true, f1(2, 's')]],
+    g1: [['cutoff', 'CUTOFF', '明るさ', 80, 12000, 1, true, (v) => Math.round(v) + 'Hz'], ['q', 'RESO', 'クセ', 0.1, 25, 0.1, false, f1(1, '')], ['fEnv', 'F-ENV', '押した瞬間の開き', 0, 6, 0.1, false, (v) => v < 0.05 ? 'OFF' : '+' + v.toFixed(1)], ['fDecay', 'F-DEC', '閉じる時間', 0.02, 3, 0.01, true, f1(2, 's')]],
+    g7: [['fmDepth', 'WARP FM', 'ワープの強さ', 0, 2000, 1, false, (v) => Math.round(v)], ['fmRatio', 'FM RATIO', '比率', 0.5, 8, 0.5, false, (v) => '×' + v]],
     g2: [['osc2', 'OSC2 MIX', '2つ目の量', 0, 1, 0.01, false, (v) => v < 0.02 ? 'OFF' : Math.round(v * 100) + '%'], ['detune', 'DETUNE', 'ずらし', 0, 50, 0.5, false, f1(1, 'ct')], ['sub', 'SUB', '1オクターブ下', 0, 1, 0.01, false, (v) => v < 0.02 ? 'OFF' : Math.round(v * 100) + '%']],
     g3: [['sweep', 'PITCH SWP', '音程すべり', -3, 3, 0.05, false, (v) => Math.abs(v) < 0.05 ? 'OFF' : (v > 0 ? '↑' : '↓') + Math.abs(v).toFixed(1) + 'oct'], ['noise', 'NOISE', 'ノイズ', 0, 1, 0.01, false, (v) => v < 0.02 ? 'OFF' : Math.round(v * 100) + '%'], ['wobble', 'WOBBLE', 'うねり', 0, 1, 0.01, false, (v) => v < 0.02 ? 'OFF' : Math.round(v * 100) + '%']],
     g4: [['delayTime', 'ECHO TIME', '間隔', 0.05, 1.2, 0.01, false, f1(2, 's')], ['feedback', 'ECHO FDBK', 'くり返し', 0, 0.9, 0.01, false, (v) => Math.round(v * 100) + '%'], ['mix', 'ECHO MIX', '量', 0, 1, 0.01, false, (v) => Math.round(v * 100) + '%']],
@@ -436,7 +437,7 @@
     for (const g in ctlDefs) {
       const box = $(g);
       for (const [key, label, jp, min, max, step, log, fmt] of ctlDefs[g]) {
-        const el = document.createElement('div'); el.className = 'kn';
+        const el = document.createElement('div'); el.className = 'kn' + ((key === 'cutoff' || key === 'q') ? ' big' : '');
         if (key === 'arpSpan') {      // 1・2・3の3択なので、つまみでなくボタン
           el.classList.add('sp');
           el.innerHTML = '<div class="spbtn"></div><div class="kl">' + label + '</div><output></output>';
