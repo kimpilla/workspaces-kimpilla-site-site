@@ -14,19 +14,19 @@
   .ctl .lfowrap { position: sticky; top: 8px; align-self: start; background: var(--bg); z-index: 2; padding-bottom: 4px; }
   .ctl .knobs { grid-template-columns: 1fr; }
   .ctlmain { padding-bottom: 150px; }
+  #addWave { padding: 10px 18px; font-size: 15px; }
   .tp { display: flex; gap: 6px; margin-bottom: 6px; }
   canvas#lfo { display: block; width: 100%; height: 190px; border: 1px solid var(--line); }
   .lfowrap .small { margin: 4px 0 0; }
-  .grp { border: 1px solid var(--line); border-left: 6px solid var(--gc, #888); border-radius: 4px; margin: 0 0 8px; padding: 0 10px 6px; }
+  .grp { border: 1px solid var(--line);  border-radius: 4px; margin: 0 0 8px; padding: 0 10px 6px; }
   .grp > summary { cursor: pointer; padding: 8px 0; list-style: none; display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; }
   .grp > summary::-webkit-details-marker { display: none; }
-  .grp > summary::before { content: "▸"; color: var(--gc, #888); }
+  .grp > summary::before { content: "▸"; color: var(--muted); }
   .grp[open] > summary::before { content: "▾"; }
   .grp > summary b { font-size: 15px; }
   .grp > summary span { font-size: 12px; color: var(--muted); }
   .grp .sub { margin: 6px 0 2px; }
   .grp .sub > summary { cursor: pointer; font-size: 12px; color: var(--muted); }
-  .g1 { --gc: #2e8b57; } .g2 { --gc: #2a7fb8; } .g3 { --gc: #8a5cc2; } .g4 { --gc: #d08a1e; } .g5 { --gc: #c2507a; } .g6 { --gc: #6a7a86; }
   .waverow { border-top: 1px solid var(--line); margin-top: 8px; padding-top: 6px; }
   .wavehead { display: flex; justify-content: space-between; align-items: center; }
   .wavehead button { padding: 2px 10px; }
@@ -63,7 +63,7 @@
       <div class="knobs" id="knobsFine"></div>
     </details>
   </details>
-  <details class="grp g2"><summary><b>2. 揺れの波を足す</b><span>ゆっくりの波と細かい波を重ねる</span></summary>
+  <details class="grp g2" open><summary><b>2. 揺れの波を足す</b><span>ゆっくりの波と細かい波を重ねる</span></summary>
     <div id="waves"></div>
     <p><button id="addWave">＋ 波を追加する</button></p>
   </details>
@@ -95,7 +95,7 @@
 
 <section class="small">
 <h2>なにが起きているか</h2>
-<p>つまみは、7つのグループに分かれている。ふだん使うのは「1. 揺れのもと」と「4. 出力」(最初から開いている)。ほかは、見出しを押すと開く。右の(スマホでは上の)波の図は、スクロールしても、画面に残る。ばらつきの内訳は、「1. 揺れのもと」の中にある。</p>
+<p>つまみは、7つのグループに分かれている。最初に開いているのは「1. 揺れのもと」「2. 揺れの波を足す」「4. 出力」。ほかは、見出しを押すと開く。右の(スマホでは上の)波の図は、スクロールしても、画面に残る。ばらつきの内訳は、「1. 揺れのもと」の中にある。</p>
 <ul>
 <li><b>段数</b>: コーラスを何個つなぐか。1段だと、ふつうのコーラス(音がふくらむ)。重ねるほど、遅れと揺れが積み重なって、音程がよれ、輪郭が溶けていく。</li>
 <li><b>遅れ・揺れの深さ</b>: 何ミリ秒遅らせるか、それをどれだけ揺らすか。深く揺らすと、音の高さが上下にうねる。</li>
