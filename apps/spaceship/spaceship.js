@@ -403,7 +403,7 @@
         const lever = g === 'g5';
         el.innerHTML = lever
           ? '<div class="lv sm"><div class="tr"></div><div class="tk"></div><div class="hd"></div></div><div class="kl">' + label + '<small>' + jp + '</small></div><output></output>'
-          : '<div class="dial"><i></i></div><div class="kl">' + label + '<small>' + jp + '</small></div><output></output>';
+          : '<div class="dial"><i></i></div><div class="kl">' + label + '</div><output></output>';
         const o = el.querySelector('output');
         const render = () => {
           const s = toS(p[key], min, max, log); o.textContent = fmt(p[key]);

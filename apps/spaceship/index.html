@@ -105,6 +105,17 @@
   .tgs { display:flex; gap:6px; flex-wrap:wrap; } .tgs span.t { align-self:center; font-size:8px; color:var(--tx); width:100%; }
   .tg { font:inherit; font-size:9px; color:var(--mu); background:#0d1620; border:1px solid #3a6070; padding:7px 8px 6px; min-width:50px; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:4px; }
   .tg i { width:20px; height:8px; background:#12303a; } .tg.on { color:var(--tx); border-color:var(--c); } .tg.on i { background:var(--c); box-shadow:0 0 8px var(--c); }
+
+  /* ---- 操作盤: モーグ風のローレットつまみ + 青の目盛り + 緑の指針 ---- */
+  .grid { grid-template-columns:repeat(auto-fill,minmax(60px,1fr)); gap:4px 0; }
+  .box { padding:22px 8px 8px; } .grp { margin-bottom:8px; }
+  .grp>.gt { color:var(--c); border-bottom:1px solid #27e8ff55; }
+  .dial { position:relative; width:50px; height:50px; border:0; border-radius:50%; background:none; }
+  .dial:before { content:""; position:absolute; inset:0; border-radius:50%; background:conic-gradient(from -135deg,#27e8ff 0deg 1.8deg,transparent 1.8deg 27deg,#27e8ff 27deg 28.8deg,transparent 28.8deg 54deg,#27e8ff 54deg 55.8deg,transparent 55.8deg 81deg,#27e8ff 81deg 82.8deg,transparent 82.8deg 108deg,#27e8ff 108deg 109.8deg,transparent 109.8deg 135deg,#27e8ff 135deg 136.8deg,transparent 136.8deg 162deg,#27e8ff 162deg 163.8deg,transparent 163.8deg 189deg,#27e8ff 189deg 190.8deg,transparent 190.8deg 216deg,#27e8ff 216deg 217.8deg,transparent 217.8deg 243deg,#27e8ff 243deg 244.8deg,transparent 244.8deg 270deg,#27e8ff 270deg 271.8deg,transparent 271.8deg 360deg); -webkit-mask:radial-gradient(circle,transparent 21px,#000 22px,#000 25px,transparent 26px); mask:radial-gradient(circle,transparent 21px,#000 22px,#000 25px,transparent 26px); }
+  .dial:after { content:""; position:absolute; inset:8px; border-radius:50%; background:repeating-conic-gradient(#222a30 0 6deg,#0b0f12 6deg 12deg); box-shadow:0 2px 4px #000, inset 0 0 0 2px #05080b, inset 0 0 0 3px #4a6a78; }
+  .dial i { z-index:2; left:24px; top:10px; width:2px; height:13px; transform-origin:1px 15px; background:var(--g); box-shadow:0 0 5px var(--g); }
+  .kl { color:var(--g); font-weight:700; font-size:7px; letter-spacing:.06em; margin-top:-1px; white-space:nowrap; }
+  .kn output { color:var(--c); font-size:7px; letter-spacing:0; }
   #spec { height:44px; margin-top:4px; }
   .tele { margin-top:6px; font-size:8px; } .tele em { font-style:normal; color:var(--tx); }
   details { margin:12px 12px 0; color:var(--mu); font-size:10px; } details summary { cursor:pointer; padding:6px 0; color:var(--c); } details li { margin:4px 0; } details a { color:var(--c); }
@@ -149,14 +160,14 @@
   <div class="dash">
 
 
-    <section class="box sys"><h3>SYSTEM<small>装置(上下にドラッグ)</small></h3>
-      <div class="grp"><p class="gt">OSC // 波のかたち</p><div class="outrow"><div class="waves"><div class="tgs" id="tg1"></div><div class="tgs" id="tg2"></div></div></div></div>
+    <section class="box sys"><h3>SYSTEM<small>DRAG ▲▼</small></h3>
+      <div class="grp"><p class="gt">OSC // WAVEFORM</p><div class="outrow"><div class="waves"><div class="tgs" id="tg1"></div><div class="tgs" id="tg2"></div></div></div></div>
       <div class="grp"><p class="gt">FILTER / FM</p><div class="grid" id="g1"></div></div>
       <div class="grp"><p class="gt">OSC MIX</p><div class="grid" id="g2"></div></div>
-      <div class="grp"><p class="gt">SPECIAL // 特殊装置</p><div class="grid" id="g3"></div></div>
-      <div class="grp"><p class="gt">AUTO // 自動演奏(窓のマークから ON)</p><div class="grid" id="g6"></div></div>
+      <div class="grp"><p class="gt">SPECIAL</p><div class="grid" id="g3"></div></div>
+      <div class="grp"><p class="gt">AUTO // RATE · SPAN</p><div class="grid" id="g6"></div></div>
       <div class="grp"><p class="gt">ECHO</p><div class="grid" id="g4"></div></div>
-      <div class="grp"><p class="gt">ENVELOPE // 音の形</p><div class="grid" id="g5"></div></div>
+      <div class="grp"><p class="gt">ENVELOPE</p><div class="grid" id="g5"></div></div>
       <canvas class="scr" id="spec"></canvas>
       <div class="tele">CORE TEMP <em id="tT">300K</em> &nbsp; SHLD <em>98%</em> &nbsp; LNK <em>OK</em></div>
     </section>
