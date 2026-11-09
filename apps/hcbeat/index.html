@@ -138,6 +138,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 <p class="small" id="status"></p>
 
 <h2>並び</h2>
+<p><button id="clear">🗑 全部消す</button><span class="small">(最初に入っている例のブロックを、まとめて消す。「例に戻す」で戻せる)</span></p>
 <p class="small" id="clipBar"></p>
 <div class="scroll">
 <table class="blocks">
@@ -146,7 +147,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 </table>
 </div>
 <p class="small"><label>全体のテンポ <input type="number" id="allBpm" min="30" max="400" value="200" style="width:5em"></label> <button id="allBpmSet">全ブロックのテンポをそろえる</button> <span>(「はじめ → おわり」は、一定のテンポになる)</span></p>
-<p><button id="add">ブロックを足す</button><button id="example">例に戻す</button><button id="clear">全部消す</button></p>
+<p><button id="add">ブロックを足す</button><button id="example">例に戻す</button></p>
 <p class="small">「編集」を押すと、そのブロックのパターンを、横=拍(16分刻み)・縦=パートの表で直せる。直した内容は、そのブロックだけに効く。</p>
 <p class="small">「長さ」は、何拍で切るか(4分=4分音符、8分=8分音符)。7と8分なら7/8拍子。パターンは頭から読んで、長さで切る(足りなければ頭に戻ってくり返す)。「テンポ」は、はじめ → おわり。140 → 160 のように入れると、そのブロックの中で少しずつ変わる。おわりを空にすると、一定のテンポ。</p>
 
