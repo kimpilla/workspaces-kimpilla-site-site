@@ -74,8 +74,8 @@
   .mpanel { position:relative; padding:6px 10px 2px; border:1px solid #3a6070; border-radius:3px; box-shadow:0 2px 8px #000c, inset 0 1px 0 #ffffff30, inset 0 -1px 0 #0008; background:repeating-linear-gradient(90deg,#ffffff0a 0 1px,#0000 1px 3px),linear-gradient(180deg,#4a5862 0%,#2a343c 18%,#1b242b 55%,#26313a 100%); }
   .grp.mpanel>.gt { color:#c8e4ee; border-bottom:1px solid #27e8ff88; display:flex; align-items:center; gap:6px; font-weight:700; } .grp.mpanel>.gt span { margin-left:auto; font-size:7px; color:var(--mu); }
   .mpanel .led { width:7px; height:7px; border-radius:50%; background:#2dff9b; box-shadow:0 0 6px #2dff9b, inset 0 0 2px #fff; }
-  .mpanel .sc { position:absolute; width:8px; height:8px; border-radius:50%; background:radial-gradient(circle at 35% 30%,#eef,#667 70%); box-shadow:0 0 0 1px #0a1218, 0 1px 2px #000; } .mpanel .sc:after { content:""; position:absolute; left:1px; right:1px; top:3.5px; height:1px; background:#222a30; transform:rotate(35deg); }
-  .mpanel .sc.a { left:3px; top:3px; } .mpanel .sc.b { right:3px; top:3px; } .mpanel .sc.c { left:3px; bottom:3px; } .mpanel .sc.d { right:3px; bottom:3px; }
+  .mpanel .sc, .plate .sc { position:absolute; width:8px; height:8px; border-radius:50%; background:radial-gradient(circle at 35% 30%,#eef,#667 70%); box-shadow:0 0 0 1px #0a1218, 0 1px 2px #000; } .mpanel .sc:after { content:""; position:absolute; left:1px; right:1px; top:3.5px; height:1px; background:#222a30; transform:rotate(35deg); }
+  .mpanel .sc.a, .plate .sc.a { left:3px; top:3px; } .mpanel .sc.b, .plate .sc.b { right:3px; top:3px; } .mpanel .sc.c, .plate .sc.c { left:3px; bottom:3px; } .mpanel .sc.d, .plate .sc.d { right:3px; bottom:3px; }
   .mpanel .grid { display:flex; flex-wrap:wrap; justify-content:space-around; align-items:flex-end; gap:6px 4px; padding:4px 0 6px; } .mpanel .grid .kn { flex:0 0 auto; }
   .mpanel .kn.big .dial { zoom:1; } .mpanel .kn.big .kl { font-size:7px; } .mpanel .kn.big output { font-size:7px; }
   .mpanel .dial:before { filter:none; }
@@ -85,10 +85,12 @@
   .gflow>.grp.oscg, .gflow>.grp.mpanel { flex:1 1 100%; }
   .osubs { display:flex; flex-wrap:wrap; gap:0 12px; align-items:flex-start; } .osub { flex:0 0 auto; } 
   .gflow .osub .grid { display:flex; flex-wrap:nowrap; justify-content:flex-start; gap:0 4px; } .oscg .dial { zoom:1.1; } .gflow .oscg .grid .kn { flex:0 0 58px; }
-  .osbr { flex-basis:100%; height:0; } @media (max-width:380px) { .gflow .osub.sm .grid .kn { flex-basis:45px !important; } }
+  .osbr { flex-basis:100%; height:0; } @media (max-width:380px) { .gflow .osub.sm .grid .kn, .gflow .osub.plate .grid .kn { flex-basis:43px !important; } }
   .osub.sm { flex:1 1 0; min-width:0; } .osub.sm .st { font-size:6px; letter-spacing:.06em; white-space:nowrap; } .osub.sm .dial { zoom:.82; } .gflow .osub.sm .grid .kn { flex-basis:52px; } .osub.sm .kl { font-size:6px; letter-spacing:.02em; } .osub.sm .kn output { font-size:6px; }
   .spd { display:flex; gap:10px 16px; align-items:center; flex-wrap:wrap; } .seq .spd .grid { flex:0 0 auto; } #sqDd { flex:1 1 150px; min-width:150px; display:flex; flex-direction:column; gap:6px; } #sqDd .dd { flex:none; }
   #g4 .dial:after { background:conic-gradient(from 20deg,#667,#dde 12%,#889 26%,#eef 40%,#667 55%,#ccd 70%,#778 85%,#667); box-shadow:0 3px 5px #000c, inset 0 0 0 1px #0a1218, inset 0 0 0 2px #ffffff55; } #g4 .dial i { background:#27e8ff; box-shadow:0 0 0 1px #04141c, 0 0 6px #27e8ff; }
+  .plate { position:relative; padding:6px 3px 2px; border:1px solid #3a6070; border-radius:3px; box-shadow:0 2px 8px #000c, inset 0 1px 0 #ffffff30, inset 0 -1px 0 #0008; background:repeating-linear-gradient(90deg,#ffffff0a 0 1px,#0000 1px 3px),linear-gradient(180deg,#4a5862 0%,#2a343c 18%,#1b242b 55%,#26313a 100%); }
+  .plate .st { color:#c8e4ee; padding-left:10px; margin:2px 0 4px; } .gflow .osub.plate .grid .kn { flex-basis:48px; } .plate .sc { width:6px; height:6px; } .plate .sc:after { top:2.5px; }
   .st { margin:6px 0 2px; font:500 7px Orbitron,monospace; letter-spacing:.14em; color:var(--mu); }
   /* ARP SPANのボタン: 金属のキー + 琥珀のLED */
   .kn.sp .seg { position:relative; color:#0d1620; background:linear-gradient(90deg,#667,#dde 50%,#667); border:1px solid #fff6; border-radius:1px; box-shadow:0 2px 5px #000a, 0 0 6px #27e8ff33; padding:12px 2px 6px; font:700 10px Orbitron,monospace; }
@@ -202,7 +204,7 @@
         <div class="osubs"><div class="osub"><p class="st">OSC2</p><div class="grid" id="g2"></div></div>
         <div class="osub"><p class="st">FM</p><div class="grid" id="g7"></div></div>
         <div class="osbr"></div><div class="osub sm"><p class="st">PITCH · NOISE · WOBBLE</p><div class="grid" id="g3"></div></div>
-        <div class="osub sm"><p class="st">ECHO</p><div class="grid" id="g4"></div></div></div></div>
+        <div class="osub sm plate"><i class="sc a"></i><i class="sc b"></i><i class="sc c"></i><i class="sc d"></i><p class="st">ECHO</p><div class="grid" id="g4"></div></div></div></div>
       <div class="grp mpanel"><p class="gt"><i class="led"></i>FILTER<span>LOW PASS</span></p><i class="sc a"></i><i class="sc b"></i><i class="sc c"></i><i class="sc d"></i><div class="grid" id="g1"></div></div>
       <div class="grp"><p class="gt">ENVELOPE</p><div class="grid" id="g5"></div></div>
       </div>
