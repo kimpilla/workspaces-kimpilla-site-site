@@ -152,9 +152,13 @@
     const tg = $('mTog'); tg.classList.toggle('act', !!ACT); if (ACT) tg.style.setProperty('--k', PRE[ACT].col);
     document.querySelectorAll('.pbtn').forEach((b) => { b.classList.toggle('on', ACT === b.dataset.p); b.classList.toggle('lk', ACT === b.dataset.p && LOCKED); });
   }
-  const hideMp = () => { $('mp').classList.add('hide'); $('mTog').classList.remove('open'); };
+  let mpTimer = 0;
+  const hideMp = () => { clearTimeout(mpTimer); $('mp').classList.add('hide'); $('mTog').classList.remove('open'); };
+  const keepMp = () => { clearTimeout(mpTimer); if (!$('mp').classList.contains('hide')) mpTimer = setTimeout(hideMp, 4000); };   // しばらく操作しなければ、自然に消える
   hideMp();
-  $('mTog').addEventListener('click', () => { const o = $('mp').classList.toggle('hide'); $('mTog').classList.toggle('open', !o); });
+  $('mp').addEventListener('pointerdown', keepMp); $('mp').addEventListener('pointermove', keepMp); $('mp').addEventListener('click', keepMp);
+  document.addEventListener('pointerdown', (e) => { if (!e.target.closest('#mp, #mTog')) hideMp(); });
+  $('mTog').addEventListener('click', () => { const o = $('mp').classList.toggle('hide'); $('mTog').classList.toggle('open', !o); keepMp(); });
   document.querySelectorAll('.pbtn').forEach((b) => {
     const name = b.dataset.p;
     b.addEventListener('pointerdown', (e) => {                      // 押すたびに ON / OFF(別のを押すと切り替わる)
@@ -227,7 +231,7 @@
   const userGrid = mkGrid(USER_RIFF), PGRID = {};
   Object.keys(PAT).forEach((k) => { PGRID[k] = mkGrid(PAT[k].cells); });
   let seqTimer = 0, seqStep = 0, seqCells = null, seqLabs = null, seqSrc = null, seqDim = '';      // seqSrc: 鳴らしている元('pre'=ミッション音 / 'user'=SEQ / null)
-  const viewPre = () => !!(ACT && selfPlay);                                          // グリッドに出すのがミッション音か
+  const viewPre = () => !!ACT;                                                        // グリッドに出すのは、選んでいるミッション音のパターン(AUTOPILOT の ON/OFF に関係なく)。何も選んでいなければ MY PATTERN
   const viewGrid = () => viewPre() ? PGRID[ACT] : userGrid;
   const viewBase = () => viewPre() ? PAT[ACT].root : base;
   function buildCells() {
@@ -301,7 +305,7 @@
   }
   function seqHalt() { clearTimeout(seqTimer); seqTimer = 0; seqSrc = null; for (let r = 0; r < MAXR; r++) noteOff('s' + r); if (seqCells) seqCells.forEach((row) => row.forEach((d) => d.classList.remove('ph'))); }
   function syncSeq() {
-    const w = (ACT && selfPlay) ? 'pre' : (autoMode === 'seq' ? 'user' : null);
+    const w = ACT ? ((selfPlay || autoMode === 'seq') ? 'pre' : null) : (autoMode === 'seq' ? 'user' : null);   // 鳴るのは、出ているグリッド。ミッション音+AUTOPILOT ON、または AUTO=SEQ のとき
     if (w !== seqSrc) { seqHalt(); seqSrc = w; if (w) { seqStep = 0; seqTick(); } }
     refreshGrid();
   }
@@ -408,11 +412,15 @@
         render(); setters[key] = render; drag(el, key, min, max, log, step, render); box.appendChild(el);
       }
     }
-    // 音量(小さなつまみ)
-    const vw = $('volw');
-    vw.innerHTML = '<div class="dial"><i></i></div><div class="kl">VOL<small>音量</small></div><output></output>';
-    const o = vw.querySelector('output'), render = () => { vw.querySelector('.dial').style.setProperty('--r', (-135 + 270 * p.volume) + 'deg'); o.textContent = Math.round(p.volume * 100) + '%'; };
-    render(); setters.volume = render; drag(vw, 'volume', 0, 1, false, 0.01, render);
+    // 音量(窓の左端の縦スライダー)
+    const vs = $('vsl'), vf = vs.querySelector('.vf'), vk = vs.querySelector('.vk'), vo = vs.querySelector('output');
+    const render = () => { const pc = Math.round(p.volume * 100); vf.style.height = pc + '%'; vk.style.bottom = 'calc(' + pc + '% - 4px)'; vo.textContent = pc; vs.setAttribute('aria-valuenow', pc); };
+    render(); setters.volume = render;
+    const tr = vs.querySelector('.vt'); let vdown = false;
+    const setV = (e) => { const r = tr.getBoundingClientRect(); p.volume = Math.max(0, Math.min(1, 1 - (e.clientY - r.top) / r.height)); applyGlobal(); render(); };
+    vs.addEventListener('pointerdown', (e) => { e.preventDefault(); ensureAudio(); vs.setPointerCapture(e.pointerId); vdown = true; setV(e); });
+    vs.addEventListener('pointermove', (e) => { if (vdown) setV(e); });
+    const vup = () => { vdown = false; }; vs.addEventListener('pointerup', vup); vs.addEventListener('pointercancel', vup);
     // 波のかたちのスイッチ
     const WV = [['sine', 'SIN'], ['triangle', 'TRI'], ['sawtooth', 'SAW'], ['square', 'SQR']];
     [['tg1', 'wave', 'OSC1'], ['tg2', 'wave2', 'OSC2']].forEach(([id, key, name]) => {
@@ -517,9 +525,9 @@
       if (Math.sin(now * 6) > -0.3) { vg.font = '700 11px Orbitron,monospace'; vg.fillStyle = '#2dff9b'; vg.textAlign = 'center'; vg.fillText('INCOMING TRANSMISSION', cx, H * 0.14); vg.textAlign = 'left'; }
     }
     // HUD
-    vg.font = '500 9px Orbitron,monospace'; vg.fillStyle = '#27e8ff';
+    vg.font = '500 9px Orbitron,monospace'; vg.fillStyle = '#27e8ff';   // 青=機械の状態表示。緑=自分で操作しているもの
     vg.fillText('FWD CAM 01   SPD ' + (0.1 + (spd / 4) * 0.89).toFixed(2) + 'c   HDG 214.7', 8, 14);
-    if (ACT) { vg.textAlign = 'right'; vg.fillStyle = PRE[ACT].col; vg.fillText(PRE[ACT].code + '  ON', W - 8, 14); vg.textAlign = 'left'; }
+    if (ACT) { vg.textAlign = 'right'; vg.fillStyle = '#2dff9b'; vg.fillText(PRE[ACT].code + '  ON', W - 8, 14); vg.textAlign = 'left'; }
     if (autoMode !== 'off') { vg.textAlign = 'right'; vg.fillStyle = '#2dff9b'; vg.fillText('AUTO ' + autoMode.toUpperCase(), W - 8, ACT ? 26 : 14); vg.textAlign = 'left'; }
     vg.strokeStyle = 'rgba(39,232,255,.22)'; vg.lineWidth = 1; vg.beginPath(); vg.moveTo(cx - 16, cy); vg.lineTo(cx - 5, cy); vg.moveTo(cx + 5, cy); vg.lineTo(cx + 16, cy); vg.moveTo(cx, cy - 16); vg.lineTo(cx, cy - 5); vg.moveTo(cx, cy + 5); vg.lineTo(cx, cy + 16); vg.stroke();
     vg.restore();
@@ -535,7 +543,7 @@
   function size(c) { const d = Math.min(window.devicePixelRatio || 1, 2), w = c.clientWidth * d, h = c.clientHeight * d; if (c.width !== w || c.height !== h) { c.width = w; c.height = h; } return d; }
   function drawScope() {
     const d = size(sc); sg.clearRect(0, 0, sc.width, sc.height);
-    sg.strokeStyle = '#2dff9b'; sg.lineWidth = 1.4 * d; sg.beginPath();
+    sg.strokeStyle = '#27e8ff'; sg.lineWidth = 1.4 * d; sg.beginPath();
     let start = 0; const n = 512;
     if (analyser) for (let i = 1; i < n; i++) if (tbuf[i - 1] < 128 && tbuf[i] >= 128) { start = i; break; }
     for (let i = 0; i < n; i++) { const v = analyser ? tbuf[start + i] : 128, x = i / (n - 1) * sc.width, y = (1 - v / 255) * sc.height; i ? sg.lineTo(x, y) : sg.moveTo(x, y); }
