@@ -162,6 +162,11 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 <h2>音量・ひずみ</h2>
 <div class="knobs" id="knobs"></div>
 
+<h2>強弱とゆれ</h2>
+<p class="small">どのパターンにも同じ決まりで効く(リズムの名前ごとの設定ではない)。表で「X(アクセント)」「o(ゴースト)」にしたマスは、上の2本の強さになる。「拍の頭以外を弱く」は、ふつうの音(x)だけに効く(8分の裏を弱く、16分のあいだはもう少し弱く)。下の4本は、0%なら今までどおり。</p>
+<div class="knobs" id="feel"></div>
+<p class="small">目安(生ドラムの打ち込みの記事から。耳で決めてよい): ゴーストは、いちばん強い音の2〜3割。速いブラストは、遅いビートほど強く叩けないので1〜2割軽く。タイミングのゆれは数ms。</p>
+
 <h2>音色</h2>
 <p class="small">キットを選ぶと、7つのパートの音がまとめて変わる(「実録音」は、実際に録音されたドラムの音)(再生中も変えられる)。パートごとに自分の音(WAV・MP3など)をアップロードすると、そのパートだけ差し替わる。短い音のほうが、速いブラストでも潰れにくい。</p>
 <div class="scroll"><table class="blocks"><tbody id="sounds"></tbody></table></div>
@@ -305,7 +310,7 @@ function saveBlob(blob, filename, statusEl) {
   const PARTS = ['C', 'R', 'H', 'O', 'S', 'M', 'T', 'K'];            // 表の上から順(シンバルが上、キックが下)
   const PS = { C: 'クラ', R: 'ライ', H: 'ハイ', O: 'オプ', S: 'スネ', M: 'ロー', T: 'フロ', K: 'キク' };   // スマホ用の短い名前
   const PN = { C: 'クラッシュ', R: 'ライド', H: 'ハイハット', O: 'オープンハイハット', S: 'スネア', M: 'ロータム', T: 'フロアタム', K: 'キック' };
-  const ACCENT = 1.45, GHOST = 0.45;                          // X(アクセント)と o(ゴースト)の強さ
+  // X(アクセント)と o(ゴースト)の強さは、vol.acc / vol.gho(「強弱とゆれ」のつまみ)
   const EXAMPLE = [
     { pat: 'ツービート', n: 4, unit: 4, bpm: 200, rep: 2 },
     { pat: 'ブラスト(交互)', n: 4, unit: 4, bpm: 240, rep: 2 },
@@ -316,7 +321,8 @@ function saveBlob(blob, filename, statusEl) {
     { pat: '決め(キメ)', n: 4, unit: 4, bpm: 200, rep: 1 },
   ];
   let blocks = EXAMPLE.map((b) => Object.assign({}, b));
-  const vol = { master: 0.7, K: 0.9, S: 0.8, M: 0.5, T: 0.5, H: 0.4, O: 0.4, R: 0.4, C: 0.5, drive: 0, dmix: 1, dtone: 9000 };
+  const vol = { master: 0.7, K: 0.9, S: 0.8, M: 0.5, T: 0.5, H: 0.4, O: 0.4, R: 0.4, C: 0.5, drive: 0, dmix: 1, dtone: 9000,
+    acc: 1.45, gho: 0.45, off: 0, fast: 0, vrand: 0, trand: 0 };   // 強弱とゆれ(off〜trand は0で今までどおり)
   const KNOBS = [
     ['master', '全体', 0, 1, (v) => Math.round(v * 100) + '%'],
     ['K', 'キック', 0, 1, (v) => Math.round(v * 100) + '%'],
@@ -331,6 +337,24 @@ function saveBlob(blob, filename, statusEl) {
     ['dmix', 'ひずみの混ぜ具合', 0, 1, (v) => Math.round(v * 100) + '%'],
     ['dtone', 'ひずみの高域カット', 1000, 16000, (v) => Math.round(v) + 'Hz', true],
   ];
+  const pct = (v) => Math.round(v * 100) + '%';
+  const FEEL = [
+    ['acc', 'アクセント(X)の強さ', 1, 2, pct],
+    ['gho', 'ゴースト(o)の強さ', 0.05, 1, pct],
+    ['off', '拍の頭以外を弱く', 0, 0.6, pct],
+    ['fast', '速いほど軽く(280BPMでの減り方)', 0, 0.5, pct],
+    ['vrand', '強さのばらつき', 0, 0.4, (v) => '±' + Math.round(v * 100) + '%'],
+    ['trand', 'タイミングのゆれ', 0, 0.015, (v) => '±' + (v * 1000).toFixed(1) + 'ms'],
+  ];
+  // 1打ごとの強さの倍率と、時刻のずれ(「強弱とゆれ」)。e = timeline() の打点
+  function feel(e) {
+    let m = 1;
+    if (e.lv === 'x') { const q = e.idx % 4; if (q === 2) m *= 1 - vol.off; else if (q !== 0) m *= Math.max(0.1, 1 - vol.off * 1.5); }
+    m *= 1 - vol.fast * Math.min(1, Math.max(0, (e.bpm - 140) / 140));
+    if (vol.vrand > 0) m *= 1 + (Math.random() * 2 - 1) * vol.vrand;
+    const dt = vol.trand > 0 ? (Math.random() * 2 - 1) * vol.trand : 0;
+    return { m: Math.max(0, m), dt };
+  }
 
   // ---- 並びを、時刻つきの打点の一覧にする ----
   function timeline() {
@@ -343,8 +367,8 @@ function saveBlob(blob, filename, statusEl) {
       const pat = b.cust || PATTERNS[b.pat] || {};     // cust = このブロックだけの編集済みパターン
       for (let k = 0; k < total; k++) {
         const s = k % steps, idx = s % 16;
-        for (const d of Object.keys(pat)) { const ch = pat[d][idx]; if (ch === 'x' || ch === 'X' || ch === 'o') ev.push({ t, d, bi, lv: ch }); }   // x=普通 X=アクセント o=ゴースト
         const bpm = from + (to - from) * (k / Math.max(1, total));       // 1ステップごとに少しずつ
+        for (const d of Object.keys(pat)) { const ch = pat[d][idx]; if (ch === 'x' || ch === 'X' || ch === 'o') ev.push({ t, d, bi, lv: ch, idx: s, bpm }); }   // x=普通 X=アクセント o=ゴースト。idx=小節の中の16分の位置
         t += 60 / bpm / 4;
       }
     });
@@ -411,8 +435,8 @@ function saveBlob(blob, filename, statusEl) {
     },
   };
 
-  function hit(c, out, nb, d, t, lv) {
-    let v = vol[d] * (lv === 'X' ? ACCENT : lv === 'o' ? GHOST : 1);
+  function hit(c, out, nb, d, t, lv, mul) {
+    let v = vol[d] * (lv === 'X' ? vol.acc : lv === 'o' ? vol.gho : 1) * (mul === undefined ? 1 : mul);
     if (v <= 0) return;
     if (samples[d]) {                                   // アップロードされた音があれば、それを鳴らす
       const s = c.createBufferSource(); s.buffer = samples[d];
@@ -511,7 +535,7 @@ function saveBlob(blob, filename, statusEl) {
       }
       const e = tl.ev[cursor], at = play0 + e.t;
       if (at > ahead) break;
-      if (at >= now - 0.01) hit(ctx, outNode, nb, e.d, at, e.lv);
+      if (at >= now - 0.01) { const f = feel(e); hit(ctx, outNode, nb, e.d, Math.max(now, at + f.dt), e.lv, f.m); }
       cursor++;
     }
     // いま鳴っているブロックを光らせる
@@ -539,7 +563,7 @@ function saveBlob(blob, filename, statusEl) {
     $('status').textContent = '書き出し中…';
     const oc = new OfflineAudioContext(1, Math.ceil((t.end + 1.3) * rate), rate);
     const onb = noiseBuffer(oc), o = outChain(oc, oc.destination);
-    for (const e of t.ev) hit(oc, o, onb, e.d, e.t, e.lv);
+    for (const e of t.ev) { const f = feel(e); hit(oc, o, onb, e.d, Math.max(0, e.t + f.dt), e.lv, f.m); }
     const buf = await oc.startRendering();
     $('status').textContent = '書き出しました(' + t.end.toFixed(1) + '秒)';
     saveBlob(audioBufferToWav(buf), 'hcbeat_' + new Date().toISOString().slice(0, 19).replace(/[-:T]/g, '') + '.wav', $('status'));
@@ -887,11 +911,13 @@ function saveBlob(blob, filename, statusEl) {
     cell(label); cell(play); cell(inp); cell(st); cell(reset);
     $('sounds').appendChild(tr);
   }
-  const resyncKnobs = buildKnobs($('knobs'), KNOBS, vol, (k) => {
+  const resyncFeel = buildKnobs($('feel'), FEEL, vol, () => autosave());
+  const resyncVol = buildKnobs($('knobs'), KNOBS, vol, (k) => {
     if (k === 'master' && outNode) outNode.gain.value = vol.master;
     if (k === 'drive' || k === 'dmix' || k === 'dtone') { if (outNode) applyDist(outNode); if (audOut) applyDist(audOut); }
     autosave();
   });
+  function resyncKnobs() { resyncVol(); resyncFeel(); }
   renderRows(); renderGrid(); refreshSlots();
   try { const a = localStorage.getItem(STORE + ':auto'); if (a) restore(JSON.parse(a)).catch(() => {}); } catch (e) {}   // 前回の続きから
 })();
