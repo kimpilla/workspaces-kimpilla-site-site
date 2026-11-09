@@ -156,15 +156,12 @@
   $('mTog').addEventListener('click', () => { const o = $('mp').classList.toggle('hide'); $('mTog').classList.toggle('open', !o); });
   document.querySelectorAll('.pbtn').forEach((b) => {
     const name = b.dataset.p;
-    b.addEventListener('pointerdown', (e) => {
-      e.preventDefault(); b.setPointerCapture(e.pointerId); ensureAudio();
-      if (ACT === name && LOCKED) { stopPreset(); click(); hideMp(); return; }       // ロック中にさわると解除
-      activate(name); pressing = name;
-      clearTimeout(lockTimer);
-      lockTimer = setTimeout(() => { if (ACT === name && pressing === name) { LOCKED = true; click(); syncBtns(); } }, 600);
+    b.addEventListener('pointerdown', (e) => {                      // 押すたびに ON / OFF(別のを押すと切り替わる)
+      e.preventDefault(); ensureAudio();
+      if (ACT === name) stopPreset(); else activate(name);
+      click();
     });
-    const release = () => { clearTimeout(lockTimer); if (pressing === name) { pressing = null; if (!LOCKED && ACT === name) stopPreset(); hideMp(); } };
-    b.addEventListener('pointerup', release); b.addEventListener('pointercancel', release);
+    b.addEventListener('pointerup', hideMp); b.addEventListener('pointercancel', hideMp);
     b.addEventListener('contextmenu', (e) => e.preventDefault());
   });
 
@@ -247,7 +244,7 @@
     held.set(e.key.toLowerCase(), base + i); press(base + i);
   });
   window.addEventListener('keyup', (e) => { const k = e.key.toLowerCase(); if (held.has(k)) { release(held.get(k)); held.delete(k); } });
-  window.addEventListener('blur', () => { releaseAll(); held.clear(); if (ACT && !LOCKED) stopPreset(); });
+  window.addEventListener('blur', () => { releaseAll(); held.clear(); });
   const shift = (d) => { releaseAll(); base = Math.min(84, Math.max(24, base + d)); buildKeys(); };
   $('octdn').onclick = () => shift(-12); $('octup').onclick = () => shift(12);
 
@@ -370,7 +367,7 @@
     const cn = Math.log(e.cutoff / 80) / Math.log(12000 / 80), hue = 20 + cn * 170, haze = 1 - cn, rim = Math.min(1, e.q / 25) * 0.9 + 0.08;
     phase += dt * (0.05 + pitchN * 0.5 + lvl * 0.2); phase2 += dt * (0.05 + pitchN * 0.35);
     const R = H * 0.2 * (1 + 0.06 * Math.sin(now * 0.3)) + lvl * H * 0.025;
-    let px = W * 0.64, py = H * 0.46;
+    let px = W * 0.68, py = H * 0.42;
     if (warpOn) { px += Math.sin(now * 38) * (e.fmDepth / 400) * 1.6; py += Math.cos(now * 31) * (e.fmDepth / 400) * 1.2; }
     if (e.osc2 > 0.02) planet(W * 0.24, H * 0.3, R * 0.42, e.wave2, 2.5, phase2, hue + 70, haze, rim * 0.6, 0.45 + e.osc2 * 0.5);
     const moons = e.mix < 0.03 ? [] : Array.from({ length: 1 + Math.floor(e.feedback * 4) }, (_, i) => {
@@ -408,7 +405,7 @@
     // HUD
     vg.font = '500 9px Orbitron,monospace'; vg.fillStyle = '#27e8ff';
     vg.fillText('FWD CAM 01   SPD ' + (0.1 + (spd / 4) * 0.89).toFixed(2) + 'c   HDG 214.7', 8, 14);
-    if (ACT) { vg.textAlign = 'right'; vg.fillStyle = PRE[ACT].col; vg.fillText(PRE[ACT].code + (LOCKED ? '  ▮LOCK' : '  HOLD'), W - 8, 14); vg.textAlign = 'left'; }
+    if (ACT) { vg.textAlign = 'right'; vg.fillStyle = PRE[ACT].col; vg.fillText(PRE[ACT].code + '  ON', W - 8, 14); vg.textAlign = 'left'; }
     if (autoMode !== 'off') { vg.textAlign = 'right'; vg.fillStyle = '#2dff9b'; vg.fillText('AUTO ' + autoMode.toUpperCase(), W - 8, ACT ? 26 : 14); vg.textAlign = 'left'; }
     vg.strokeStyle = 'rgba(39,232,255,.22)'; vg.lineWidth = 1; vg.beginPath(); vg.moveTo(cx - 16, cy); vg.lineTo(cx - 5, cy); vg.moveTo(cx + 5, cy); vg.lineTo(cx + 16, cy); vg.moveTo(cx, cy - 16); vg.lineTo(cx, cy - 5); vg.moveTo(cx, cy + 5); vg.lineTo(cx, cy + 16); vg.stroke();
     vg.restore();
