@@ -34,8 +34,24 @@
   const on = (t, f, o) => document.addEventListener(t, f, o);
   ['gesturestart', 'gesturechange', 'gestureend'].forEach((t) => on(t, (e) => { if (hasUI()) e.preventDefault(); }, { passive: false }));   // Safariの ピンチ
   on('touchmove', (e) => { if (e.touches && e.touches.length > 1 && hasUI()) e.preventDefault(); }, { passive: false });                     // 2ほんゆびの ズーム・スクロール
-  on('touchstart', (e) => {                                                                                                                    // がめんの ふちから はじまる スワイプ(もどる・すすむ)
-    const t = e.touches && e.touches[0]; if (!t || !hasUI()) return;
-    if (t.clientX < 18 || t.clientX > window.innerWidth - 18) e.preventDefault();
+  // がめんの ふちから はじまる スワイプ(もどる・すすむ)を とめる。ただし、たての うごきは ページの スクロールに する(2026-11-10)
+  // (ふちで ゆびを おくと スクロールまで とまって いたため。ボタンなどの 上なら、ふつうに おせるように なにも しない)
+  let edge = null;
+  const noTouch = (el) => { for (; el && el !== document.documentElement; el = el.parentElement) { if (getComputedStyle(el).touchAction === 'none') return true; } return false; };
+  on('touchstart', (e) => {
+    edge = null;
+    const t = e.touches && e.touches[0]; if (!t || e.touches.length > 1 || !hasUI()) return;
+    if (!(t.clientX < 18 || t.clientX > window.innerWidth - 18)) return;
+    if (e.target.closest && e.target.closest('button, a, input, select, textarea, label, [role=slider]')) return;
+    e.preventDefault();
+    if (!noTouch(e.target)) edge = { x: t.clientX, y: t.clientY };
   }, { passive: false });
+  on('touchmove', (e) => {
+    if (!edge || !e.touches || e.touches.length !== 1) return;
+    const t = e.touches[0], dy = t.clientY - edge.y;
+    if (Math.abs(t.clientX - edge.x) > Math.abs(dy)) return;          // よこの うごきは なにも しない(もどる・すすむに しない)
+    window.scrollBy(0, -dy); edge.x = t.clientX; edge.y = t.clientY;
+    if (e.cancelable) e.preventDefault();
+  }, { passive: false });
+  on('touchend', () => { edge = null; }, { passive: true });
 })();

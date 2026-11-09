@@ -9,14 +9,14 @@
   @font-face { font-family:"Orbitron"; font-weight:700; src:url(orbitron-700.woff2) format("woff2"); }
   :root { --bg:#04060a; --c:#27e8ff; --m:#ff2d8a; --a:#ffb000; --g:#2dff9b; --ln:#1d4a5a; --tx:#dff; --mu:#7fa3b8; }
   * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-  html,body { margin:0; background:var(--bg); color:var(--mu); }
+  html,body { margin:0; background:var(--bg); color:var(--mu); touch-action:pan-y; overscroll-behavior:none; }  /* ダブルタップ・ピンチのズームを止める(たてスクロールはそのまま) */
   body { font:10px/1.4 ui-monospace,Menlo,Consolas,"Hiragino Kaku Gothic ProN",monospace; letter-spacing:.06em; padding:0 0 190px; -webkit-user-select:none; user-select:none;
     background:linear-gradient(90deg,transparent 0 49px,#27e8ff10 50px,transparent 51px) 0 0/50px 50px,linear-gradient(transparent 0 49px,#27e8ff10 50px,transparent 51px) 0 0/50px 50px,var(--bg); }
   .wrap { max-width:820px; margin:0 auto; }
   header { display:flex; justify-content:space-between; align-items:center; padding:8px 12px; font-family:Orbitron,monospace; font-size:11px; letter-spacing:.18em; color:var(--c); }
   header a { color:var(--mu); text-decoration:none; font:10px ui-monospace,monospace; letter-spacing:.06em; }
   .win { position:relative; border-top:2px solid var(--c); border-bottom:2px solid var(--c); background:#010208; }
-  #view { display:block; width:100%; height:clamp(240px,37vh,340px); touch-action:none; }
+  #view { display:block; width:100%; height:clamp(240px,37vh,340px); touch-action:pan-y; }  /* 窓は見るだけなので、指を置いてもスクロールできる */
   .win:after { content:""; position:absolute; inset:0; background:repeating-linear-gradient(#0000 0 2px,#0004 3px); pointer-events:none; }
   .dash { display:grid; grid-template-columns:1fr; gap:10px; padding:12px 8px 0; }
   .box { position:relative; border:1px solid var(--ln); background:#0a121bcc; padding:22px 10px 10px; clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px); }
@@ -37,7 +37,7 @@
   .seg small, .seg2 small { display:block; font:7px ui-monospace,monospace; letter-spacing:.02em; margin-top:1px; color:#8aa; }
   .seg.on, .seg2.on { color:var(--g); border-color:var(--g); box-shadow:inset 0 0 8px #2dff9b66; } .mtog.auto:not(.act) { color:var(--g); border-color:var(--g); box-shadow:0 0 10px #2dff9b88; }
   .win { position:sticky; top:0; z-index:6; }
-  .vsl { position:absolute; left:6px; top:24px; bottom:8px; width:26px; z-index:3; display:flex; flex-direction:column; align-items:center; gap:3px; touch-action:none; cursor:ns-resize; color:var(--g); font:500 7px Orbitron,monospace; letter-spacing:.1em; }
+  .vsl { position:absolute; left:20px; top:24px; bottom:8px; width:26px; z-index:3; display:flex; flex-direction:column; align-items:center; gap:3px; touch-action:none; cursor:ns-resize; color:var(--g); font:500 7px Orbitron,monospace; letter-spacing:.1em; }
   .vsl .vt { position:relative; flex:1; width:12px; background:rgba(4,12,20,.3); border:1px solid #2dff9b66; } .vsl .vf { position:absolute; left:0; right:0; bottom:0; background:linear-gradient(#2dff9bcc,#2dff9b44); }
   .vsl .vk { position:absolute; left:-6px; right:-6px; height:8px; background:#2dff9b; box-shadow:0 0 8px #2dff9b; } .vsl output { font:500 8px Orbitron,monospace; color:var(--g); }
   .hud { position:absolute; left:38px; bottom:8px; width:min(190px,calc(100% - 106px)); z-index:3; padding:6px 6px 5px; background:rgba(4,12,20,.22); -webkit-backdrop-filter:blur(2px); backdrop-filter:blur(2px); border:1px solid #27e8ff44; }
@@ -139,7 +139,7 @@
   .bk.dn { background:var(--o); box-shadow:0 0 14px var(--o); }
   .wk span { color:var(--o); font-weight:700; line-height:1.15; text-shadow:0 0 5px var(--o); bottom:8px; } .wk.dn span { color:#021; text-shadow:none; }
 </style>
-<script src="../../audio-unlock.js?v=3"></script>
+<script src="../../audio-unlock.js?v=4"></script>
 </head>
 <body>
 <div class="wrap">

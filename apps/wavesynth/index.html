@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <title>なみシンセ | kimpilla</title>
 <style>
+  html,body { touch-action:pan-y; overscroll-behavior:none; }  /* ダブルタップ・ピンチのズームを止める(たてスクロールはそのまま) */
   :root { --bg:#2b2e2a; --ln:#12392a; --gd:#1f7a52; --g:#4dff9f; --tx:#222; --mu:#555; --am:#ff9d1a; --pl:#d9dbd0; --pl2:#c3c6b9; }
   * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
   html,body { margin:0; background:var(--bg); color:var(--tx); }
@@ -56,7 +57,7 @@
   .wk.dn { background:#7fe8b0; } .bk.dn { background:#1f7a52; }
   .wk span { position:absolute; bottom:4px; left:0; right:0; text-align:center; font-size:10px; color:#4a7; pointer-events:none; }
 </style>
-<script src="../../audio-unlock.js?v=3"></script>
+<script src="../../audio-unlock.js?v=4"></script>
 </head>
 <body>
 <div class="wrap"><div class="body">
