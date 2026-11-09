@@ -19,6 +19,8 @@
   canvas#lfo { display: block; width: 100%; height: 190px; border: 1px solid var(--line); }
   .lfowrap .small { margin: 4px 0 0; }
   .grp { border: 1px solid var(--line);  border-radius: 4px; margin: 0 0 8px; padding: 0 10px 6px; }
+  .gh { padding: 8px 0 4px; display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; }
+  .gh b { font-size: 15px; } .gh span { font-size: 12px; color: var(--muted); }
   .grp > summary { cursor: pointer; padding: 8px 0; list-style: none; display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; }
   .grp > summary::-webkit-details-marker { display: none; }
   .grp > summary::before { content: "▸"; color: var(--muted); }
@@ -56,31 +58,33 @@
 <h2>つまみ</h2>
 <div class="ctl">
  <div class="ctlmain">
-  <details class="grp g1" open><summary><b>1. 揺れのもと</b><span>段数・遅れ・深さ・速さ・ばらつき</span></summary>
+  <div class="grp"><div class="gh"><b>揺れのもと</b><span>段数・遅れ・深さ・速さ・ばらつき</span></div>
     <div class="stagerow"><span>段数</span><button id="stDown" aria-label="1段へらす">−</button><output id="stOut"></output><button id="stUp" aria-label="1段ふやす">+</button><span class="small">押し続けると、どんどん変わる</span></div>
     <div class="knobs" id="knobsMod"></div>
     <details class="sub"><summary>ばらつきの内訳(上の「ばらつき」を動かすと、ここも一緒に動く)</summary>
       <div class="knobs" id="knobsFine"></div>
     </details>
-  </details>
-  <details class="grp g2" open><summary><b>2. 揺れの波を足す</b><span>ゆっくりの波と細かい波を重ねる</span></summary>
+  </div>
+  <div class="grp"><div class="gh"><b>マクロ</b><span>全段をまとめて動かす</span></div>
+    <div class="knobs" id="knobsMacro"></div>
+    <details class="sub"><summary>マクロを自動で往復させる</summary>
+      <div class="knobs" id="knobsMacro2"></div>
+    </details>
+  </div>
+  <div class="grp"><div class="gh"><b>揺れの波を足す</b><span>ゆっくりの波と細かい波を重ねる</span></div>
     <div id="waves"></div>
     <p><button id="addWave">＋ 波を追加する</button></p>
-  </details>
-  <details class="grp g3"><summary><b>3. マクロ</b><span>全段をまとめて動かす・自動で往復</span></summary>
-    <div class="knobs" id="knobsMacro"></div>
-    <div class="knobs" id="knobsMacro2"></div>
-  </details>
-  <details class="grp g4" open><summary><b>4. 出力</b><span>フィードバック・混ぜる量・音量</span></summary>
+  </div>
+  <div class="grp"><div class="gh"><b>出力</b><span>フィードバック・混ぜる量・音量</span></div>
     <div class="knobs" id="knobs"></div>
-  </details>
-  <details class="grp g5"><summary><b>5. ディレイ</b><span>コーラスの後ろにつなぐエコー(量0%で、なし)</span></summary>
+  </div>
+  <details class="grp"><summary><b>ディレイ</b><span>コーラスの後ろにつなぐエコー(量0%で、なし)</span></summary>
     <div class="knobs" id="knobsFx"></div>
   </details>
-  <details class="grp g5"><summary><b>6. 音量の波</b><span>音量が波のように上下する(深さ0%で、なし)</span></summary>
+  <details class="grp"><summary><b>音量の波</b><span>音量が波のように上下する(深さ0%で、なし)</span></summary>
     <div class="knobs" id="knobsTrem"></div>
   </details>
-  <details class="grp g6"><summary><b>7. 圧縮</b><span>OTT風・コンプ(音が暴れすぎないようにする)</span></summary>
+  <details class="grp"><summary><b>圧縮</b><span>OTT風・コンプ(音が暴れすぎないようにする)</span></summary>
     <div class="knobs" id="knobsComp"></div>
     <p class="small" id="grOut"></p>
   </details>
@@ -95,12 +99,12 @@
 
 <section class="small">
 <h2>なにが起きているか</h2>
-<p>つまみは、7つのグループに分かれている。最初に開いているのは「1. 揺れのもと」「2. 揺れの波を足す」「4. 出力」。ほかは、見出しを押すと開く。右の(スマホでは上の)波の図は、スクロールしても、画面に残る。ばらつきの内訳は、「1. 揺れのもと」の中にある。</p>
+<p>つまみは、グループに分かれている。ディレイ・音量の波・圧縮と、ばらつきの内訳・マクロの自動往復は、押すと開く。右の(スマホでは上の)波の図は、スクロールしても、画面に残る。ばらつきの内訳は、「揺れのもと」の中にある。</p>
 <ul>
 <li><b>段数</b>: コーラスを何個つなぐか。1段だと、ふつうのコーラス(音がふくらむ)。重ねるほど、遅れと揺れが積み重なって、音程がよれ、輪郭が溶けていく。</li>
 <li><b>遅れ・揺れの深さ</b>: 何ミリ秒遅らせるか、それをどれだけ揺らすか。深く揺らすと、音の高さが上下にうねる。</li>
 <li><b>揺れの速さ</b>: ふつうのコーラスは1秒に1回前後。数十回まで速くすると、うねりがザラザラした音に変わる。</li>
-<li><b>ばらつき(速さ・深さ・遅れ・出だし)</b>: 上の「ばらつき」1本で、4つがまとめて決まる(細かく変えたいときは、「1. 揺れのもと」の中の「ばらつきの内訳」)。DAWで、コーラスを1つずつ別の設定にして重ねたときのような、段ごとの不揃い。<b>速さ</b>=段ごとに揺れの速さが違う(100%で、基本の4分の1〜4倍)。<b>深さ</b>・<b>遅れ</b>=段ごとに、基本の値より、大きかったり小さかったりする。<b>出だし</b>=波がどの位置から始まるか(100%で、段ごとにばらばら。0%だと、全部の段が同じ瞬間に、同じ向きに揺れ始める)。全部0%だと、規則的なうねり、上げるほど、予測できない崩れ方になる。「揺れのばらつきを振り直す」で、段ごとの値が、全部振り直される。</li>
+<li><b>ばらつき(速さ・深さ・遅れ・出だし)</b>: 上の「ばらつき」1本で、4つがまとめて決まる(細かく変えたいときは、「揺れのもと」の中の「ばらつきの内訳」)。DAWで、コーラスを1つずつ別の設定にして重ねたときのような、段ごとの不揃い。<b>速さ</b>=段ごとに揺れの速さが違う(100%で、基本の4分の1〜4倍)。<b>深さ</b>・<b>遅れ</b>=段ごとに、基本の値より、大きかったり小さかったりする。<b>出だし</b>=波がどの位置から始まるか(100%で、段ごとにばらばら。0%だと、全部の段が同じ瞬間に、同じ向きに揺れ始める)。全部0%だと、規則的なうねり、上げるほど、予測できない崩れ方になる。「揺れのばらつきを振り直す」で、段ごとの値が、全部振り直される。</li>
 <li><b>マクロ</b>: コーラスの、速さ・深さ・遅れを、全段まとめて1本のつまみで動かす(DAWで、コーラスのパラメーターを1つのMacroにつないで、複製したのと同じ)。真ん中(50%)で、基本の設定のまま。上げると、全段が速く・深く・遅れ大きくなり、下げると逆になる。段ごとの違い(ばらつき)は、そのまま保たれる。<b>自動で往復させる幅</b>を上げると、マクロが、周期ごとに、真ん中のまわりで自動で往復する(幅100%で、0%〜100%を行き来する)。WAV書き出しにも、この往復が入る。</li>
 <li><b>フィードバック</b>: 遅れた音を、もう一度、自分の入り口に戻す。上げると金属的に鳴り、段数が多いと、発振ぎりぎりのノイズになる。</li>
 <li><b>波を追加する</b>: 揺れの波を、もう1つ、足す。遅れの時間が、全部の波の足し算で動く。ゆっくりの波(0.02〜2回/秒)と細かい波(数回〜数十回/秒)を重ねると、テープやレコードのような「うねり」と「ザラつき」が同時に出る。6つまで足せる。遅れの時間が0より小さくならないように、深さの合計が大きすぎると、全部の波が同じ割合で小さくなる。</li>
