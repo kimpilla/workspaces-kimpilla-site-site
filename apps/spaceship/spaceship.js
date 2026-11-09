@@ -155,10 +155,10 @@
   function stopSelf() { clearInterval(pulseTimer); noteOff('d'); noteOff('v'); }
   function setSelf(on) {
     selfPlay = on;
-    document.querySelectorAll('.seg2').forEach((b) => b.classList.toggle('on', (b.dataset.s === '1') === on));
+    const g = $('gsw'); g.classList.toggle('on', on); g.setAttribute('aria-pressed', on); g.querySelector('em').textContent = on ? 'ARMED' : 'SAFE'; click();
     if (ACT) { stopSelf(); if (on) startSelf(ACT); }
   }
-  document.querySelectorAll('.seg2').forEach((b) => b.addEventListener('click', () => setSelf(b.dataset.s === '1')));
+  $('gsw').addEventListener('click', () => { ensureAudio(); setSelf(!selfPlay); });
   function syncBtns() {
     const tg = $('mTog'); tg.classList.toggle('act', !!ACT); if (ACT) tg.style.setProperty('--k', PRE[ACT].col);
     document.querySelectorAll('.pbtn').forEach((b) => { b.classList.toggle('on', ACT === b.dataset.p); b.classList.toggle('lk', ACT === b.dataset.p && LOCKED); });
