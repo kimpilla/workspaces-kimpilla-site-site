@@ -4,19 +4,29 @@
   const $ = (id) => document.getElementById(id);
 
   const DEFAULTS = { wave: 'sawtooth', wave2: 'sawtooth', volume: 0.5, fmRatio: 2, fmDepth: 400, cutoff: 2400, q: 4, attack: 0.01, decay: 1, sustain: 1, fEnv: 0, fDecay: 0.4,
-    osc2: 0, detune: 12, sub: 0, release: 0.4, delayTime: 0.35, feedback: 0.35, mix: 0.25, sweep: 0, sweepTime: 0.25, noise: 0, wobble: 0, wobbleRate: 5 };
+    osc2: 0, detune: 12, sub: 0, release: 0.4, delayTime: 0.35, feedback: 0.35, mix: 0.25, sweep: 0, sweepTime: 0.25, noise: 0, wobble: 0, wobbleRate: 5, arpRate: 6, arpSpan: 2 };
   const p = Object.assign({}, DEFAULTS);
 
-  // ---- ミッション音(押している間だけ上書きする設定。drone=鳴りっぱなし、pulse=くり返し) ----
+  // ---- ミッション音(押すと音色が変わり、自動演奏のパターンがグリッドに出る) ----
   const PRE = {
-    laser: { code: 'LASER', col: '#ff2d8a', p: { wave: 'square', wave2: 'sawtooth', osc2: 0.3, sub: 0, cutoff: 7000, q: 6, sweep: -3, sweepTime: 0.2, release: 0.15, attack: 0.002, decay: 0.2, sustain: 0.2, mix: 0.2, delayTime: 0.12, feedback: 0.3, noise: 0, wobble: 0 }, pulse: { every: 0.34, len: 0.18, note: 84 } },
-    warp: { code: 'WARP', col: '#27e8ff', p: { wave: 'sawtooth', wave2: 'square', osc2: 0.4, sub: 0.5, cutoff: 3500, q: 8, sweep: 2.5, sweepTime: 1.1, attack: 0.3, decay: 1, sustain: 1, release: 1.2, mix: 0.45, feedback: 0.62, delayTime: 0.3, noise: 0, wobble: 0, fm: 'dial' }, pulse: { every: 2, len: 1.5, note: 36 } },
-    alert: { code: 'ALERT', col: '#ff4a4a', p: { wave: 'square', osc2: 0, sub: 0, cutoff: 2600, q: 3, wobble: 0.75, wobbleRate: 1.6, attack: 0.02, sustain: 0.8, release: 0.1, mix: 0.1, noise: 0, sweep: 0 }, drone: 74 },
-    comms: { code: 'COMMS', col: '#2dff9b', p: { wave: 'square', osc2: 0, sub: 0, cutoff: 3200, q: 2, attack: 0.001, sustain: 0.9, release: 0.03, mix: 0.25, delayTime: 0.15, feedback: 0.3, noise: 0, wobble: 0, sweep: 0, fm: 260, fmRatio: 3.5 }, pulse: { every: 1.1, len: 0.07, note: 88, double: true } },
-    thrust: { code: 'THRUST', col: '#ffb000', p: { wave: 'sawtooth', wave2: 'square', osc2: 0.6, sub: 1, cutoff: 420, q: 2, noise: 0.9, wobble: 0.12, wobbleRate: 9, attack: 0.4, sustain: 1, release: 0.6, mix: 0.05, sweep: 0 }, drone: 28 },
-    sonar: { code: 'SONAR', col: '#9bd0ff', p: { wave: 'sine', osc2: 0, sub: 0, cutoff: 5000, q: 0.5, attack: 0.003, decay: 1.2, sustain: 0, release: 0.6, mix: 0.7, feedback: 0.72, delayTime: 0.45, noise: 0, wobble: 0, sweep: 0 }, pulse: { every: 2.4, len: 0.05, note: 81 } },
+    laser: { code: 'LASER', col: '#ff2d8a', p: { wave: 'square', wave2: 'sawtooth', osc2: 0.3, sub: 0, cutoff: 7000, q: 6, sweep: -3, sweepTime: 0.2, release: 0.15, attack: 0.002, decay: 0.2, sustain: 0.2, mix: 0.2, delayTime: 0.12, feedback: 0.3, noise: 0, wobble: 0 } },
+    warp: { code: 'WARP', col: '#27e8ff', p: { wave: 'sawtooth', wave2: 'square', osc2: 0.4, sub: 0.5, cutoff: 3500, q: 8, sweep: 2.5, sweepTime: 1.1, attack: 0.3, decay: 1, sustain: 1, release: 1.2, mix: 0.45, feedback: 0.62, delayTime: 0.3, noise: 0, wobble: 0, fm: 'dial' } },
+    alert: { code: 'ALERT', col: '#ff4a4a', p: { wave: 'square', osc2: 0, sub: 0, cutoff: 2600, q: 3, wobble: 0.75, wobbleRate: 1.6, attack: 0.02, sustain: 0.8, release: 0.1, mix: 0.1, noise: 0, sweep: 0 } },
+    comms: { code: 'COMMS', col: '#2dff9b', p: { wave: 'square', osc2: 0, sub: 0, cutoff: 3200, q: 2, attack: 0.001, sustain: 0.9, release: 0.03, mix: 0.25, delayTime: 0.15, feedback: 0.3, noise: 0, wobble: 0, sweep: 0, fm: 260, fmRatio: 3.5 } },
+    thrust: { code: 'THRUST', col: '#ffb000', p: { wave: 'sawtooth', wave2: 'square', osc2: 0.6, sub: 1, cutoff: 420, q: 2, noise: 0.9, wobble: 0.12, wobbleRate: 9, attack: 0.4, sustain: 1, release: 0.6, mix: 0.05, sweep: 0 } },
+    sonar: { code: 'SONAR', col: '#9bd0ff', p: { wave: 'sine', osc2: 0, sub: 0, cutoff: 5000, q: 0.5, attack: 0.003, decay: 1.2, sustain: 0, release: 0.6, mix: 0.7, feedback: 0.72, delayTime: 0.45, noise: 0, wobble: 0, sweep: 0 } },
   };
-  let ACT = null, LOCKED = false, pressing = null, lockTimer = 0, pulseTimer = 0;
+  // 自動演奏のパターン(root=いちばん下の段の音、rate=1秒あたりのマス数、cells=[段,列]。つながったマスは音が伸びる)
+  const rng = (r, a, b) => { const o = []; for (let c = a; c <= b; c++) o.push([r, c]); return o; };
+  const PAT = {
+    laser: { root: 72, rate: 11.76, cells: [].concat(rng(5, 0, 1), rng(5, 4, 5), rng(5, 8, 9), rng(5, 12, 13)) },
+    warp: { root: 24, rate: 8, cells: rng(5, 0, 11) },
+    alert: { root: 74, rate: 8, cells: rng(0, 0, 15) },
+    comms: { root: 76, rate: 14.5, cells: [[5, 0], [5, 2]] },
+    thrust: { root: 28, rate: 8, cells: rng(0, 0, 15) },
+    sonar: { root: 69, rate: 6.7, cells: [[5, 0]] },
+  };
+  let ACT = null, LOCKED = false, pressing = null, lockTimer = 0;
   const events = [];                                              // 景色用の出来事(レーザー発射、ソナーなど)
 
   // 実際に鳴らす設定 = つまみの設定 + ミッション音の上書き
@@ -125,28 +135,19 @@
     o.connect(g); g.connect(ctx.destination); o.start(t); o.stop(t + 0.04);
   }
 
-  // ---- ミッション音の入り切り ----
-  function fire(name) {
-    const pr = PRE[name]; if (!pr || ACT !== name || !pr.pulse) return;
-    const q = pr.pulse, go = (delayMs) => setTimeout(() => {
-      if (ACT !== name) return;
-      noteOn('v', q.note); events.push({ type: name, t: performance.now() / 1000 });
-      setTimeout(() => noteOff('v'), q.len * 1000);
-    }, delayMs);
-    go(0); if (q.double) go(160);
-  }
-  function stopPreset() {
-    clearInterval(pulseTimer); noteOff('d'); noteOff('v');
-    ACT = null; LOCKED = false; applyGlobal(); syncBtns();
-  }
+  // ---- ミッション音の入り切り(音は、シーケンサーが自動で鳴らす) ----
+  let selfPlay = true;
+  function stopPreset() { seqHalt(); ACT = null; LOCKED = false; applyGlobal(); syncBtns(); syncSeq(); }
   function activate(name) {
-    if (ACT) stopPreset();
-    ensureAudio(); ACT = name; LOCKED = false; applyGlobal();
-    const pr = PRE[name];
-    if (pr.drone) { noteOn('d', pr.drone); events.push({ type: name, t: performance.now() / 1000 }); }
-    if (pr.pulse) { fire(name); pulseTimer = setInterval(() => fire(name), pr.pulse.every * 1000); }
-    syncBtns();
+    seqHalt(); ensureAudio(); ACT = name; LOCKED = false; applyGlobal();
+    syncBtns(); syncSeq();
   }
+  function setSelf(on) {                                          // OFF のときは、鍵盤の音色だけ変わる
+    seqHalt(); selfPlay = on;
+    const g = $('gsw'); g.classList.toggle('on', on); g.setAttribute('aria-pressed', on); g.querySelector('b').textContent = on ? 'ON' : 'OFF'; click();
+    syncSeq();
+  }
+  $('gsw').addEventListener('click', () => { ensureAudio(); setSelf(!selfPlay); });
   function syncBtns() {
     const tg = $('mTog'); tg.classList.toggle('act', !!ACT); if (ACT) tg.style.setProperty('--k', PRE[ACT].col);
     document.querySelectorAll('.pbtn').forEach((b) => { b.classList.toggle('on', ACT === b.dataset.p); b.classList.toggle('lk', ACT === b.dataset.p && LOCKED); });
@@ -156,17 +157,167 @@
   $('mTog').addEventListener('click', () => { const o = $('mp').classList.toggle('hide'); $('mTog').classList.toggle('open', !o); });
   document.querySelectorAll('.pbtn').forEach((b) => {
     const name = b.dataset.p;
-    b.addEventListener('pointerdown', (e) => {
-      e.preventDefault(); b.setPointerCapture(e.pointerId); ensureAudio();
-      if (ACT === name && LOCKED) { stopPreset(); click(); hideMp(); return; }       // ロック中にさわると解除
-      activate(name); pressing = name;
-      clearTimeout(lockTimer);
-      lockTimer = setTimeout(() => { if (ACT === name && pressing === name) { LOCKED = true; click(); syncBtns(); } }, 600);
+    b.addEventListener('pointerdown', (e) => {                      // 押すたびに ON / OFF(別のを押すと切り替わる)
+      e.preventDefault(); ensureAudio();
+      if (ACT === name) stopPreset(); else activate(name);
+      click();
     });
-    const release = () => { clearTimeout(lockTimer); if (pressing === name) { pressing = null; if (!LOCKED && ACT === name) stopPreset(); hideMp(); } };
-    b.addEventListener('pointerup', release); b.addEventListener('pointercancel', release);
+    b.addEventListener('pointerup', hideMp); b.addEventListener('pointercancel', hideMp);
     b.addEventListener('contextmenu', (e) => e.preventDefault());
   });
+
+  // ---- 自動演奏: OFF / DRONE(一定の高さを鳴らし続ける) / ARP(押さえた鍵盤を順番に鳴らす) ----
+  // ---- 段のあるレバー(モード切り替え用) ----
+  function mkLever(box, opts, get, set) {
+    const n = opts.length;
+    box.innerHTML = '<div class="sl"><div class="slot"><div class="hd"></div></div><div class="labs"></div></div>';
+    const sl = box.firstChild, slot = sl.querySelector('.slot'), hd = sl.querySelector('.hd'), labs = sl.querySelector('.labs');
+    opts.forEach(([v, l, s], i) => { const b = document.createElement('button'); b.type = 'button'; b.innerHTML = l + (s ? '<small>' + s + '</small>' : ''); b.dataset.i = i; labs.appendChild(b); });
+    const sync = () => { const i = Math.max(0, opts.findIndex((o) => o[0] === get())); hd.style.left = (n === 1 ? 50 : i / (n - 1) * 100) + '%'; [...labs.children].forEach((b, k) => b.classList.toggle('on', k === i)); };
+    const at = (e) => { const r = slot.getBoundingClientRect(); return Math.max(0, Math.min(n - 1, Math.round((e.clientX - r.left) / r.width * (n - 1)))); };
+    let on = false;
+    sl.addEventListener('pointerdown', (e) => { if (e.target.closest('.labs button')) return; e.preventDefault(); sl.setPointerCapture(e.pointerId); on = true; set(opts[at(e)][0]); sync(); });
+    sl.addEventListener('pointermove', (e) => { if (!on) return; const v = opts[at(e)][0]; if (v !== get()) { set(v); sync(); } });
+    sl.addEventListener('pointerup', () => { on = false; }); sl.addEventListener('pointercancel', () => { on = false; });
+    labs.addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; set(opts[+b.dataset.i][0]); sync(); });
+    sync(); return sync;
+  }
+  let autoMode = 'off', droneNote = null, arpTimer = 0, arpIdx = 0;
+  const arpHeld = new Set(), arpNotes = new Set();                // arpHeld=いま押している鍵盤、arpNotes=くり返し鳴らす音(離しても残る)
+  function setDrone(n) { noteOff('a'); droneNote = n; noteOn('a', n); }
+  function stopDrone() { noteOff('a'); }
+  function arpStep() {
+    if (autoMode !== 'arp' || !arpNotes.size) return;
+    const base0 = [...arpNotes].sort((a, b) => a - b), list = [];
+    for (let k = 0; k < Math.round(p.arpSpan); k++) base0.forEach((n) => list.push(n + 12 * k));
+    const n = list[arpIdx % list.length]; arpIdx++;
+    noteOff('arp'); noteOn('arp', n);
+    events.push({ type: 'arp', t: performance.now() / 1000 });
+    const iv = 1000 / p.arpRate; setTimeout(() => noteOff('arp'), iv * 0.6);
+    arpTimer = setTimeout(arpStep, iv);
+  }
+  function startArp() { if (arpTimer) return; arpIdx = 0; arpStep(); }
+  function stopArp() { clearTimeout(arpTimer); arpTimer = 0; noteOff('arp'); }
+  function press(n) {
+    if (autoMode === 'arp') {                                      // 新しく押しはじめたら、くり返す音を入れ替える
+      if (!arpHeld.size) arpNotes.clear();
+      arpHeld.add(n); arpNotes.add(n); keyEl(n, true); ensureAudio(); startArp(); return;
+    }
+    if (autoMode === 'drone') setDrone(n);
+    noteOn(n);
+  }
+  function release(n) {
+    if (arpHeld.has(n)) { arpHeld.delete(n); keyEl(n, false); return; }
+    noteOff(n);
+  }
+  function releaseAll() { for (const n of [...voices.keys()]) if (typeof n === 'number') noteOff(n); [...arpHeld].forEach((n) => keyEl(n, false)); arpHeld.clear(); }
+  // ---- シーケンサー(音階をグリッドに並べて、自動で鳴らす) ----
+  const PRE_IV = [0, 3, 5, 7, 10, 12, 15, 17, 19, 22], PRE_N = 10, PRE_W = 16;     // ミッション音のパターンは、この枠(マイナーペンタ2オクターブ×16マス)で作ってある
+  const MAXR = 36, MAXW = 32;
+  const SCALES = { mp: ['マイナーペンタ', [0, 3, 5, 7, 10]], Mp: ['メジャーペンタ', [0, 2, 4, 7, 9]], mi: ['マイナー', [0, 2, 3, 5, 7, 8, 10]], ma: ['ドレミ(メジャー)', [0, 2, 4, 5, 7, 9, 11]], ry: ['琉球', [0, 4, 5, 7, 11]], ch: ['半音ぜんぶ', [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]] };
+  const SCF = { user: { scale: 'mp', oct: 2, len: 16 } };       // 範囲の設定(自分のパターンと、ミッション音ごとに別々)
+  Object.keys(PAT).forEach((k) => { SCF[k] = { scale: 'mp', oct: 2, len: 16 }; });
+  const curSC = () => viewPre() ? SCF[ACT] : SCF.user;
+  const cfgFor = (sc) => { const base0 = SCALES[sc.scale][1], iv = []; for (let k = 0; k < sc.oct; k++) base0.forEach((v) => iv.push(v + 12 * k)); return { iv, N: iv.length, W: sc.len, key: iv.length + 'x' + sc.len + ':' + sc.scale }; };
+  const NAMES = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
+  const OCT_COL = { 0: '#ff5a2d', 1: '#ff2d8a', 2: '#ffb000', 3: '#2dff9b', 4: '#27e8ff', 5: '#a66bff', 6: '#ff5a2d', 7: '#ff2d8a' };   // オクターブごとの蛍光色
+  const octCol = (m) => OCT_COL[Math.floor(m / 12) - 1] || '#27e8ff';
+  const mkGrid = (cells) => { const g = Array.from({ length: MAXR }, () => new Array(MAXW).fill(false)); cells.forEach(([r, c]) => { g[r][c] = true; }); return g; };
+  const USER_RIFF = [[0, 0], [3, 2], [4, 4], [3, 6], [0, 8], [2, 10], [3, 12], [5, 14], [0, 14], [8, 12]];
+  const userGrid = mkGrid(USER_RIFF), PGRID = {};
+  Object.keys(PAT).forEach((k) => { PGRID[k] = mkGrid(PAT[k].cells); });
+  let seqTimer = 0, seqStep = 0, seqCells = null, seqLabs = null, seqSrc = null, seqDim = '';      // seqSrc: 鳴らしている元('pre'=ミッション音 / 'user'=SEQ / null)
+  const viewPre = () => !!(ACT && selfPlay);                                          // グリッドに出すのがミッション音か
+  const viewGrid = () => viewPre() ? PGRID[ACT] : userGrid;
+  const viewBase = () => viewPre() ? PAT[ACT].root : base;
+  function buildCells() {
+    const g = $('sqGrid'), lab = $('sqLab'), c0 = cfgFor(curSC()); g.innerHTML = ''; lab.innerHTML = ''; seqCells = []; seqLabs = [];
+    const rh = c0.N > 12 ? Math.max(11, Math.floor(288 / c0.N)) : 24;
+    g.style.gridTemplateColumns = 'repeat(' + c0.W + ',1fr)'; g.style.gridTemplateRows = 'repeat(' + c0.N + ',' + rh + 'px)';
+    lab.style.gridTemplateRows = 'repeat(' + c0.N + ',' + rh + 'px)'; lab.style.rowGap = '2px'; lab.style.fontSize = rh < 16 ? '7px' : '8px';
+    for (let r = c0.N - 1; r >= 0; r--) {
+      const l = document.createElement('div'); l.className = 'sqL'; lab.appendChild(l); seqLabs[r] = l;
+      for (let c = 0; c < c0.W; c++) {
+        const d = document.createElement('div'); d.className = 'sqc' + (c % 4 === 0 ? ' b4' : ''); d.dataset.r = r; d.dataset.c = c;
+        g.appendChild(d); (seqCells[r] = seqCells[r] || [])[c] = d;
+      }
+    }
+    seqDim = c0.key;
+  }
+  function initSeq() {
+    const g = $('sqGrid'); let paint = null;
+    const hit = (e) => { const el = document.elementFromPoint(e.clientX, e.clientY); return el && el.classList.contains('sqc') ? el : null; };
+    const set = (el, v) => { const G = viewGrid(), r = +el.dataset.r, c = +el.dataset.c; if (G[r][c] === v) return; G[r][c] = v; el.classList.toggle('on', v); if (v) { ensureAudio(); const id = 'p'; noteOff(id); noteOn(id, viewBase() + cfgFor(curSC()).iv[r]); setTimeout(() => noteOff(id), 160); } };
+    g.addEventListener('pointerdown', (e) => { const el = hit(e); if (!el) return; e.preventDefault(); g.setPointerCapture(e.pointerId); paint = !viewGrid()[+el.dataset.r][+el.dataset.c]; set(el, paint); });
+    g.addEventListener('pointermove', (e) => { if (paint === null) return; const el = hit(e); if (el) set(el, paint); });
+    const up = () => { paint = null; }; g.addEventListener('pointerup', up); g.addEventListener('pointercancel', up);
+    $('sqClr').onclick = () => { viewGrid().forEach((row) => row.fill(false)); refreshGrid(); };
+    $('sqRst').onclick = () => { Object.assign(curSC(), { scale: 'mp', oct: 2, len: 16 }); const G = viewGrid(), src = mkGrid(viewPre() ? PAT[ACT].cells : USER_RIFF); G.forEach((row, r) => row.forEach((v, c) => { row[c] = src[r][c]; })); seqHalt(); syncSeq(); };
+    const nearest = (iv, v) => { let bi = 0; iv.forEach((x, i) => { if (Math.abs(x - v) < Math.abs(iv[bi] - v)) bi = i; }); return bi; };
+    const change = (key, val) => {                                 // 範囲を変える。いまのパターンは、できるだけ同じ高さ・同じ位置に引き継ぐ
+      const sc = curSC(), G = viewGrid(), old = cfgFor(sc), oldLen = sc.len; sc[key] = val; const nw = cfgFor(sc);
+      if (key !== 'len') {
+        const on = []; for (let r = 0; r < old.N; r++) for (let c = 0; c < MAXW; c++) if (G[r][c]) on.push([nearest(nw.iv, old.iv[r]), c]);
+        G.forEach((row) => row.fill(false)); on.forEach(([r, c]) => { G[r][c] = true; });
+      } else if (val > oldLen) for (let r = 0; r < MAXR; r++) for (let c = oldLen; c < val; c++) G[r][c] = G[r][c % oldLen];   // 長くしたら、くり返しで埋める
+      seqHalt(); syncSeq();
+    };
+    const sel = (id, key, opts, conv) => { const el = $(id); el.innerHTML = opts.map(([v, l]) => '<option value="' + v + '">' + l + '</option>').join(''); el.onchange = () => change(key, conv(el.value)); };
+    sel('sqScale', 'scale', Object.keys(SCALES).map((k) => [k, SCALES[k][0]]), (v) => v);
+    sel('sqOct', 'oct', [[1, '1オクターブ'], [2, '2オクターブ'], [3, '3オクターブ']], Number);
+    sel('sqLen', 'len', [[8, '8マス'], [16, '16マス'], [32, '32マス']], Number);
+    refreshGrid();
+  }
+  function refreshGrid() {
+    const pre = viewPre(), c0 = cfgFor(curSC());
+    if (!seqCells || seqDim !== c0.key) buildCells();
+    const G = viewGrid(), col = pre ? PRE[ACT].col : '#27e8ff';
+    for (let r = 0; r < c0.N; r++) for (let c = 0; c < c0.W; c++) seqCells[r][c].classList.toggle('on', G[r][c]);
+    updateSeqLabels();
+    const t = $('sqSrc'); if (t) { t.textContent = pre ? PRE[ACT].code + ' パターン' : 'MY PATTERN'; t.style.color = col; }
+    const sc = curSC(); $('sqScale').value = sc.scale; $('sqOct').value = sc.oct; $('sqLen').value = sc.len;
+  }
+  function updateSeqLabels() {
+    if (!seqLabs) return;
+    const c0 = cfgFor(curSC()), b0 = viewBase();
+    c0.iv.forEach((iv, r) => { if (!seqLabs[r]) return; const m = b0 + iv; seqLabs[r].textContent = NAMES[m % 12] + (Math.floor(m / 12) - 1); seqLabs[r].style.color = octCol(m); });
+    for (let r = 0; r < c0.N; r++) for (let c = 0; c < c0.W; c++) seqCells[r][c].style.setProperty('--o', octCol(b0 + c0.iv[r]));
+  }
+  function seqTick() {
+    if (!seqSrc) return;
+    const pre = seqSrc === 'pre' && ACT, sc = pre ? SCF[ACT] : SCF.user, c0 = cfgFor(sc), W = c0.W, G = pre ? PGRID[ACT] : userGrid, B = pre ? PAT[ACT].root : base, rate = pre ? PAT[ACT].rate : p.arpRate;
+    const col = seqStep % W, prv = (col + W - 1) % W, nxt = (col + 1) % W; seqStep++;
+    if (seqCells && seqDim === c0.key && viewPre() === !!pre) for (let r = 0; r < c0.N; r++) for (let c = 0; c < W; c++) seqCells[r][c].classList.toggle('ph', c === col);
+    const iv = 1000 / rate; let any = false;
+    for (let r = 0; r < c0.N; r++) {
+      const id = 's' + r;
+      if (G[r][col]) {
+        if (!G[r][prv] || !voices.has(id)) { any = true; noteOff(id); noteOn(id, B + c0.iv[r]); }   // つながったマスは、鳴らしっぱなし
+        if (!G[r][nxt]) setTimeout(() => noteOff(id), iv * 0.75);
+      } else noteOff(id);
+    }
+    if (any) events.push({ type: pre ? ACT : 'arp', t: performance.now() / 1000 });
+    seqTimer = setTimeout(seqTick, iv);
+  }
+  function seqHalt() { clearTimeout(seqTimer); seqTimer = 0; seqSrc = null; for (let r = 0; r < MAXR; r++) noteOff('s' + r); if (seqCells) seqCells.forEach((row) => row.forEach((d) => d.classList.remove('ph'))); }
+  function syncSeq() {
+    const w = (ACT && selfPlay) ? 'pre' : (autoMode === 'seq' ? 'user' : null);
+    if (w !== seqSrc) { seqHalt(); seqSrc = w; if (w) { seqStep = 0; seqTick(); } }
+    refreshGrid();
+  }
+  let autoSync = null;
+  function setAuto(m) {
+    if (autoMode === 'arp' && m !== 'arp') { [...arpHeld].forEach((n) => keyEl(n, false)); arpHeld.clear(); arpNotes.clear(); stopArp(); }
+    if (m !== 'drone') stopDrone();
+    autoMode = m; ensureAudio();
+    if (m === 'drone') setDrone(droneNote == null ? base : droneNote);                 // 選んだだけで、一定の高さが鳴りはじめる
+    if (m === 'arp') { if (!arpNotes.size) [0, 3, 7].forEach((d) => arpNotes.add(base + d)); startArp(); }   // 選んだだけで、和音が順番に鳴りはじめる
+    syncSeq();
+    if (autoSync) autoSync();
+    $('mTog').classList.toggle('auto', m !== 'off');
+  }
+  autoSync = mkLever($('autoLv'), [['off', 'OFF'], ['drone', 'DRONE', '鳴りっぱなし'], ['arp', 'ARP', '順番に鳴る'], ['seq', 'SEQ', 'グリッド']], () => autoMode, setAuto);
+
 
   // ---- 鍵盤(2オクターブ) ----
   let base = 48;
@@ -178,13 +329,13 @@
     for (let i = 0; i < 24; i++) {
       const n = base + i, isW = WHITE.includes(i % 12);
       const k = document.createElement('div');
-      k.className = isW ? 'wk' : 'bk'; k.dataset.note = n;
+      k.className = isW ? 'wk' : 'bk'; k.dataset.note = n; k.style.setProperty('--o', octCol(n));
       if (isW) { k.style.left = (wi * ww) + '%'; k.style.width = ww + '%'; wi++; }
       else { k.style.left = (wi * ww - ww * 0.3) + '%'; k.style.width = (ww * 0.6) + '%'; }
-      if (isW) k.innerHTML = '<span>' + PC[i].toUpperCase() + '</span>';
+      if (isW) k.innerHTML = '<span>' + (i % 12 === 0 ? 'C' + (n / 12 - 1) + '<br>' : '') + PC[i].toUpperCase() + '</span>';
       box.appendChild(k);
     }
-    $('octl').textContent = 'OCT C' + (base / 12 - 1);
+    $('octl').textContent = 'OCT C' + (base / 12 - 1); updateSeqLabels();
   }
   function keyEl(id, on) {
     if (typeof id !== 'number') return;
@@ -194,25 +345,25 @@
   $('kb').addEventListener('pointerdown', (e) => {
     const k = e.target.closest('[data-note]'); if (!k) return;
     e.preventDefault(); $('kb').setPointerCapture(e.pointerId);
-    pointerNote.set(e.pointerId, +k.dataset.note); noteOn(+k.dataset.note);
+    pointerNote.set(e.pointerId, +k.dataset.note); press(+k.dataset.note);
   });
   $('kb').addEventListener('pointermove', (e) => {
     if (!pointerNote.has(e.pointerId)) return;
     const el = document.elementFromPoint(e.clientX, e.clientY), k = el && el.closest('[data-note]'); if (!k) return;
     const n = +k.dataset.note, old = pointerNote.get(e.pointerId);
-    if (n !== old) { noteOff(old); pointerNote.set(e.pointerId, n); noteOn(n); }
+    if (n !== old) { release(old); pointerNote.set(e.pointerId, n); press(n); }
   });
-  const kup = (e) => { if (pointerNote.has(e.pointerId)) { noteOff(pointerNote.get(e.pointerId)); pointerNote.delete(e.pointerId); } };
+  const kup = (e) => { if (pointerNote.has(e.pointerId)) { release(pointerNote.get(e.pointerId)); pointerNote.delete(e.pointerId); } };
   $('kb').addEventListener('pointerup', kup); $('kb').addEventListener('pointercancel', kup);
   const held = new Map();
   window.addEventListener('keydown', (e) => {
     if (e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
     const i = PC.indexOf(e.key.toLowerCase()); if (i < 0) return;
-    held.set(e.key.toLowerCase(), base + i); noteOn(base + i);
+    held.set(e.key.toLowerCase(), base + i); press(base + i);
   });
-  window.addEventListener('keyup', (e) => { const k = e.key.toLowerCase(); if (held.has(k)) { noteOff(held.get(k)); held.delete(k); } });
-  window.addEventListener('blur', () => { for (const n of [...voices.keys()]) if (typeof n === 'number') noteOff(n); held.clear(); if (ACT && !LOCKED) stopPreset(); });
-  const shift = (d) => { for (const n of [...voices.keys()]) if (typeof n === 'number') noteOff(n); base = Math.min(84, Math.max(24, base + d)); buildKeys(); };
+  window.addEventListener('keyup', (e) => { const k = e.key.toLowerCase(); if (held.has(k)) { release(held.get(k)); held.delete(k); } });
+  window.addEventListener('blur', () => { releaseAll(); held.clear(); });
+  const shift = (d) => { releaseAll(); base = Math.min(84, Math.max(24, base + d)); buildKeys(); };
   $('octdn').onclick = () => shift(-12); $('octup').onclick = () => shift(12);
 
   // ---- つまみ・レバー・スイッチ ----
@@ -224,6 +375,7 @@
     g2: [['osc2', 'OSC2 MIX', '2つ目の量', 0, 1, 0.01, false, (v) => v < 0.02 ? 'OFF' : Math.round(v * 100) + '%'], ['detune', 'DETUNE', 'ずらし', 0, 50, 0.5, false, f1(1, 'ct')], ['sub', 'SUB', '1オクターブ下', 0, 1, 0.01, false, (v) => v < 0.02 ? 'OFF' : Math.round(v * 100) + '%']],
     g3: [['sweep', 'PITCH SWP', '音程すべり', -3, 3, 0.05, false, (v) => Math.abs(v) < 0.05 ? 'OFF' : (v > 0 ? '↑' : '↓') + Math.abs(v).toFixed(1) + 'oct'], ['noise', 'NOISE', 'ノイズ', 0, 1, 0.01, false, (v) => v < 0.02 ? 'OFF' : Math.round(v * 100) + '%'], ['wobble', 'WOBBLE', 'うねり', 0, 1, 0.01, false, (v) => v < 0.02 ? 'OFF' : Math.round(v * 100) + '%']],
     g4: [['delayTime', 'ECHO TIME', '間隔', 0.05, 1.2, 0.01, false, f1(2, 's')], ['feedback', 'ECHO FDBK', 'くり返し', 0, 0.9, 0.01, false, (v) => Math.round(v * 100) + '%'], ['mix', 'ECHO MIX', '量', 0, 1, 0.01, false, (v) => Math.round(v * 100) + '%']],
+    g6: [['arpRate', 'RATE', '速さ(ARP・SEQ)', 1, 20, 0.5, true, (v) => v.toFixed(1) + '/s'], ['arpSpan', 'ARP SPAN', '何オクターブ', 1, 3, 1, false, (v) => Math.round(v) + 'oct']],
     g5: [['attack', 'ATK', '立ち上がり', 0.001, 2, 0.001, true, f1(2, 's')], ['decay', 'DEC', '減っていく', 0.01, 3, 0.01, true, f1(2, 's')], ['sustain', 'SUS', '押している間', 0, 1, 0.01, false, (v) => Math.round(v * 100) + '%'], ['release', 'REL', '余韻', 0.01, 4, 0.01, true, f1(2, 's')]],
   };
   const setters = {};
@@ -264,12 +416,8 @@
     // 波のかたちのスイッチ
     const WV = [['sine', 'SIN'], ['triangle', 'TRI'], ['sawtooth', 'SAW'], ['square', 'SQR']];
     [['tg1', 'wave', 'OSC1'], ['tg2', 'wave2', 'OSC2']].forEach(([id, key, name]) => {
-      const box = $(id); box.innerHTML = '<span class="t">' + name + '</span>';
-      WV.forEach(([w, l]) => {
-        const b = document.createElement('button'); b.className = 'tg' + (p[key] === w ? ' on' : ''); b.innerHTML = '<i></i>' + l;
-        b.onclick = () => { p[key] = w; box.querySelectorAll('.tg').forEach((x) => x.classList.toggle('on', x === b)); applyGlobal(); };
-        box.appendChild(b);
-      });
+      const box = $(id); box.innerHTML = '<span class="t">' + name + '</span><div class="slw"></div>';
+      mkLever(box.querySelector('.slw'), WV.map(([w, l]) => [w, l]), () => p[key], (v) => { p[key] = v; applyGlobal(); });
     });
   }
 
@@ -333,7 +481,7 @@
     const cn = Math.log(e.cutoff / 80) / Math.log(12000 / 80), hue = 20 + cn * 170, haze = 1 - cn, rim = Math.min(1, e.q / 25) * 0.9 + 0.08;
     phase += dt * (0.05 + pitchN * 0.5 + lvl * 0.2); phase2 += dt * (0.05 + pitchN * 0.35);
     const R = H * 0.2 * (1 + 0.06 * Math.sin(now * 0.3)) + lvl * H * 0.025;
-    let px = W * 0.64, py = H * 0.46;
+    let px = W * 0.68, py = H * 0.42;
     if (warpOn) { px += Math.sin(now * 38) * (e.fmDepth / 400) * 1.6; py += Math.cos(now * 31) * (e.fmDepth / 400) * 1.2; }
     if (e.osc2 > 0.02) planet(W * 0.24, H * 0.3, R * 0.42, e.wave2, 2.5, phase2, hue + 70, haze, rim * 0.6, 0.45 + e.osc2 * 0.5);
     const moons = e.mix < 0.03 ? [] : Array.from({ length: 1 + Math.floor(e.feedback * 4) }, (_, i) => {
@@ -359,6 +507,7 @@
         vg.beginPath(); vg.moveTo(sx + (tx - sx) * tl, H + (ty - H) * tl); vg.lineTo(sx + (tx - sx) * h, H + (ty - H) * h); vg.stroke(); vg.shadowBlur = 0;
         if (pr >= 1) { vg.fillStyle = 'rgba(255,200,230,' + (1 - (pr - 1) / 0.9) + ')'; vg.beginPath(); vg.arc(tx, ty, 6 + (pr - 1) * 40, 0, 7); vg.fill(); }
       }
+      if (ev.type === 'arp' && a < 0.35) { vg.strokeStyle = 'rgba(45,255,155,' + (1 - a / 0.35) * 0.7 + ')'; vg.lineWidth = 2; vg.beginPath(); vg.arc(px, py, R * (1.02 + a * 0.9), 0, 7); vg.stroke(); }
       if (ev.type === 'sonar') { for (let j = 0; j < 1 + Math.floor(e.feedback * 3); j++) { const aa = a - j * e.delayTime; if (aa < 0 || aa > 1.8) continue; vg.strokeStyle = 'rgba(155,208,255,' + (1 - aa / 1.8) * 0.6 + ')'; vg.lineWidth = 1.5; vg.beginPath(); vg.arc(px, py, aa * W * 0.45, 0, 7); vg.stroke(); } }
     }
     if (thrOn) { const g = vg.createLinearGradient(0, H, 0, H * 0.55); g.addColorStop(0, 'rgba(255,150,30,' + (0.35 + lvl * 0.4) + ')'); g.addColorStop(1, 'rgba(255,150,30,0)'); vg.fillStyle = g; vg.fillRect(0, H * 0.55, W, H * 0.45); }
@@ -370,7 +519,8 @@
     // HUD
     vg.font = '500 9px Orbitron,monospace'; vg.fillStyle = '#27e8ff';
     vg.fillText('FWD CAM 01   SPD ' + (0.1 + (spd / 4) * 0.89).toFixed(2) + 'c   HDG 214.7', 8, 14);
-    if (ACT) { vg.textAlign = 'right'; vg.fillStyle = PRE[ACT].col; vg.fillText(PRE[ACT].code + (LOCKED ? '  ▮LOCK' : '  HOLD'), W - 8, 14); vg.textAlign = 'left'; }
+    if (ACT) { vg.textAlign = 'right'; vg.fillStyle = PRE[ACT].col; vg.fillText(PRE[ACT].code + '  ON', W - 8, 14); vg.textAlign = 'left'; }
+    if (autoMode !== 'off') { vg.textAlign = 'right'; vg.fillStyle = '#2dff9b'; vg.fillText('AUTO ' + autoMode.toUpperCase(), W - 8, ACT ? 26 : 14); vg.textAlign = 'left'; }
     vg.strokeStyle = 'rgba(39,232,255,.22)'; vg.lineWidth = 1; vg.beginPath(); vg.moveTo(cx - 16, cy); vg.lineTo(cx - 5, cy); vg.moveTo(cx + 5, cy); vg.lineTo(cx + 16, cy); vg.moveTo(cx, cy - 16); vg.lineTo(cx, cy - 5); vg.moveTo(cx, cy + 5); vg.lineTo(cx, cy + 16); vg.stroke();
     vg.restore();
 
@@ -401,6 +551,6 @@
     }
   }
 
-  buildKeys(); buildKnobs(); fit(); requestAnimationFrame(frame);
-  window.__ss = { p, E, get ACT() { return ACT; }, get LOCKED() { return LOCKED; }, voices, events, activate, stopPreset };
+  initSeq(); buildKeys(); buildKnobs(); fit(); requestAnimationFrame(frame);
+  window.__ss = { p, E, setAuto, press, release, get autoMode() { return autoMode; }, arpHeld, arpNotes, get ACT() { return ACT; }, get LOCKED() { return LOCKED; }, voices, events, activate, stopPreset, get seqSrc() { return seqSrc; }, userGrid, PGRID, PAT, setSelf, SCF };
 })();
