@@ -65,10 +65,10 @@
   .sqc { background:#0a141c; border:1px solid #16303c; } .sqc.b4 { border-left:2px solid #2a5a6a; } .sqc.on { background:var(--o); border-color:var(--o); box-shadow:0 0 6px var(--o); } .sqc.ph { outline:1px solid #fff; outline-offset:-1px; background:#16303c; } .sqc.on.ph { background:#fff; }
   .sqbar { margin-top:8px; }
   #sqOpt { margin:0 0 8px; } #sqSk { display:flex; flex-wrap:wrap; gap:6px; align-items:stretch; }
-  .dd { position:relative; flex:1 1 150px; } .dd > button { width:100%; display:flex; justify-content:space-between; align-items:center; gap:8px; font:700 9px Orbitron,monospace; letter-spacing:.1em; color:var(--c); background:#08121a88; border:1px solid #3a6070; padding:8px 8px 7px; cursor:pointer; touch-action:manipulation; } .dd > button small { font:8px Orbitron,monospace; color:var(--mu); } .dd > button:after { content:"\25BE"; color:var(--c); } .dd.open > button { border-color:var(--c); box-shadow:0 0 8px #27e8ff55; }
+  .dd { position:relative; flex:1 1 130px; } .dd:first-child { flex-grow:1.4; } .dd > button span { white-space:nowrap; } .dd > button { width:100%; display:flex; justify-content:space-between; align-items:center; gap:6px; font:700 8.5px Orbitron,monospace; letter-spacing:.1em; color:var(--c); background:#08121a88; border:1px solid #3a6070; padding:8px 8px 7px; cursor:pointer; touch-action:manipulation; } .dd > button small { font:8px Orbitron,monospace; color:var(--mu); } .dd > button:after { content:"\25BE"; color:var(--c); } .dd.open > button { border-color:var(--c); box-shadow:0 0 8px #27e8ff55; }
   .dd ul { display:none; position:absolute; left:0; right:0; top:100%; margin:2px 0 0; padding:3px; list-style:none; z-index:20; background:#06121be6; border:1px solid var(--c); box-shadow:0 0 14px #27e8ff55, 0 6px 16px #000c; } .dd.open ul { display:block; }
   .dd li { padding:9px 8px 8px; font:700 9px Orbitron,monospace; letter-spacing:.1em; color:var(--mu); cursor:pointer; touch-action:manipulation; } .dd li.on { color:var(--g); background:#2dff9b1a; } .dd li:hover { color:var(--c); }
-  .sqseg { display:flex; gap:4px; flex:1 1 130px; } .sqseg > span { align-self:center; font:8px Orbitron,monospace; color:var(--mu); letter-spacing:.1em; }
+  .sqseg { display:flex; gap:4px; flex:1 1 150px; } .sqseg > span { align-self:center; font:8px Orbitron,monospace; color:var(--mu); letter-spacing:.1em; }
   .kn.sp { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; } .kn.sp .spbtn { display:flex; gap:4px; width:100%; } .kn.sp .seg { padding:8px 2px 7px; }
   /* ---- FILTER: ラックの金属パネル風(ヘアラインのアルミ、琥珀の指針、LED、ネジ) ---- */
   .mpanel { position:relative; padding:6px 10px 2px; border:1px solid #3a6070; border-radius:3px; box-shadow:0 2px 8px #000c, inset 0 1px 0 #ffffff30, inset 0 -1px 0 #0008; background:repeating-linear-gradient(90deg,#ffffff0a 0 1px,#0000 1px 3px),linear-gradient(180deg,#4a5862 0%,#2a343c 18%,#1b242b 55%,#26313a 100%); }
@@ -81,6 +81,7 @@
   .mpanel .dial:before { filter:none; }
   .mpanel .dial:after { background:conic-gradient(from 20deg,#667,#dde 12%,#889 26%,#eef 40%,#667 55%,#ccd 70%,#778 85%,#667); box-shadow:0 3px 5px #000c, inset 0 0 0 1px #0a1218, inset 0 0 0 2px #ffffff55, inset 0 -2px 3px #0006; }
   .mpanel .dial i { background:#27e8ff; box-shadow:0 0 0 1px #04141c, 0 0 6px #27e8ff; }
+  .seq .grid { display:flex; justify-content:flex-start; gap:4px 28px; align-items:center; } .seq .grid .kn { flex:0 0 auto; }
   .st { margin:6px 0 2px; font:500 7px Orbitron,monospace; letter-spacing:.14em; color:var(--mu); }
   /* ARP SPANのボタン: 金属のキー + 琥珀のLED */
   .kn.sp .seg { position:relative; color:#0d1620; background:linear-gradient(90deg,#667,#dde 50%,#667); border:1px solid #fff6; border-radius:1px; box-shadow:0 2px 5px #000a, 0 0 6px #27e8ff33; padding:12px 2px 6px; font:700 10px Orbitron,monospace; }
@@ -197,12 +198,12 @@
       <div class="grp mpanel"><p class="gt"><i class="led"></i>FILTER<span>LOW PASS</span></p><i class="sc a"></i><i class="sc b"></i><i class="sc c"></i><i class="sc d"></i><div class="grid" id="g1"></div></div>
       <div class="grp"><p class="gt">ENVELOPE</p><div class="grid" id="g5"></div></div>
       <div class="grp"><p class="gt">ECHO</p><div class="grid" id="g4"></div></div>
-      <div class="grp"><p class="gt">AUTO // RATE · SPAN</p><div class="grid" id="g6"></div></div>
       </div>
       <canvas class="scr" id="spec"></canvas>
       <div class="tele">CORE TEMP <em id="tT">300K</em> &nbsp; SHLD <em>98%</em> &nbsp; LNK <em>OK</em></div>
     </section>
     <section class="box seq"><details open><summary>SEQUENCE<b id="sqSrc" style="margin-left:8px"></b><small>ミッション音を押すと、その音の並びが出る。マスを押す・なぞるで直せる。音階・音域・長さは自分のパターンで選べる</small></summary>
+      <div class="grp"><p class="gt">SPEED // RATE · ARP SPAN</p><div class="grid" id="g6"></div></div>
       <div id="sqOpt"><select id="sqScale" hidden aria-hidden="true"></select><select id="sqOct" hidden aria-hidden="true"></select><select id="sqLen" hidden aria-hidden="true"></select><div id="sqSk"></div></div>
       <div class="sqw"><div class="sqlab" id="sqLab"></div><div class="sqgrid" id="sqGrid"></div></div>
       <div class="sqbar" style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" id="sqClr" class="tgb" style="margin-left:0;width:auto;padding:8px 14px">🗑 ぜんぶ けす</button><button type="button" id="sqRst" class="tgb" style="margin-left:0;width:auto;padding:8px 14px">↩ もとに もどす</button></div>
