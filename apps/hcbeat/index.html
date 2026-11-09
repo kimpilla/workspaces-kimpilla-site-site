@@ -180,6 +180,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 <p><button id="fileOut">ファイルに書き出す(JSON)</button><label class="small">ファイルから読み込む <input type="file" id="fileIn" accept=".json,application/json"></label></p>
 <p class="small">ファイルが書き出せないときは、こちら。「テキストで書き出す」で下の枠に出るので、中身を全部コピーして保存したり、人に送ったりできる。読み込むときは、枠に貼ってから「テキストから読み込む」。</p>
 <p><button id="txtOut">テキストで書き出す</button><button id="txtIn">テキストから読み込む</button></p>
+<p><button id="txtOutPick">選んだブロックだけテキストで書き出す</button><button id="txtAdd">テキストのブロックを、後ろに足す</button> <span class="small">(フレーズだけを人に渡す・受け取るとき。キットや音量は変わらない)</span></p>
 <textarea id="txtBox" rows="8" style="width:100%;font:12px/1.4 ui-monospace,Menlo,Consolas,monospace;background:var(--bg);color:var(--fg);border:1px solid var(--line)" spellcheck="false" placeholder="ここに書き出される / 貼って読み込む"></textarea>
 <p class="small" id="slStatus"></p>
 </main>
@@ -735,7 +736,7 @@ function saveBlob(blob, filename, statusEl) {
   }
   const clamp = (x, lo, hi, def) => Number.isFinite(+x) ? Math.max(lo, Math.min(hi, +x)) : def;
   const cleanPat = (p) => { if (!p || typeof p !== 'object') return null; const q = {}; for (const d of PARTS) if (typeof p[d] === 'string' && /^[.xXo]{1,16}$/.test(p[d])) q[d] = p[d].padEnd(16, '.'); return q; };
-  async function restore(o) {
+  async function restore(o, append) {
     if (!o || o.v !== 1 || !Array.isArray(o.blocks)) throw new Error('このアプリの保存データではありません');
     const old = o.patterns && typeof o.patterns === 'object' ? o.patterns : {};     // 前の版の「自作パターン」も、ブロックの編集内容として引き継ぐ
     const bl = o.blocks.slice(0, 200).map((b) => {
@@ -757,6 +758,7 @@ function saveBlob(blob, filename, statusEl) {
         if (from !== bl[i].bpm) { bl[i].bpmEnd = bl[i].bpm; bl[i].bpm = from; }
       }
     });
+    if (append) { blocks = blocks.concat(bl).slice(0, 200); renderRows(); changed(); return bl.length; }   // フレーズだけ読み込む: キット・音量は変えず、ブロックを後ろに足す
     const kit = typeof o.kit === 'string' && Object.prototype.hasOwnProperty.call(KITS, o.kit) ? o.kit : kitName;
     if (KITS[kit] && KITS[kit].real) await loadReal(KITS[kit].real);
     blocks = bl; kitName = kit;
@@ -794,6 +796,15 @@ function saveBlob(blob, filename, statusEl) {
   };
   $('txtIn').onclick = async () => {
     try { await restore(JSON.parse($('txtBox').value)); slStatus('読み込みました'); } catch (err) { slStatus('読み込めませんでした: ' + err.message); }
+  };
+  $('txtAdd').onclick = async () => {
+    try { const n = await restore(JSON.parse($('txtBox').value), true); slStatus(n + '個のブロックを、後ろに足しました(キット・音量はそのまま)'); } catch (err) { slStatus('読み込めませんでした: ' + err.message); }
+  };
+  $('txtOutPick').onclick = () => {
+    const list = blocks.filter((b) => picked.has(b));
+    if (!list.length) { slStatus('先に、書き出したいブロックの左のチェックを入れてください'); return; }
+    $('txtBox').value = JSON.stringify({ v: 1, kit: kitName, vol: Object.assign({}, vol), blocks: JSON.parse(JSON.stringify(list)) });
+    slStatus(list.length + '個のブロックを、下の枠に書き出しました。中身を全部コピーして使えます');
   };
   $('fileIn').onchange = async (e) => {
     const f = e.target.files[0]; if (!f) return;
