@@ -449,6 +449,25 @@
     Object.keys(waveSync).forEach((k) => waveSync[k]());
     applyGlobal();
   }
+  // FILTERの効き具合の窓(周波数ごとの通り方。点線は、鳴らした瞬間に開いたとき)
+  let fwin = null;
+  function drawFilter() {
+    if (!fwin) return;
+    const c = fwin.getContext('2d'), W = fwin.width, H = fwin.height, lo = Math.log(30), hi = Math.log(18000), DB = 24;
+    const resp = (fc, qdb) => { const ql = Math.pow(10, qdb / 20); return (f) => { const x = f / fc, m = 1 / Math.sqrt(Math.pow(1 - x * x, 2) + x * x / (ql * ql)); return 20 * Math.log10(m); }; };
+    const X = (f) => (Math.log(f) - lo) / (hi - lo) * W, Y = (d) => H - 8 - (Math.max(-DB, Math.min(DB, d)) + DB) / (2 * DB) * (H - 16);
+    c.clearRect(0, 0, W, H);
+    c.strokeStyle = '#17323c'; c.lineWidth = 1; c.beginPath();
+    [100, 1000, 10000].forEach((f) => { c.moveTo(X(f), 0); c.lineTo(X(f), H); }); c.moveTo(0, Y(0)); c.lineTo(W, Y(0)); c.stroke();
+    const path = (fc, col, dash, fill) => {
+      const h = resp(fc, p.q); c.beginPath();
+      for (let i = 0; i <= 120; i++) { const f = Math.exp(lo + (hi - lo) * i / 120), x = X(f), y = Y(h(f)); i ? c.lineTo(x, y) : c.moveTo(x, y); }
+      c.setLineDash(dash || []); c.strokeStyle = col; c.lineWidth = 2; c.stroke(); c.setLineDash([]);
+      if (fill) { c.lineTo(W, H); c.lineTo(0, H); c.closePath(); c.fillStyle = fill; c.fill(); }
+    };
+    if (p.fEnv > 0.05) path(Math.min(20000, p.cutoff * Math.pow(2, p.fEnv)), '#27e8ff99', [5, 4]);
+    path(p.cutoff, '#2dff9b', null, '#2dff9b22');
+  }
   function buildKnobs() {
     for (const g in ctlDefs) {
       const box = $(g);
@@ -468,12 +487,14 @@
           : '<div class="dial"><i></i></div><div class="kl">' + label + '</div><output></output>';
         const o = el.querySelector('output');
         const render = () => {
-          if (key === 'mix') { const l = $('ecLed'); if (l) l.classList.toggle('on', p.mix > 0); }      // ECHOがかかっている間、LEDが点く
+          if (key === 'mix' || key === 'delayTime') { const l = $('ecLed'); if (l) { l.classList.toggle('on', p.mix > 0); l.style.setProperty('--ect', Math.max(0.08, p.delayTime) + 's'); } }      // ECHOがかかっている間、ディレイの間隔でLEDが点滅する
+          if (key === 'cutoff' || key === 'q' || key === 'fEnv') drawFilter();
           const s = toS(p[key], min, max, log); o.textContent = fmt(p[key]);
           if (lever) el.querySelector('.hd').style.bottom = (s * 100) + '%'; else el.querySelector('.dial').style.setProperty('--r', (-135 + 270 * s) + 'deg');
         };
         render(); setters[key] = render; drag(el, key, min, max, log, step, render); box.appendChild(el);
       }
+      if (g === 'g1') { fwin = document.createElement('canvas'); fwin.className = 'fwin'; fwin.width = 240; fwin.height = 148; box.appendChild(fwin); drawFilter(); }
     }
     // 音量(窓の左端の縦スライダー)
     const vs = $('vsl'), vf = vs.querySelector('.vf'), vk = vs.querySelector('.vk'), vo = vs.querySelector('output');
