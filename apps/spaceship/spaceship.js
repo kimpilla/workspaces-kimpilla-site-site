@@ -215,11 +215,10 @@
   const PRE_IV = [0, 3, 5, 7, 10, 12, 15, 17, 19, 22], PRE_N = 10, PRE_W = 16;     // ミッション音のパターンは、この枠(マイナーペンタ2オクターブ×16マス)で作ってある
   const MAXR = 36, MAXW = 32;
   const SCALES = { mp: ['マイナーペンタ', [0, 3, 5, 7, 10]], Mp: ['メジャーペンタ', [0, 2, 4, 7, 9]], mi: ['マイナー', [0, 2, 3, 5, 7, 8, 10]], ma: ['ドレミ(メジャー)', [0, 2, 4, 5, 7, 9, 11]], ry: ['琉球', [0, 4, 5, 7, 11]], ch: ['半音ぜんぶ', [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]] };
-  const SC = { scale: 'mp', oct: 2, len: 16 };                  // 自分のパターンの範囲(操作する人が選ぶ)
-  function userIV() { const sc = SCALES[SC.scale][1], o = []; for (let k = 0; k < SC.oct; k++) sc.forEach((v) => o.push(v + 12 * k)); return o; }
-  const cfgPre = () => ({ iv: PRE_IV, N: PRE_N, W: PRE_W });
-  const cfgUser = () => { const iv = userIV(); return { iv, N: iv.length, W: SC.len }; };
-  const cfgOf = (pre) => pre ? cfgPre() : cfgUser();
+  const SCF = { user: { scale: 'mp', oct: 2, len: 16 } };       // 範囲の設定(自分のパターンと、ミッション音ごとに別々)
+  Object.keys(PAT).forEach((k) => { SCF[k] = { scale: 'mp', oct: 2, len: 16 }; });
+  const curSC = () => viewPre() ? SCF[ACT] : SCF.user;
+  const cfgFor = (sc) => { const base0 = SCALES[sc.scale][1], iv = []; for (let k = 0; k < sc.oct; k++) base0.forEach((v) => iv.push(v + 12 * k)); return { iv, N: iv.length, W: sc.len, key: iv.length + 'x' + sc.len + ':' + sc.scale }; };
   const NAMES = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
   const OCT_COL = { 0: '#ff5a2d', 1: '#ff2d8a', 2: '#ffb000', 3: '#2dff9b', 4: '#27e8ff', 5: '#a66bff', 6: '#ff5a2d', 7: '#ff2d8a' };   // オクターブごとの蛍光色
   const octCol = (m) => OCT_COL[Math.floor(m / 12) - 1] || '#27e8ff';
@@ -232,7 +231,7 @@
   const viewGrid = () => viewPre() ? PGRID[ACT] : userGrid;
   const viewBase = () => viewPre() ? PAT[ACT].root : base;
   function buildCells() {
-    const g = $('sqGrid'), lab = $('sqLab'), c0 = cfgOf(viewPre()); g.innerHTML = ''; lab.innerHTML = ''; seqCells = []; seqLabs = [];
+    const g = $('sqGrid'), lab = $('sqLab'), c0 = cfgFor(curSC()); g.innerHTML = ''; lab.innerHTML = ''; seqCells = []; seqLabs = [];
     const rh = c0.N > 12 ? Math.max(11, Math.floor(288 / c0.N)) : 24;
     g.style.gridTemplateColumns = 'repeat(' + c0.W + ',1fr)'; g.style.gridTemplateRows = 'repeat(' + c0.N + ',' + rh + 'px)';
     lab.style.gridTemplateRows = 'repeat(' + c0.N + ',' + rh + 'px)'; lab.style.rowGap = '2px'; lab.style.fontSize = rh < 16 ? '7px' : '8px';
@@ -243,44 +242,52 @@
         g.appendChild(d); (seqCells[r] = seqCells[r] || [])[c] = d;
       }
     }
-    seqDim = c0.N + 'x' + c0.W + ':' + (viewPre() ? 'p' : SC.scale);
+    seqDim = c0.key;
   }
   function initSeq() {
     const g = $('sqGrid'); let paint = null;
     const hit = (e) => { const el = document.elementFromPoint(e.clientX, e.clientY); return el && el.classList.contains('sqc') ? el : null; };
-    const set = (el, v) => { const G = viewGrid(), r = +el.dataset.r, c = +el.dataset.c; if (G[r][c] === v) return; G[r][c] = v; el.classList.toggle('on', v); if (v) { ensureAudio(); const id = 'p'; noteOff(id); noteOn(id, viewBase() + cfgOf(viewPre()).iv[r]); setTimeout(() => noteOff(id), 160); } };
+    const set = (el, v) => { const G = viewGrid(), r = +el.dataset.r, c = +el.dataset.c; if (G[r][c] === v) return; G[r][c] = v; el.classList.toggle('on', v); if (v) { ensureAudio(); const id = 'p'; noteOff(id); noteOn(id, viewBase() + cfgFor(curSC()).iv[r]); setTimeout(() => noteOff(id), 160); } };
     g.addEventListener('pointerdown', (e) => { const el = hit(e); if (!el) return; e.preventDefault(); g.setPointerCapture(e.pointerId); paint = !viewGrid()[+el.dataset.r][+el.dataset.c]; set(el, paint); });
     g.addEventListener('pointermove', (e) => { if (paint === null) return; const el = hit(e); if (el) set(el, paint); });
     const up = () => { paint = null; }; g.addEventListener('pointerup', up); g.addEventListener('pointercancel', up);
     $('sqClr').onclick = () => { viewGrid().forEach((row) => row.fill(false)); refreshGrid(); };
-    $('sqRst').onclick = () => { const G = viewGrid(), src = mkGrid(viewPre() ? PAT[ACT].cells : USER_RIFF); G.forEach((row, r) => row.forEach((v, c) => { row[c] = src[r][c]; })); refreshGrid(); };
-    const sel = (id, opts, get, set2) => { const el = $(id); el.innerHTML = opts.map(([v, l]) => '<option value="' + v + '">' + l + '</option>').join(''); el.value = get(); el.onchange = () => { set2(el.value); seqHalt(); syncSeq(); }; };
-    sel('sqScale', Object.keys(SCALES).map((k) => [k, SCALES[k][0]]), () => SC.scale, (v) => { SC.scale = v; });
-    sel('sqOct', [[1, '1オクターブ'], [2, '2オクターブ'], [3, '3オクターブ']], () => SC.oct, (v) => { SC.oct = +v; });
-    sel('sqLen', [[8, '8マス'], [16, '16マス'], [32, '32マス']], () => SC.len, (v) => { SC.len = +v; });
+    $('sqRst').onclick = () => { Object.assign(curSC(), { scale: 'mp', oct: 2, len: 16 }); const G = viewGrid(), src = mkGrid(viewPre() ? PAT[ACT].cells : USER_RIFF); G.forEach((row, r) => row.forEach((v, c) => { row[c] = src[r][c]; })); seqHalt(); syncSeq(); };
+    const nearest = (iv, v) => { let bi = 0; iv.forEach((x, i) => { if (Math.abs(x - v) < Math.abs(iv[bi] - v)) bi = i; }); return bi; };
+    const change = (key, val) => {                                 // 範囲を変える。いまのパターンは、できるだけ同じ高さ・同じ位置に引き継ぐ
+      const sc = curSC(), G = viewGrid(), old = cfgFor(sc), oldLen = sc.len; sc[key] = val; const nw = cfgFor(sc);
+      if (key !== 'len') {
+        const on = []; for (let r = 0; r < old.N; r++) for (let c = 0; c < MAXW; c++) if (G[r][c]) on.push([nearest(nw.iv, old.iv[r]), c]);
+        G.forEach((row) => row.fill(false)); on.forEach(([r, c]) => { G[r][c] = true; });
+      } else if (val > oldLen) for (let r = 0; r < MAXR; r++) for (let c = oldLen; c < val; c++) G[r][c] = G[r][c % oldLen];   // 長くしたら、くり返しで埋める
+      seqHalt(); syncSeq();
+    };
+    const sel = (id, key, opts, conv) => { const el = $(id); el.innerHTML = opts.map(([v, l]) => '<option value="' + v + '">' + l + '</option>').join(''); el.onchange = () => change(key, conv(el.value)); };
+    sel('sqScale', 'scale', Object.keys(SCALES).map((k) => [k, SCALES[k][0]]), (v) => v);
+    sel('sqOct', 'oct', [[1, '1オクターブ'], [2, '2オクターブ'], [3, '3オクターブ']], Number);
+    sel('sqLen', 'len', [[8, '8マス'], [16, '16マス'], [32, '32マス']], Number);
     refreshGrid();
   }
   function refreshGrid() {
-    const pre = viewPre(), c0 = cfgOf(pre);
-    if (!seqCells || seqDim !== c0.N + 'x' + c0.W + ':' + (pre ? 'p' : SC.scale)) buildCells();
+    const pre = viewPre(), c0 = cfgFor(curSC());
+    if (!seqCells || seqDim !== c0.key) buildCells();
     const G = viewGrid(), col = pre ? PRE[ACT].col : '#27e8ff';
     for (let r = 0; r < c0.N; r++) for (let c = 0; c < c0.W; c++) seqCells[r][c].classList.toggle('on', G[r][c]);
     updateSeqLabels();
     const t = $('sqSrc'); if (t) { t.textContent = pre ? PRE[ACT].code + ' パターン' : 'MY PATTERN'; t.style.color = col; }
-    $('sqOpt').classList.toggle('dim', pre);
-    ['sqScale', 'sqOct', 'sqLen'].forEach((id) => { $(id).disabled = pre; });
+    const sc = curSC(); $('sqScale').value = sc.scale; $('sqOct').value = sc.oct; $('sqLen').value = sc.len;
   }
   function updateSeqLabels() {
     if (!seqLabs) return;
-    const c0 = cfgOf(viewPre()), b0 = viewBase();
+    const c0 = cfgFor(curSC()), b0 = viewBase();
     c0.iv.forEach((iv, r) => { if (!seqLabs[r]) return; const m = b0 + iv; seqLabs[r].textContent = NAMES[m % 12] + (Math.floor(m / 12) - 1); seqLabs[r].style.color = octCol(m); });
     for (let r = 0; r < c0.N; r++) for (let c = 0; c < c0.W; c++) seqCells[r][c].style.setProperty('--o', octCol(b0 + c0.iv[r]));
   }
   function seqTick() {
     if (!seqSrc) return;
-    const pre = seqSrc === 'pre' && ACT, c0 = cfgOf(pre), W = c0.W, G = pre ? PGRID[ACT] : userGrid, B = pre ? PAT[ACT].root : base, rate = pre ? PAT[ACT].rate : p.arpRate;
+    const pre = seqSrc === 'pre' && ACT, sc = pre ? SCF[ACT] : SCF.user, c0 = cfgFor(sc), W = c0.W, G = pre ? PGRID[ACT] : userGrid, B = pre ? PAT[ACT].root : base, rate = pre ? PAT[ACT].rate : p.arpRate;
     const col = seqStep % W, prv = (col + W - 1) % W, nxt = (col + 1) % W; seqStep++;
-    if (seqCells && seqDim === c0.N + 'x' + c0.W + ':' + (pre ? 'p' : SC.scale)) for (let r = 0; r < c0.N; r++) for (let c = 0; c < W; c++) seqCells[r][c].classList.toggle('ph', c === col);
+    if (seqCells && seqDim === c0.key && viewPre() === !!pre) for (let r = 0; r < c0.N; r++) for (let c = 0; c < W; c++) seqCells[r][c].classList.toggle('ph', c === col);
     const iv = 1000 / rate; let any = false;
     for (let r = 0; r < c0.N; r++) {
       const id = 's' + r;
@@ -545,5 +552,5 @@
   }
 
   initSeq(); buildKeys(); buildKnobs(); fit(); requestAnimationFrame(frame);
-  window.__ss = { p, E, setAuto, press, release, get autoMode() { return autoMode; }, arpHeld, arpNotes, get ACT() { return ACT; }, get LOCKED() { return LOCKED; }, voices, events, activate, stopPreset, get seqSrc() { return seqSrc; }, userGrid, PGRID, PAT, setSelf, SC };
+  window.__ss = { p, E, setAuto, press, release, get autoMode() { return autoMode; }, arpHeld, arpNotes, get ACT() { return ACT; }, get LOCKED() { return LOCKED; }, voices, events, activate, stopPreset, get seqSrc() { return seqSrc; }, userGrid, PGRID, PAT, setSelf, SCF };
 })();
