@@ -434,30 +434,23 @@
     el.addEventListener('dblclick', () => { p[key] = DEFAULTS[key]; render(); applyGlobal(); });
   }
   // 音色のつまみをランダムにする(音量・ARP/SEQの設定は変えない。大きな音にならない範囲で)
-  // RANGE: 0=S(いまの音から少しだけ動かす) 1=M(ふつう) 2=L(極端まで振る)
-  let rndLevel = 1, undoSnap = null;
+  // 対象(OSC / FILTER / ALL)のつまみだけをランダムにする
+  let rndScope = 'all', undoSnap = null;
   const RKEYS = ['wave', 'wave2', 'cutoff', 'q', 'fEnv', 'fDecay', 'fmDepth', 'fmRatio', 'osc2', 'detune', 'sub', 'sweep', 'noise', 'wobble', 'attack', 'decay', 'sustain', 'release', 'delayTime', 'feedback', 'mix'];
+  const RSCOPE = { osc: ['wave', 'wave2', 'fmDepth', 'fmRatio', 'osc2', 'detune', 'sub', 'sweep', 'noise', 'wobble'], filter: ['cutoff', 'q', 'fEnv', 'fDecay'], all: RKEYS };
   function randomize() {
     undoSnap = {}; RKEYS.forEach((k) => { undoSnap[k] = p[k]; });
-    const L = rndLevel, W = L === 2;
     const r = (a, b) => a + Math.random() * (b - a), lg = (a, b) => a * Math.pow(b / a, Math.random()), pick = (a) => a[Math.floor(Math.random() * a.length)];
     const W4 = ['sine', 'triangle', 'sawtooth', 'square'];
     const n = {
-      wave: pick(W4), wave2: pick(W4), cutoff: W ? lg(100, 12000) : lg(250, 9000), q: W ? r(0.5, 18) : r(0.5, 12), fEnv: Math.random() < 0.5 ? 0 : r(0.5, W ? 6 : 4), fDecay: r(0.1, W ? 3 : 1.5),
-      fmDepth: Math.random() < 0.4 ? 0 : r(50, W ? 1500 : 800), fmRatio: pick([0.5, 1, 1.5, 2, 3, 4, 5, 6]),
-      osc2: Math.random() < 0.3 ? 0 : r(0.2, 0.8), detune: r(0, W ? 60 : 30), sub: Math.random() < 0.5 ? 0 : r(0.2, 0.6),
-      sweep: Math.random() < 0.7 ? 0 : (Math.random() < 0.5 ? -1 : 1) * r(0.3, W ? 3 : 1.5), noise: Math.random() < 0.7 ? 0 : r(0.05, W ? 0.6 : 0.3), wobble: Math.random() < 0.6 ? 0 : r(0.1, W ? 1 : 0.5),
-      attack: lg(0.002, W ? 1.5 : 0.5), decay: r(0.1, W ? 3 : 2), sustain: r(W ? 0.1 : 0.3, 1), release: r(0.1, W ? 3 : 2),
-      delayTime: r(0.1, W ? 1 : 0.7), feedback: r(0.1, W ? 0.8 : 0.6), mix: Math.random() < 0.2 ? 0 : r(0.1, W ? 0.7 : 0.5),
+      wave: pick(W4), wave2: pick(W4), cutoff: lg(250, 9000), q: r(0.5, 12), fEnv: Math.random() < 0.5 ? 0 : r(0.5, 4), fDecay: r(0.1, 1.5),
+      fmDepth: Math.random() < 0.4 ? 0 : r(50, 800), fmRatio: pick([0.5, 1, 1.5, 2, 3, 4, 5, 6]),
+      osc2: Math.random() < 0.3 ? 0 : r(0.2, 0.8), detune: r(0, 30), sub: Math.random() < 0.5 ? 0 : r(0.2, 0.6),
+      sweep: Math.random() < 0.7 ? 0 : (Math.random() < 0.5 ? -1 : 1) * r(0.3, 1.5), noise: Math.random() < 0.7 ? 0 : r(0.05, 0.3), wobble: Math.random() < 0.6 ? 0 : r(0.1, 0.5),
+      attack: lg(0.002, 0.5), decay: r(0.1, 2), sustain: r(0.3, 1), release: r(0.1, 2),
+      delayTime: r(0.1, 0.7), feedback: r(0.1, 0.6), mix: Math.random() < 0.2 ? 0 : r(0.1, 0.5),
     };
-    if (L === 0) {      // S: いまの値と新しい値の間の、25%だけ動く(音色の種類は、ときどきだけ変える)
-      RKEYS.forEach((k) => {
-        if (typeof p[k] !== 'number') { if (Math.random() < 0.15) p[k] = n[k]; return; }
-        if (k === 'fmRatio') { if (Math.random() < 0.15) p[k] = n[k]; return; }
-        const a = p[k], b = n[k];
-        p[k] = (k === 'cutoff' || k === 'attack') ? a * Math.pow(b / a, 0.25) : a + (b - a) * 0.25;
-      });
-    } else Object.assign(p, n);
+    RSCOPE[rndScope].forEach((k) => { p[k] = n[k]; });
     refreshAll();
   }
   function refreshAll() {
@@ -533,7 +526,7 @@
       $('rndCov').onclick = () => { box.classList.add('open'); clearTimeout(tm); tm = setTimeout(close, 6000); };
       $('rndBtn').onclick = () => { ensureAudio(); randomize(); $('rndUndo').disabled = false; close(); };
       $('rndUndo').onclick = () => { if (!undoSnap) return; Object.assign(p, undoSnap); undoSnap = null; $('rndUndo').disabled = true; refreshAll(); };
-      $('rRange').querySelectorAll('.seg').forEach((b) => { b.onclick = () => { rndLevel = +b.dataset.l; $('rRange').querySelectorAll('.seg').forEach((x) => x.classList.toggle('on', x === b)); }; });
+      $('rRange').querySelectorAll('.seg').forEach((b) => { b.onclick = () => { rndScope = b.dataset.s; $('rRange').querySelectorAll('.seg').forEach((x) => x.classList.toggle('on', x === b)); }; });
       document.addEventListener('pointerdown', (e) => { if (!box.contains(e.target)) close(); }); }
   }
 
