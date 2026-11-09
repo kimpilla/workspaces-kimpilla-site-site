@@ -257,7 +257,7 @@
     g.addEventListener('pointermove', (e) => { if (paint === null) return; const el = hit(e); if (el) set(el, paint); });
     const up = () => { paint = null; }; g.addEventListener('pointerup', up); g.addEventListener('pointercancel', up);
     $('sqClr').onclick = () => { viewGrid().forEach((row) => row.fill(false)); refreshGrid(); };
-    $('sqRst').onclick = () => { Object.assign(curSC(), { scale: 'mp', oct: 2, len: 16 }); const G = viewGrid(), src = mkGrid(viewPre() ? PAT[ACT].cells : USER_RIFF); G.forEach((row, r) => row.forEach((v, c) => { row[c] = src[r][c]; })); seqHalt(); syncSeq(); };
+    $('sqRst').onclick = () => { Object.assign(curSC(), { scale: 'mp', oct: 2, len: 16, root: null }); const G = viewGrid(), src = mkGrid(viewPre() ? PAT[ACT].cells : USER_RIFF); G.forEach((row, r) => row.forEach((v, c) => { row[c] = src[r][c]; })); seqHalt(); syncSeq(); };
     const nearest = (iv, v) => { let bi = 0; iv.forEach((x, i) => { if (Math.abs(x - v) < Math.abs(iv[bi] - v)) bi = i; }); return bi; };
     const change = (key, val) => {                                 // 範囲を変える。いまのパターンは、できるだけ同じ高さ・同じ位置に引き継ぐ
       const sc = curSC(), G = viewGrid(), old = cfgFor(sc), oldLen = sc.len; sc[key] = val; const nw = cfgFor(sc);
@@ -315,7 +315,7 @@
     const G = viewGrid(), col = pre ? PRE[ACT].col : '#27e8ff';
     for (let r = 0; r < c0.N; r++) for (let c = 0; c < c0.W; c++) seqCells[r][c].classList.toggle('on', G[r][c]);
     updateSeqLabels();
-    const t = $('sqSrc'); if (t) { t.textContent = pre ? PRE[ACT].code + ' パターン' : 'MY PATTERN'; t.style.color = col; }
+    const t = $('sqSrc'); if (t) { t.textContent = pre ? PRE[ACT].code + ' PATTERN' : 'MY PATTERN'; t.style.color = col; }
     const sc = curSC(); $('sqScale').value = sc.scale; $('sqOct').value = sc.oct; $('sqLen').value = sc.len; skinSync();
   }
   function updateSeqLabels() {
@@ -357,7 +357,7 @@
     if (autoSync) autoSync();
     $('mTog').classList.toggle('auto', m !== 'off');
   }
-  autoSync = mkLever($('autoLv'), [['off', 'OFF'], ['drone', 'DRONE', '鳴りっぱなし'], ['arp', 'ARP', '順番に鳴る'], ['seq', 'SEQ', 'グリッド']], () => autoMode, setAuto);
+  autoSync = mkLever($('autoLv'), [['off', 'OFF'], ['drone', 'DRONE'], ['arp', 'ARP'], ['seq', 'SEQ']], () => autoMode, setAuto);
 
 
   // ---- 鍵盤(2オクターブ) ----
@@ -448,7 +448,7 @@
         }
         const lever = g === 'g5';
         el.innerHTML = lever
-          ? '<div class="lv sm"><div class="tr"></div><div class="tk"></div><div class="hd"></div></div><div class="kl">' + label + '<small>' + jp + '</small></div><output></output>'
+          ? '<div class="lv sm"><div class="tr"></div><div class="tk"></div><div class="hd"></div></div><div class="kl">' + label + '</div><output></output>'
           : '<div class="dial"><i></i></div><div class="kl">' + label + '</div><output></output>';
         const o = el.querySelector('output');
         const render = () => {
