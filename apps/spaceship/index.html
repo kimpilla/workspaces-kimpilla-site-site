@@ -116,6 +116,12 @@
   .dial i { z-index:2; left:24px; top:10px; width:2px; height:13px; transform-origin:1px 15px; background:var(--g); box-shadow:0 0 5px var(--g); }
   .kl { color:var(--g); font-weight:700; font-size:7px; letter-spacing:.06em; margin-top:-1px; white-space:nowrap; }
   .kn output { color:var(--c); font-size:7px; letter-spacing:0; }
+
+  /* 空きを作らない: グループを横にも並べて、行の余りはグループが広がって埋める */
+  .gflow { display:flex; flex-wrap:wrap; gap:6px 12px; align-items:flex-start; }
+  .gflow>.grp { flex:1 1 auto; margin-bottom:2px; min-width:0; }
+  .gflow .grid { display:flex; flex-wrap:wrap; justify-content:space-around; gap:2px 0; } .gflow .grid .kn { flex:0 0 56px; }
+  .gflow .outrow { display:block; } .gflow .waves { flex-direction:row; gap:8px; } .gflow .waves .tgs { flex:1; flex-wrap:wrap; gap:2px; } .gflow .waves .tgs span.t { width:100%; }
   #spec { height:44px; margin-top:4px; }
   .tele { margin-top:6px; font-size:8px; } .tele em { font-style:normal; color:var(--tx); }
   details { margin:12px 12px 0; color:var(--mu); font-size:10px; } details summary { cursor:pointer; padding:6px 0; color:var(--c); } details li { margin:4px 0; } details a { color:var(--c); }
@@ -161,6 +167,7 @@
 
 
     <section class="box sys"><h3>SYSTEM<small>DRAG ▲▼</small></h3>
+      <div class="gflow">
       <div class="grp"><p class="gt">OSC // WAVEFORM</p><div class="outrow"><div class="waves"><div class="tgs" id="tg1"></div><div class="tgs" id="tg2"></div></div></div></div>
       <div class="grp"><p class="gt">FILTER / FM</p><div class="grid" id="g1"></div></div>
       <div class="grp"><p class="gt">OSC MIX</p><div class="grid" id="g2"></div></div>
@@ -168,6 +175,7 @@
       <div class="grp"><p class="gt">AUTO // RATE · SPAN</p><div class="grid" id="g6"></div></div>
       <div class="grp"><p class="gt">ECHO</p><div class="grid" id="g4"></div></div>
       <div class="grp"><p class="gt">ENVELOPE</p><div class="grid" id="g5"></div></div>
+      </div>
       <canvas class="scr" id="spec"></canvas>
       <div class="tele">CORE TEMP <em id="tT">300K</em> &nbsp; SHLD <em>98%</em> &nbsp; LNK <em>OK</em></div>
     </section>
