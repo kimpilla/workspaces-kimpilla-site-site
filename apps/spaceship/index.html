@@ -72,7 +72,6 @@
   .kn.sp { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; } .kn.sp .spbtn { display:flex; gap:4px; width:100%; } .kn.sp .seg { padding:8px 2px 7px; }
   /* ---- FILTER: ラックの金属パネル風(ヘアラインのアルミ、琥珀の指針、LED、ネジ) ---- */
   .mpanel { position:relative; padding:6px 10px 6px; border:1px solid #3a6070; border-radius:3px; box-shadow:0 2px 8px #000c, inset 0 1px 0 #ffffff30, inset 0 -1px 0 #0008; background:repeating-linear-gradient(90deg,#ffffff0a 0 1px,#0000 1px 3px),linear-gradient(180deg,#4a5862 0%,#2a343c 18%,#1b242b 55%,#26313a 100%); }
-  .gflow>.grp.mpanel { flex:1 1 300px; }
   .grp.mpanel>.gt { color:#c8e4ee; border-bottom:1px solid #27e8ff88; display:flex; align-items:center; gap:6px; font-weight:700; } .grp.mpanel>.gt span { margin-left:auto; font-size:7px; color:var(--mu); }
   .mpanel .led { width:7px; height:7px; border-radius:50%; background:#2dff9b; box-shadow:0 0 6px #2dff9b, inset 0 0 2px #fff; }
   .mpanel .sc { position:absolute; width:8px; height:8px; border-radius:50%; background:radial-gradient(circle at 35% 30%,#eef,#667 70%); box-shadow:0 0 0 1px #0a1218, 0 1px 2px #000; } .mpanel .sc:after { content:""; position:absolute; left:1px; right:1px; top:3.5px; height:1px; background:#222a30; transform:rotate(35deg); }
@@ -131,7 +130,7 @@
 
   /* ---- 操作盤: モーグ風のローレットつまみ + 青の目盛り + 緑の指針 ---- */
   .grid { grid-template-columns:repeat(auto-fill,minmax(60px,1fr)); gap:4px 0; }
-  .box { padding:22px 8px 8px; } .grp { margin-bottom:8px; }
+  .box { padding:22px 22px 8px; } .grp { margin-bottom:8px; }
   .grp>.gt { color:var(--c); border-bottom:1px solid #27e8ff55; }
   .dial { position:relative; width:50px; height:50px; border:0; border-radius:50%; background:none; }
   .dial:before { content:""; position:absolute; inset:0; border-radius:50%; background:conic-gradient(from -135deg,#27e8ff 0deg 1.8deg,transparent 1.8deg 27deg,#27e8ff 27deg 28.8deg,transparent 28.8deg 54deg,#27e8ff 54deg 55.8deg,transparent 55.8deg 81deg,#27e8ff 81deg 82.8deg,transparent 82.8deg 108deg,#27e8ff 108deg 109.8deg,transparent 109.8deg 135deg,#27e8ff 135deg 136.8deg,transparent 136.8deg 162deg,#27e8ff 162deg 163.8deg,transparent 163.8deg 189deg,#27e8ff 189deg 190.8deg,transparent 190.8deg 216deg,#27e8ff 216deg 217.8deg,transparent 217.8deg 243deg,#27e8ff 243deg 244.8deg,transparent 244.8deg 270deg,#27e8ff 270deg 271.8deg,transparent 271.8deg 360deg); -webkit-mask:radial-gradient(circle,transparent 21px,#000 22px,#000 25px,transparent 26px); mask:radial-gradient(circle,transparent 21px,#000 22px,#000 25px,transparent 26px); }
@@ -191,11 +190,11 @@
 
     <section class="box sys"><h3>SYSTEM<small>DRAG ▲▼</small></h3>
       <div class="gflow">
-      <div class="grp mpanel"><p class="gt"><i class="led"></i>FILTER<span>LOW PASS</span></p><i class="sc a"></i><i class="sc b"></i><i class="sc c"></i><i class="sc d"></i><div class="grid" id="g1"></div></div>
-      <div class="grp"><p class="gt">OSC</p><div class="outrow"><div class="waves"><div class="tgs" id="tg1"></div><div class="tgs" id="tg2"></div></div></div>
+      <div class="grp oscg"><p class="gt">OSC</p><div class="outrow"><div class="waves"><div class="tgs" id="tg1"></div><div class="tgs" id="tg2"></div></div></div>
         <div class="osubs"><div class="osub"><p class="st">OSC2</p><div class="grid" id="g2"></div></div>
         <div class="osub"><p class="st">FM</p><div class="grid" id="g7"></div></div>
         <div class="osub"><p class="st">PITCH · NOISE · WOBBLE</p><div class="grid" id="g3"></div></div></div></div>
+      <div class="grp mpanel"><p class="gt"><i class="led"></i>FILTER<span>LOW PASS</span></p><i class="sc a"></i><i class="sc b"></i><i class="sc c"></i><i class="sc d"></i><div class="grid" id="g1"></div></div>
       <div class="grp"><p class="gt">AUTO // RATE · SPAN</p><div class="grid" id="g6"></div></div>
       <div class="grp"><p class="gt">ECHO</p><div class="grid" id="g4"></div></div>
       <div class="grp"><p class="gt">ENVELOPE</p><div class="grid" id="g5"></div></div>
