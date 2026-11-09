@@ -416,7 +416,7 @@
     g7: [['fmDepth', 'WARP FM', 'ワープの強さ', 0, 2000, 1, false, (v) => Math.round(v)], ['fmRatio', 'FM RATIO', '比率', 0.5, 8, 0.5, false, (v) => '×' + v]],
     g2: [['osc2', 'OSC2 MIX', '2つ目の量', 0, 1, 0.01, false, (v) => v < 0.02 ? 'OFF' : Math.round(v * 100) + '%'], ['detune', 'DETUNE', 'ずらし', 0, 50, 0.5, false, f1(1, 'ct')], ['sub', 'SUB', '1オクターブ下', 0, 1, 0.01, false, (v) => v < 0.02 ? 'OFF' : Math.round(v * 100) + '%']],
     g3: [['sweep', 'PITCH SWP', '音程すべり', -3, 3, 0.05, false, (v) => Math.abs(v) < 0.05 ? 'OFF' : (v > 0 ? '↑' : '↓') + Math.abs(v).toFixed(1) + 'oct'], ['noise', 'NOISE', 'ノイズ', 0, 1, 0.01, false, (v) => v < 0.02 ? 'OFF' : Math.round(v * 100) + '%'], ['wobble', 'WOBBLE', 'うねり', 0, 1, 0.01, false, (v) => v < 0.02 ? 'OFF' : Math.round(v * 100) + '%']],
-    g4: [['delayTime', 'ECHO TIME', '間隔', 0.05, 1.2, 0.01, false, f1(2, 's')], ['feedback', 'ECHO FDBK', 'くり返し', 0, 0.9, 0.01, false, (v) => Math.round(v * 100) + '%'], ['mix', 'ECHO MIX', '量', 0, 1, 0.01, false, (v) => Math.round(v * 100) + '%']],
+    g4: [['delayTime', 'TIME', '間隔', 0.05, 1.2, 0.01, false, f1(2, 's')], ['feedback', 'FDBK', 'くり返し', 0, 0.9, 0.01, false, (v) => Math.round(v * 100) + '%'], ['mix', 'MIX', '量', 0, 1, 0.01, false, (v) => Math.round(v * 100) + '%']],
     g6: [['arpRate', 'RATE', '速さ(ARP・SEQ)', 1, 20, 0.5, true, (v) => v.toFixed(1) + '/s'], ['arpSpan', 'ARP SPAN', '何オクターブ', 1, 3, 1, false, (v) => Math.round(v) + 'oct']],
     g5: [['attack', 'ATK', '立ち上がり', 0.001, 2, 0.001, true, f1(2, 's')], ['decay', 'DEC', '減っていく', 0.01, 3, 0.01, true, f1(2, 's')], ['sustain', 'SUS', '押している間', 0, 1, 0.01, false, (v) => Math.round(v * 100) + '%'], ['release', 'REL', '余韻', 0.01, 4, 0.01, true, f1(2, 's')]],
   };
@@ -448,7 +448,7 @@
         }
         const lever = g === 'g5';
         el.innerHTML = lever
-          ? '<div class="lv sm"><div class="tr"></div><div class="tk"></div><div class="hd"></div></div><div class="kl">' + label + '<small>' + jp + '</small></div><output></output>'
+          ? '<div class="lv sm"><div class="tr"></div><div class="tk"></div><div class="hd"></div></div><div class="kl">' + label + '</div><output></output>'
           : '<div class="dial"><i></i></div><div class="kl">' + label + '</div><output></output>';
         const o = el.querySelector('output');
         const render = () => {
@@ -458,12 +458,8 @@
         render(); setters[key] = render; drag(el, key, min, max, log, step, render); box.appendChild(el);
       }
     }
-    // PITCH・NOISE・WOBBLEの警告の蓋(押すと開く/閉じる。効果がかかっている間は、閉じても、蓋の上に ACTIVE が出る)
-    { const wb = $('wbox'), cv = $('wcov'), keys = ['sweep', 'noise', 'wobble'];
-      const mark = () => { const act = keys.some((k) => Math.abs(p[k]) >= 0.05 && !(k !== 'sweep' && p[k] < 0.02)); cv.querySelector('b').textContent = wb.classList.contains('open') ? (act ? '● ACTIVE' : 'OPEN') : (act ? '⚠ ACTIVE' : '⚠ WARNING'); };
-      cv.onclick = () => { wb.classList.toggle('open'); cv.setAttribute('aria-expanded', wb.classList.contains('open')); mark(); };
-      document.querySelectorAll('#g3 .kn').forEach((k) => k.addEventListener('pointerup', () => setTimeout(mark, 0)));
-      mark(); }
+    // PITCH・NOISE・WOBBLEの警告の蓋: 押すと開く(閉じない。ほかの項目がずれないよう、開いたら消える)
+    $('wcov').onclick = () => $('wbox').classList.add('open');
     // 音量(窓の左端の縦スライダー)
     const vs = $('vsl'), vf = vs.querySelector('.vf'), vk = vs.querySelector('.vk'), vo = vs.querySelector('output');
     const render = () => { const pc = Math.round(p.volume * 100); vf.style.height = pc + '%'; vk.style.bottom = 'calc(' + pc + '% - 4px)'; vo.textContent = pc; vs.setAttribute('aria-valuenow', pc); };
