@@ -420,7 +420,7 @@
     g6: [['arpRate', 'RATE', '速さ(ARP・SEQ)', 1, 20, 0.5, true, (v) => v.toFixed(1) + '/s'], ['arpSpan', 'ARP SPAN', '何オクターブ', 1, 3, 1, false, (v) => Math.round(v) + 'oct']],
     g5: [['attack', 'ATK', '立ち上がり', 0.001, 2, 0.001, true, f1(2, 's')], ['decay', 'DEC', '減っていく', 0.01, 3, 0.01, true, f1(2, 's')], ['sustain', 'SUS', '押している間', 0, 1, 0.01, false, (v) => Math.round(v * 100) + '%'], ['release', 'REL', '余韻', 0.01, 4, 0.01, true, f1(2, 's')]],
   };
-  const setters = {};
+  const setters = {}, waveSync = {};
   function drag(el, key, min, max, log, step, render) {
     let sy = 0, ss = 0, on = false;
     el.addEventListener('pointerdown', (e) => { e.preventDefault(); el.setPointerCapture(e.pointerId); on = true; sy = e.clientY; ss = toS(p[key], min, max, log); });
@@ -432,6 +432,50 @@
     });
     const up = () => { on = false; }; el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
     el.addEventListener('dblclick', () => { p[key] = DEFAULTS[key]; render(); applyGlobal(); });
+  }
+  // 音色のつまみをランダムにする(音量・ARP/SEQの設定は変えない。大きな音にならない範囲で)
+  // 対象(OSC / FILTER / ALL)のつまみだけをランダムにする
+  let rndScope = 'all', undoSnap = null;
+  const RKEYS = ['wave', 'wave2', 'cutoff', 'q', 'fEnv', 'fDecay', 'fmDepth', 'fmRatio', 'osc2', 'detune', 'sub', 'sweep', 'noise', 'wobble', 'attack', 'decay', 'sustain', 'release', 'delayTime', 'feedback', 'mix'];
+  const RSCOPE = { voice: ['wave', 'wave2', 'fmDepth', 'fmRatio', 'osc2', 'detune', 'sub', 'sweep', 'noise', 'wobble', 'attack', 'decay', 'sustain', 'release'], fx: ['cutoff', 'q', 'fEnv', 'fDecay', 'delayTime', 'feedback', 'mix'], all: RKEYS };
+  function randomize() {
+    undoSnap = {}; RKEYS.forEach((k) => { undoSnap[k] = p[k]; });
+    const r = (a, b) => a + Math.random() * (b - a), lg = (a, b) => a * Math.pow(b / a, Math.random()), pick = (a) => a[Math.floor(Math.random() * a.length)];
+    const W4 = ['sine', 'triangle', 'sawtooth', 'square'];
+    const n = {
+      wave: pick(W4), wave2: pick(W4), cutoff: lg(250, 9000), q: r(0.5, 12), fEnv: Math.random() < 0.5 ? 0 : r(0.5, 4), fDecay: r(0.1, 1.5),
+      fmDepth: Math.random() < 0.4 ? 0 : r(50, 800), fmRatio: pick([0.5, 1, 1.5, 2, 3, 4, 5, 6]),
+      osc2: Math.random() < 0.3 ? 0 : r(0.2, 0.8), detune: r(0, 30), sub: Math.random() < 0.5 ? 0 : r(0.2, 0.6),
+      sweep: Math.random() < 0.7 ? 0 : (Math.random() < 0.5 ? -1 : 1) * r(0.3, 1.5), noise: Math.random() < 0.7 ? 0 : r(0.05, 0.3), wobble: Math.random() < 0.6 ? 0 : r(0.1, 0.5),
+      attack: lg(0.002, 0.5), decay: r(0.1, 2), sustain: r(0.3, 1), release: r(0.1, 2),
+      delayTime: r(0.1, 0.7), feedback: r(0.1, 0.6), mix: Math.random() < 0.2 ? 0 : r(0.1, 0.5),
+    };
+    RSCOPE[rndScope].forEach((k) => { p[k] = n[k]; });
+    refreshAll();
+  }
+  function refreshAll() {
+    Object.keys(setters).forEach((k) => { if (k !== 'volume' && k !== 'arpRate' && k !== 'arpSpan') setters[k](); });
+    Object.keys(waveSync).forEach((k) => waveSync[k]());
+    applyGlobal(); drawFilter();
+  }
+  // FILTERの効き具合の窓(周波数ごとの通り方。点線は、鳴らした瞬間に開いたとき)
+  let fwin = null;
+  function drawFilter() {
+    if (!fwin) return;
+    const c = fwin.getContext('2d'), W = fwin.width, H = fwin.height, lo = Math.log(30), hi = Math.log(18000), DB = 24;
+    const resp = (fc, qdb) => { const ql = Math.pow(10, qdb / 20); return (f) => { const x = f / fc, m = 1 / Math.sqrt(Math.pow(1 - x * x, 2) + x * x / (ql * ql)); return 20 * Math.log10(m); }; };
+    const X = (f) => (Math.log(f) - lo) / (hi - lo) * W, Y = (d) => H - 8 - (Math.max(-DB, Math.min(DB, d)) + DB) / (2 * DB) * (H - 16);
+    c.clearRect(0, 0, W, H);
+    c.strokeStyle = '#17323c'; c.lineWidth = 1; c.beginPath();
+    [100, 1000, 10000].forEach((f) => { c.moveTo(X(f), 0); c.lineTo(X(f), H); }); c.moveTo(0, Y(0)); c.lineTo(W, Y(0)); c.stroke();
+    const path = (fc, col, dash, fill) => {
+      const h = resp(fc, p.q); c.beginPath();
+      for (let i = 0; i <= 120; i++) { const f = Math.exp(lo + (hi - lo) * i / 120), x = X(f), y = Y(h(f)); i ? c.lineTo(x, y) : c.moveTo(x, y); }
+      c.setLineDash(dash || []); c.strokeStyle = col; c.lineWidth = 2; c.stroke(); c.setLineDash([]);
+      if (fill) { c.lineTo(W, H); c.lineTo(0, H); c.closePath(); c.fillStyle = fill; c.fill(); }
+    };
+    if (p.fEnv > 0.05) path(Math.min(20000, p.cutoff * Math.pow(2, p.fEnv)), '#27e8ff99', [5, 4]);
+    path(p.cutoff, '#2dff9b', null, '#2dff9b22');
   }
   function buildKnobs() {
     for (const g in ctlDefs) {
@@ -452,11 +496,14 @@
           : '<div class="dial"><i></i></div><div class="kl">' + label + '</div><output></output>';
         const o = el.querySelector('output');
         const render = () => {
+          if (key === 'mix' || key === 'delayTime') { const l = $('ecLed'); if (l) { l.classList.toggle('on', p.mix > 0); l.style.setProperty('--ect', Math.max(0.08, p.delayTime) + 's'); } }      // ECHOがかかっている間、ディレイの間隔でLEDが点滅する
+          if (key === 'cutoff' || key === 'q' || key === 'fEnv') drawFilter();
           const s = toS(p[key], min, max, log); o.textContent = fmt(p[key]);
           if (lever) el.querySelector('.hd').style.bottom = (s * 100) + '%'; else el.querySelector('.dial').style.setProperty('--r', (-135 + 270 * s) + 'deg');
         };
         render(); setters[key] = render; drag(el, key, min, max, log, step, render); box.appendChild(el);
       }
+      if (g === 'g1') { fwin = document.createElement('canvas'); fwin.className = 'fwin'; fwin.width = 240; fwin.height = 148; box.appendChild(fwin); drawFilter(); }
     }
     // 音量(窓の左端の縦スライダー)
     const vs = $('vsl'), vf = vs.querySelector('.vf'), vk = vs.querySelector('.vk'), vo = vs.querySelector('output');
@@ -471,8 +518,16 @@
     const WV = [['sine', 'SIN'], ['triangle', 'TRI'], ['sawtooth', 'SAW'], ['square', 'SQR']];
     [['tg1', 'wave', 'OSC1'], ['tg2', 'wave2', 'OSC2']].forEach(([id, key, name]) => {
       const box = $(id); box.innerHTML = '<span class="t">' + name + '</span><div class="slw"></div>';
-      mkLever(box.querySelector('.slw'), WV.map(([w, l]) => [w, l]), () => p[key], (v) => { p[key] = v; applyGlobal(); });
+      waveSync[key] = mkLever(box.querySelector('.slw'), WV.map(([w, l]) => [w, l]), () => p[key], (v) => { p[key] = v; applyGlobal(); });
     });
+    // RANDOM(赤いボタン + 警告のふた): ふたを開けると押せる。押したら、ふたは自動で閉まる
+    { const box = $('rbox'); let tm = 0;
+      const close = () => { box.classList.remove('open'); clearTimeout(tm); };
+      $('rndCov').onclick = () => { box.classList.add('open'); clearTimeout(tm); tm = setTimeout(close, 6000); };
+      $('rndBtn').onclick = () => { ensureAudio(); randomize(); $('rndUndo').disabled = false; close(); };
+      $('rndUndo').onclick = () => { if (!undoSnap) return; Object.assign(p, undoSnap); undoSnap = null; $('rndUndo').disabled = true; refreshAll(); };
+      $('rRange').querySelectorAll('.seg').forEach((b) => { b.onclick = () => { rndScope = b.dataset.s; $('rRange').querySelectorAll('.seg').forEach((x) => x.classList.toggle('on', x === b)); }; });
+      document.addEventListener('pointerdown', (e) => { if (!box.contains(e.target)) close(); }); }
   }
 
   // ---- 窓(操縦席から見える景色) ----
