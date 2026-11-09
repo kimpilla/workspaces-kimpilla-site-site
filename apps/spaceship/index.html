@@ -82,7 +82,7 @@
   .mpanel .dial:after { background:conic-gradient(from 20deg,#667,#dde 12%,#889 26%,#eef 40%,#667 55%,#ccd 70%,#778 85%,#667); box-shadow:0 3px 5px #000c, inset 0 0 0 1px #0a1218, inset 0 0 0 2px #ffffff55, inset 0 -2px 3px #0006; }
   .mpanel .dial i { background:#27e8ff; box-shadow:0 0 0 1px #04141c, 0 0 6px #27e8ff; }
   .seq .grid { display:flex; justify-content:flex-start; gap:4px 28px; align-items:center; } .seq .grid .kn { flex:0 0 auto; }
-  .gflow>.grp.oscg, .gflow>.grp.mpanel { flex:1 1 100%; }
+  .gflow>.grp.oscg, .gflow>.grp.mpanel, .gflow>.grp.envg { flex:1 1 100%; }
   .osubs { display:flex; flex-wrap:wrap; gap:0 12px; align-items:flex-start; } .osub { flex:0 0 auto; } .osub.warn { flex-basis:100%; }
   .gflow .osub .grid { display:flex; flex-wrap:nowrap; justify-content:flex-start; gap:0 4px; } .oscg .dial { zoom:1.1; } .gflow .oscg .grid .kn { flex:0 0 58px; }
   .wbox { position:relative; display:flex; flex-direction:column; width:max-content; max-width:100%; }
@@ -204,7 +204,7 @@
         <div class="osub"><p class="st">FM</p><div class="grid" id="g7"></div></div>
         <div class="osub warn"><p class="st">PITCH · NOISE · WOBBLE</p><div class="wbox" id="wbox"><div class="grid" id="g3"></div><button type="button" class="cover" id="wcov" aria-expanded="false"><b>⚠ WARNING</b><small>強い効果 / TAP TO OPEN</small></button></div></div></div></div>
       <div class="grp mpanel"><p class="gt"><i class="led"></i>FILTER<span>LOW PASS</span></p><i class="sc a"></i><i class="sc b"></i><i class="sc c"></i><i class="sc d"></i><div class="grid" id="g1"></div></div>
-      <div class="grp"><p class="gt">ENVELOPE</p><div class="grid" id="g5"></div></div>
+      <div class="grp envg"><p class="gt">ENVELOPE</p><div class="grid" id="g5"></div></div>
       <div class="grp"><p class="gt">ECHO</p><div class="grid" id="g4"></div></div>
       </div>
       <canvas class="scr" id="spec"></canvas>
