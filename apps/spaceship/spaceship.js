@@ -218,7 +218,7 @@
   // ---- シーケンサー(音階をグリッドに並べて、自動で鳴らす) ----
   const PRE_IV = [0, 3, 5, 7, 10, 12, 15, 17, 19, 22], PRE_N = 10, PRE_W = 16;     // ミッション音のパターンは、この枠(マイナーペンタ2オクターブ×16マス)で作ってある
   const MAXR = 36, MAXW = 32;
-  const SCALES = { mp: ['マイナーペンタ', [0, 3, 5, 7, 10]], Mp: ['メジャーペンタ', [0, 2, 4, 7, 9]], mi: ['マイナー', [0, 2, 3, 5, 7, 8, 10]], ma: ['ドレミ(メジャー)', [0, 2, 4, 5, 7, 9, 11]], ry: ['琉球', [0, 4, 5, 7, 11]], ch: ['半音ぜんぶ', [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]] };
+  const SCALES = { mp: ['MINOR PENTA', [0, 3, 5, 7, 10]], Mp: ['MAJOR PENTA', [0, 2, 4, 7, 9]], mi: ['MINOR', [0, 2, 3, 5, 7, 8, 10]], ma: ['MAJOR', [0, 2, 4, 5, 7, 9, 11]], ry: ['RYUKYU', [0, 4, 5, 7, 11]], ch: ['CHROMATIC', [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]] };
   const SCF = { user: { scale: 'mp', oct: 2, len: 16 } };       // 範囲の設定(自分のパターンと、ミッション音ごとに別々)
   Object.keys(PAT).forEach((k) => { SCF[k] = { scale: 'mp', oct: 2, len: 16 }; });
   const curSC = () => viewPre() ? SCF[ACT] : SCF.user;
@@ -268,10 +268,29 @@
     };
     const sel = (id, key, opts, conv) => { const el = $(id); el.innerHTML = opts.map(([v, l]) => '<option value="' + v + '">' + l + '</option>').join(''); el.onchange = () => change(key, conv(el.value)); };
     sel('sqScale', 'scale', Object.keys(SCALES).map((k) => [k, SCALES[k][0]]), (v) => v);
-    sel('sqOct', 'oct', [[1, '1オクターブ'], [2, '2オクターブ'], [3, '3オクターブ']], Number);
-    sel('sqLen', 'len', [[8, '8マス'], [16, '16マス'], [32, '32マス']], Number);
+    sel('sqOct', 'oct', [[1, '1'], [2, '2'], [3, '3']], Number);
+    sel('sqLen', 'len', [[8, '8'], [16, '16'], [32, '32']], Number);
+    // 見た目: 本物の<select>は隠して、操作盤に合わせた部品で操作する(値は<select>に入れて、onchangeを呼ぶ)
+    const sk = $('sqSk'), fire = (id, v) => { const el = $(id); el.value = v; el.onchange(); skinSync(); };
+    const dd = document.createElement('div'); dd.className = 'dd';
+    dd.innerHTML = '<button type="button" aria-haspopup="listbox"><span><small>SCALE</small> <b></b></span></button><ul role="listbox"></ul>';
+    const ul = dd.querySelector('ul'), btn = dd.querySelector('button');
+    Object.keys(SCALES).forEach((k) => { const li = document.createElement('li'); li.dataset.v = k; li.textContent = SCALES[k][0]; li.setAttribute('role', 'option'); li.onclick = () => { dd.classList.remove('open'); fire('sqScale', k); }; ul.appendChild(li); });
+    btn.onclick = () => dd.classList.toggle('open');
+    document.addEventListener('pointerdown', (e) => { if (!dd.contains(e.target)) dd.classList.remove('open'); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') dd.classList.remove('open'); });
+    sk.appendChild(dd);
+    const seg = (id, label, unit, vals) => { const w = document.createElement('div'); w.className = 'sqseg'; w.innerHTML = '<span>' + label + '</span>'; vals.forEach((v) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'seg'; b.dataset.v = v; b.textContent = v + unit; b.onclick = () => fire(id, v); w.appendChild(b); }); w.dataset.id = id; sk.appendChild(w); };
+    seg('sqOct', 'OCT', '', [1, 2, 3]); seg('sqLen', 'STEP', '', [8, 16, 32]);
+    skinSync = () => {
+      const sc = curSC(); dd.querySelector('b').textContent = SCALES[sc.scale][0];
+      ul.querySelectorAll('li').forEach((li) => li.classList.toggle('on', li.dataset.v === sc.scale));
+      sk.querySelectorAll('.sqseg').forEach((w) => w.querySelectorAll('button').forEach((b) => b.classList.toggle('on', +b.dataset.v === sc[w.dataset.id === 'sqOct' ? 'oct' : 'len'])));
+    };
+    skinSync();
     refreshGrid();
   }
+  let skinSync = () => {};
   function refreshGrid() {
     const pre = viewPre(), c0 = cfgFor(curSC());
     if (!seqCells || seqDim !== c0.key) buildCells();
@@ -279,7 +298,7 @@
     for (let r = 0; r < c0.N; r++) for (let c = 0; c < c0.W; c++) seqCells[r][c].classList.toggle('on', G[r][c]);
     updateSeqLabels();
     const t = $('sqSrc'); if (t) { t.textContent = pre ? PRE[ACT].code + ' パターン' : 'MY PATTERN'; t.style.color = col; }
-    const sc = curSC(); $('sqScale').value = sc.scale; $('sqOct').value = sc.oct; $('sqLen').value = sc.len;
+    const sc = curSC(); $('sqScale').value = sc.scale; $('sqOct').value = sc.oct; $('sqLen').value = sc.len; skinSync();
   }
   function updateSeqLabels() {
     if (!seqLabs) return;
