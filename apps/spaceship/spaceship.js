@@ -219,8 +219,8 @@
   const PRE_IV = [0, 3, 5, 7, 10, 12, 15, 17, 19, 22], PRE_N = 10, PRE_W = 16;     // ミッション音のパターンは、この枠(マイナーペンタ2オクターブ×16マス)で作ってある
   const MAXR = 36, MAXW = 32;
   const SCALES = { mp: ['MINOR PENTA', [0, 3, 5, 7, 10]], Mp: ['MAJOR PENTA', [0, 2, 4, 7, 9]], mi: ['MINOR', [0, 2, 3, 5, 7, 8, 10]], ma: ['MAJOR', [0, 2, 4, 5, 7, 9, 11]], ry: ['RYUKYU', [0, 4, 5, 7, 11]], ch: ['CHROMATIC', [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]] };
-  const SCF = { user: { scale: 'mp', oct: 2, len: 16 } };       // 範囲の設定(自分のパターンと、ミッション音ごとに別々)
-  Object.keys(PAT).forEach((k) => { SCF[k] = { scale: 'mp', oct: 2, len: 16 }; });
+  const SCF = { user: { scale: 'mp', oct: 2, len: 16, root: null } };       // 範囲の設定(自分のパターンと、ミッション音ごとに別々)
+  Object.keys(PAT).forEach((k) => { SCF[k] = { scale: 'mp', oct: 2, len: 16, root: null }; });
   const curSC = () => viewPre() ? SCF[ACT] : SCF.user;
   const cfgFor = (sc) => { const base0 = SCALES[sc.scale][1], iv = []; for (let k = 0; k < sc.oct; k++) base0.forEach((v) => iv.push(v + 12 * k)); return { iv, N: iv.length, W: sc.len, key: iv.length + 'x' + sc.len + ':' + sc.scale }; };
   const NAMES = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -233,7 +233,8 @@
   let seqTimer = 0, seqStep = 0, seqCells = null, seqLabs = null, seqSrc = null, seqDim = '';      // seqSrc: 鳴らしている元('pre'=ミッション音 / 'user'=SEQ / null)
   const viewPre = () => !!ACT;                                                        // グリッドに出すのは、選んでいるミッション音のパターン(AUTOPILOT の ON/OFF に関係なく)。何も選んでいなければ MY PATTERN
   const viewGrid = () => viewPre() ? PGRID[ACT] : userGrid;
-  const viewBase = () => viewPre() ? PAT[ACT].root : base;
+  const rootFor = (pre) => { const sc = pre ? SCF[ACT] : SCF.user; return sc.root != null ? sc.root : (pre ? PAT[ACT].root : base); };   // 範囲の一番下の音。ふだん(AUTO)は、自分用=鍵盤のOCT、ミッション音=その音の元の高さ
+  const viewBase = () => rootFor(viewPre());
   function buildCells() {
     const g = $('sqGrid'), lab = $('sqLab'), c0 = cfgFor(curSC()); g.innerHTML = ''; lab.innerHTML = ''; seqCells = []; seqLabs = [];
     const rh = c0.N > 12 ? Math.max(11, Math.floor(288 / c0.N)) : 24;
@@ -280,17 +281,34 @@
     document.addEventListener('pointerdown', (e) => { if (!dd.contains(e.target)) dd.classList.remove('open'); });
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') dd.classList.remove('open'); });
     sk.appendChild(dd);
+    const dd2 = document.createElement('div'); dd2.className = 'dd';
+    dd2.innerHTML = '<button type="button" aria-haspopup="listbox"><span><small>FROM</small> <b></b></span></button><ul role="listbox"></ul>';
+    const ul2 = dd2.querySelector('ul'), btn2 = dd2.querySelector('button');
+    btn2.onclick = () => { dd.classList.remove('open'); dd2.classList.toggle('open'); }; btn.onclick = () => { dd2.classList.remove('open'); dd.classList.toggle('open'); };
+    document.addEventListener('pointerdown', (e) => { if (!dd2.contains(e.target)) dd2.classList.remove('open'); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') dd2.classList.remove('open'); });
+    const noteName = (m) => NAMES[m % 12] + (Math.floor(m / 12) - 1);
+    const setRoot = (m) => { curSC().root = m; updateSeqLabels(); skinSync(); };
+    skinRoot = () => {      // 選べる「一番下の音」を作り直す(音名は、元の高さの音名に合わせる)
+      const pre = viewPre(), def = pre ? PAT[ACT].root : base, pc = def % 12, cur = curSC().root;
+      ul2.innerHTML = '';
+      const add = (v, label) => { const li = document.createElement('li'); li.textContent = label; li.dataset.v = v == null ? '' : v; li.className = (cur == null ? v == null : cur === v) ? 'on' : ''; li.onclick = () => { dd2.classList.remove('open'); setRoot(v); }; ul2.appendChild(li); };
+      add(null, 'AUTO (' + noteName(def) + ')');
+      for (let o = 1; o <= 6; o++) add(pc + 12 * (o + 1), noteName(pc + 12 * (o + 1)));
+      dd2.querySelector('b').textContent = cur == null ? 'AUTO · ' + noteName(def) : noteName(cur);
+    };
+    sk.appendChild(dd2);
     const seg = (id, label, unit, vals) => { const w = document.createElement('div'); w.className = 'sqseg'; w.innerHTML = '<span>' + label + '</span>'; vals.forEach((v) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'seg'; b.dataset.v = v; b.textContent = v + unit; b.onclick = () => fire(id, v); w.appendChild(b); }); w.dataset.id = id; sk.appendChild(w); };
     seg('sqOct', 'OCT', '', [1, 2, 3]); seg('sqLen', 'STEP', '', [8, 16, 32]);
     skinSync = () => {
-      const sc = curSC(); dd.querySelector('b').textContent = SCALES[sc.scale][0];
+      const sc = curSC(); dd.querySelector('b').textContent = SCALES[sc.scale][0]; skinRoot();
       ul.querySelectorAll('li').forEach((li) => li.classList.toggle('on', li.dataset.v === sc.scale));
       sk.querySelectorAll('.sqseg').forEach((w) => w.querySelectorAll('button').forEach((b) => b.classList.toggle('on', +b.dataset.v === sc[w.dataset.id === 'sqOct' ? 'oct' : 'len'])));
     };
     skinSync();
     refreshGrid();
   }
-  let skinSync = () => {};
+  let skinSync = () => {}, skinRoot = () => {};
   function refreshGrid() {
     const pre = viewPre(), c0 = cfgFor(curSC());
     if (!seqCells || seqDim !== c0.key) buildCells();
@@ -308,7 +326,7 @@
   }
   function seqTick() {
     if (!seqSrc) return;
-    const pre = seqSrc === 'pre' && ACT, sc = pre ? SCF[ACT] : SCF.user, c0 = cfgFor(sc), W = c0.W, G = pre ? PGRID[ACT] : userGrid, B = pre ? PAT[ACT].root : base, rate = pre ? PAT[ACT].rate : p.arpRate;
+    const pre = seqSrc === 'pre' && ACT, sc = pre ? SCF[ACT] : SCF.user, c0 = cfgFor(sc), W = c0.W, G = pre ? PGRID[ACT] : userGrid, B = rootFor(pre), rate = pre ? PAT[ACT].rate : p.arpRate;
     const col = seqStep % W, prv = (col + W - 1) % W, nxt = (col + 1) % W; seqStep++;
     if (seqCells && seqDim === c0.key && viewPre() === !!pre) for (let r = 0; r < c0.N; r++) for (let c = 0; c < W; c++) seqCells[r][c].classList.toggle('ph', c === col);
     const iv = 1000 / rate; let any = false;
@@ -419,6 +437,14 @@
       const box = $(g);
       for (const [key, label, jp, min, max, step, log, fmt] of ctlDefs[g]) {
         const el = document.createElement('div'); el.className = 'kn';
+        if (key === 'arpSpan') {      // 1・2・3の3択なので、つまみでなくボタン
+          el.classList.add('sp');
+          el.innerHTML = '<div class="spbtn"></div><div class="kl">' + label + '</div><output></output>';
+          const row = el.querySelector('.spbtn'), o = el.querySelector('output');
+          const bs = [1, 2, 3].map((n) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'seg'; b.textContent = n; b.onclick = () => { p.arpSpan = n; render(); applyGlobal(); }; row.appendChild(b); return b; });
+          const render = () => { bs.forEach((b, i) => b.classList.toggle('on', Math.round(p.arpSpan) === i + 1)); o.textContent = Math.round(p.arpSpan) + 'oct'; };
+          render(); setters[key] = render; box.appendChild(el); continue;
+        }
         const lever = g === 'g5';
         el.innerHTML = lever
           ? '<div class="lv sm"><div class="tr"></div><div class="tk"></div><div class="hd"></div></div><div class="kl">' + label + '<small>' + jp + '</small></div><output></output>'
