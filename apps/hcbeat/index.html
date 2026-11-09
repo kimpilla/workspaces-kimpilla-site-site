@@ -14,6 +14,7 @@
 }
 :root[data-theme="dark"] { --bg: #111111; --fg: #eeeeee; --muted: #999999; --line: #444444; --accent: #ff4d5e; --key: #dddddd; --key-black: #222222; color-scheme: dark; }
 * { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.7 ui-monospace, "SFMono-Regular", Menlo, Consolas, "Hiragino Kaku Gothic ProN", monospace; }
 header, main, footer { max-width: 760px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
 header { display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: baseline; justify-content: space-between; padding-top: 20px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
@@ -80,7 +81,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   table.steps th .short { display: none; }
   @media (max-width: 700px) {
     /* スマホ: ブロックの表を、1ブロック=1枚のカードにして、全部の項目が横にはみ出さず見えるようにする */
-    .scroll { overflow-x: visible; }
+    .scroll { overflow-x: visible; } .scroll.stw { overflow-x: auto; }
     table.blocks, table.blocks tbody { display: block; width: 100%; }
     table.blocks thead { display: none; }
     #rows > tr:not(.editrow) { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
@@ -249,7 +250,7 @@ function saveBlob(blob, filename, statusEl) {
     ['基本のビート', ['ツービート', 'ツービート(スネアとハイハット交互)', 'ツービート(裏拍アクセント)', 'ツービート(フロアタム)', 'Dビート', 'Dビート(フロアタム)', 'Dビート(クラッシュ版)', 'パスパス(スネア頭+オープンハット)']],
     ['ブラスト・連打', ['ブラスト(交互)', 'ハンマーブラスト', 'ドコドコ(2バス)']],
     ['ハーフ・遅いビート', ['ハーフ(モッシュ)', 'スロー16ビート(クラッシュ8分)', '8ビート', '8ビート(フロアタム)']],
-    ['フィル・タム回し', ['スネア連打(スネアだけ)', 'スネア連打(タム回し)', 'タム回し(スネア→ロー→フロア)']],
+    ['フィル・タム回し', ['スネア・ロー・スネア(頭クラッシュ2発)', 'スネア連打(スネアだけ)', 'スネア連打(タム回し)', 'タム回し(スネア→ロー→フロア)']],
     ['キメ・休み', ['決め(キメ)', '3・3・2(クラッシュ+スネア+キック)', '休み']],
   ];
   const PATTERNS = {
@@ -279,6 +280,8 @@ function saveBlob(blob, filename, statusEl) {
     '8ビート(フロアタム)': { K: 'x.......x.x.....', S: '....x.......x...', T: 'x.x.x.x.x.x.x.x.' },
     // ---- フィル・タム回し ----
     // スネアだけ: 「スネア連打(タム回し)」の、ロータム・フロアタムの部分を、スネアに置き換えた形
+    // きんぴらさんが編集した形に近いフレーズ: 頭にクラッシュ(+キック)が2発入ってアクセント、そのあとスネア4連→ロータム4連→スネア4連
+    'スネア・ロー・スネア(頭クラッシュ2発)': { K: 'X.X.............', C: 'X.X.............', S: '....xxxx....xxxx', M: '........xxxx....' },
     'スネア連打(スネアだけ)': { K: 'x.......x.......', S: '.oooooooxxxxxxXX', C: 'x...............' },
     'スネア連打(タム回し)': { K: 'x.......x.......', S: '.ooooooo........', M: '........xxxx....', T: '............xxXX', C: 'x...............' },
     'タム回し(スネア→ロー→フロア)': { K: 'x...............', S: 'xxxx............', M: '....xxxx........', T: '........xxxxxxxX', C: 'x...............' },
@@ -294,7 +297,7 @@ function saveBlob(blob, filename, statusEl) {
     'Dビート': 200, 'Dビート(フロアタム)': 200, 'Dビート(クラッシュ版)': 200, 'パスパス(スネア頭+オープンハット)': 200,
     'ブラスト(交互)': 240, 'ハンマーブラスト': 240, 'ドコドコ(2バス)': 85,
     'ハーフ(モッシュ)': 85, 'スロー16ビート(クラッシュ8分)': 50, '8ビート': 120, '8ビート(フロアタム)': 120,
-    'スネア連打(スネアだけ)': 140, 'スネア連打(タム回し)': 140, 'タム回し(スネア→ロー→フロア)': 140,
+    'スネア連打(スネアだけ)': 140, 'スネア・ロー・スネア(頭クラッシュ2発)': 180, 'スネア連打(タム回し)': 140, 'タム回し(スネア→ロー→フロア)': 140,
     '決め(キメ)': 200, '3・3・2(クラッシュ+スネア+キック)': 200,
   };
   const NAMES = Object.keys(PATTERNS);
@@ -561,7 +564,7 @@ function saveBlob(blob, filename, statusEl) {
     const p = b.cust || PATTERNS[b.pat] || {};
     const steps = b.n * (b.unit === 4 ? 4 : 2);
     const edit = (fn) => { const cp = b.cust || (b.cust = clonePat(PATTERNS[b.pat])); fn(cp); renderRows(); liveEdit(); };
-    const wrap = document.createElement('div'); wrap.className = 'scroll';
+    const wrap = document.createElement('div'); wrap.className = 'scroll stw';
     const tb = document.createElement('table'); tb.className = 'steps';
     const head = tb.insertRow(); head.insertCell();
     for (let i = 0; i < 16; i++) {
