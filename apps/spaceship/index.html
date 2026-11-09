@@ -47,13 +47,14 @@
   .outrow { display:flex; gap:14px; align-items:center; } .outrow .kn { flex:none; width:74px; } .waves { flex:1; display:flex; flex-direction:column; gap:6px; min-width:0; }
   .waves .tgs { flex-wrap:nowrap; gap:4px; } .waves .tgs span.t { width:34px; flex:none; align-self:center; color:var(--g); }
   .waves .tg { flex:1; min-width:0; padding:8px 1px 6px; }
-  .gsw { position:relative; flex:none; width:112px; height:60px; margin-left:auto; padding:0; background:linear-gradient(#0c1822,#070e14); border:1px solid #3a6070; cursor:pointer; overflow:hidden; touch-action:manipulation; }
-  .gsw .lever { position:absolute; left:22px; bottom:8px; width:18px; height:16px; border-radius:3px 3px 1px 1px; background:linear-gradient(90deg,#556,#bcd,#556); transition:height .2s, background .2s; }
-  .gsw.on .lever { height:40px; background:linear-gradient(90deg,#7a5,#cfa,#7a5); box-shadow:0 0 10px #2dff9b88; }
-  .gsw .cover { position:absolute; left:3px; right:3px; top:3px; bottom:3px; background:repeating-linear-gradient(-45deg,rgba(255,176,0,.6) 0 7px,rgba(0,0,0,.65) 7px 14px); border:1px solid #ffb000; transform-origin:top; transition:transform .28s cubic-bezier(.3,1.5,.5,1); }
-  .gsw.on .cover { transform:translateY(-88%); }
-  .gsw .lamp { position:absolute; right:10px; top:12px; width:10px; height:10px; background:#12303a; transition:background .2s; } .gsw.on .lamp { background:var(--g); box-shadow:0 0 10px var(--g); }
-  .gsw em { position:absolute; right:7px; bottom:7px; font:700 9px Orbitron,monospace; letter-spacing:.14em; font-style:normal; color:var(--mu); } .gsw.on em { color:var(--g); }
+  .tgb { margin-left:auto; flex:none; width:112px; display:flex; align-items:center; justify-content:center; gap:8px; padding:8px 4px; font:inherit; color:var(--mu); background:rgba(8,18,26,.5); border:1px solid #3a6070; cursor:pointer; touch-action:manipulation; }
+  .tgb i { width:9px; height:9px; background:#12303a; } .tgb b { font:700 11px Orbitron,monospace; letter-spacing:.14em; }
+  .tgb.on { color:var(--g); border-color:var(--g); box-shadow:inset 0 0 8px #2dff9b55; } .tgb.on i { background:var(--g); box-shadow:0 0 8px var(--g); }
+  .slw { flex:1; min-width:0; } .sl { position:relative; padding:0 14px; touch-action:none; cursor:ew-resize; }
+  .sl .slot { position:relative; height:12px; margin:4px 0 0; background:#02040a; border:1px solid #2a5a6a; box-shadow:inset 0 2px 4px #000; }
+  .sl .hd { position:absolute; top:-6px; width:26px; height:24px; margin-left:-13px; background:linear-gradient(90deg,#667,#dde,#667); border:1px solid #fff6; box-shadow:0 2px 6px #000a,0 0 8px #27e8ff55; transition:left .12s; }
+  .sl .hd:after { content:""; position:absolute; left:50%; top:4px; bottom:4px; width:2px; margin-left:-1px; background:#27e8ff; box-shadow:0 0 6px #27e8ff; }
+  .sl .labs { display:flex; justify-content:space-between; margin:11px -14px 0; } .sl .labs button { flex:1; margin:0; padding:3px 0; font:700 8px Orbitron,monospace; letter-spacing:.08em; color:var(--mu); background:none; border:0; cursor:pointer; touch-action:manipulation; } .sl .labs button.on { color:var(--c); } .sl .labs small { display:block; font:7px ui-monospace,monospace; color:#8aa; letter-spacing:0; }
   .btns { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
   .pbtn { position:relative; font:inherit; color:var(--k); border:1px solid var(--k); background:linear-gradient(#10202b,#08121a); padding:7px 2px 6px; min-height:74px; cursor:pointer; text-align:center; touch-action:none;
     box-shadow:inset 0 0 12px #0008; clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px); display:flex; flex-direction:column; align-items:center; gap:1px; }
@@ -120,8 +121,10 @@
         <button class="pbtn" data-p="sonar" style="--k:#9bd0ff"><i></i><svg viewBox="0 0 512 512" aria-hidden="true"><path fill="currentColor" d="M252.78 20.875c-1.302.012-2.6.03-3.905.063c-37.928.974-76.148 11.153-111.28 31.437C25.164 117.285-13.41 261.322 51.5 373.75s208.946 151.036 321.375 86.125c77.7-44.86 120.1-127.513 117.47-211.406c-3.563 65.847-35.898 128.573-91 169.374a218 218 0 0 1-35.814 25.844c-103.68 59.86-235.983 24.4-295.842-79.282c-59.86-103.68-24.43-235.984 79.25-295.844c35.64-20.576 74.67-29.88 112.968-29.03c63.304 1.4 124.623 30.57 165.438 82.53l-32.594 23.032c-33.27-42.835-84.01-66.6-136.063-67c-.96-.008-1.91-.012-2.875 0c-.964.01-1.943.038-2.906.062c-28.006.717-56.222 8.215-82.156 23.188c-82.99 47.914-111.508 154.322-63.594 237.312s154.32 111.51 237.313 63.594c51.37-29.66 81.862-81.724 86.28-136.78c-12.53 45.37-42.32 86.745-85.438 114.186c-.02.013-.043.018-.062.03l-.344.22a158 158 0 0 1-9.78 6.156c-74.245 42.865-168.918 17.494-211.782-56.75c-42.864-74.243-17.493-168.917 56.75-211.78c23.2-13.396 48.39-20.122 73.375-20.782c47.953-1.266 95.138 19.858 125.968 59.156l-39.844 28.156c-20.232-24.32-50.055-37.79-80.594-38.03c-1.17-.01-2.33 0-3.5.03c-17.035.432-34.176 4.995-49.938 14.094c-50.435 29.12-67.806 93.877-38.687 144.313c29.12 50.434 93.908 67.806 144.344 38.686c21.245-12.267 36.623-30.85 45.124-52.03c-18.815 21.064-44.364 36.888-73.938 44.155c-.04.013-.084.02-.125.033c-37.507 10.787-78.796-4.816-99.217-40.188c-24.07-41.688-9.845-94.712 31.843-118.78c13.028-7.523 27.143-11.314 41.156-11.69c25.66-.685 50.898 10.098 68.188 30.25l-41 28.97c-5.497-4.796-12.664-7.72-20.53-7.72c-17.277 0-31.283 14.007-31.283 31.282c0 17.276 14.004 31.282 31.282 31.282s31.28-14.007 31.28-31.283c0-1.187-.06-2.347-.188-3.5l120.094-57.312l4.03-1.75l-.06-.156l62.25-29.72l9.25-4.438l-5.282-8.812l-19.97-33.375l-5.155-8.625l-8.25 5.813l-8.095 5.718c-45.9-58.864-116.14-91.053-187.844-90.405z"/></svg><b>SONAR</b><small>ソナー</small></button>
       </div>
       <div class="mphelp">TAP <em>ON</em> / もう一度 TAP <em>OFF</em>(別のを押すと切り替え)</div>
-      <div class="auto"><span>AUTOPILOT<small>自動で鳴らす</small></span><button id="gsw" class="gsw on" aria-pressed="true" aria-label="自動で鳴らす"><b class="cover"></b><b class="lever"></b><i class="lamp"></i><em>ARMED</em></button></div>
-      <div class="auto"><span>AUTO<small>自動演奏</small></span><button class="seg on" data-a="off">OFF</button><button class="seg" data-a="drone">DRONE<small>鳴りっぱなし</small></button><button class="seg" data-a="arp">ARP<small>順番に鳴る</small></button></div></div></div>
+      <div class="auto"><span>AUTOPILOT<small>自動で鳴らす</small></span><button id="gsw" class="tgb on" aria-pressed="true" aria-label="自動で鳴らす"><i></i><b>ON</b></button></div>
+      <div class="auto"><span>AUTO<small>自動演奏</small></span><div id="autoLv" class="slw"></div></div>
+    </div>
+  </div>
 
   <div class="dash">
 
@@ -141,7 +144,7 @@
 
   <details><summary>しくみ</summary><ul>
     <li><b>窓の景色</b>: 惑星の縞模様は、選んだ波のかたちそのもの。音が高いほど惑星の回転が速く、フィルターを閉じるともやがかかる。クセ(RESO)を上げると縁が光る。エコーは衛星の数と間隔、OSC2は小さな2つ目の惑星。</li>
-    <li><b>ミッション音</b>: ボタンを押すたびに ON / OFF が切り替わる(別のを押すと切り替え)。ONにすると、その音が自動で鳴り(AUTOPILOT が ARMED のとき)、鍵盤もその音色で弾ける。AUTOPILOT のスイッチ(黄黒のカバーつき)を SAFE にすると、自動では鳴らさず、鍵盤の音色だけが変わる。つまみのPITCH SWPなどは、ミッション音がOFFの間の設定。</li>
+    <li><b>ミッション音</b>: ボタンを押すたびに ON / OFF が切り替わる(別のを押すと切り替え)。ONにすると、その音が自動で鳴り(AUTOPILOT が ON のとき)、鍵盤もその音色で弾ける。AUTOPILOT を OFF にすると、自動では鳴らさず、鍵盤の音色だけが変わる。つまみのPITCH SWPなどは、ミッション音がOFFの間の設定。</li>
     <li><b>AUTO</b>: 窓のマークの中の AUTO で切り替える。DRONE=最後に弾いた鍵盤の高さを鳴らし続ける(OFFで止まる)。ARP=押さえた鍵盤を順番にくり返して鳴らす(速さと範囲は SYSTEM の AUTO のつまみ)。</li>
     <li><b>WARP</b>: WARP FM のつまみで、ワープの強さを決める。</li>
     <li>鍵盤はパソコンのキーボードでも弾ける(A S D F G H J K、黒鍵は W E T Y U)。音が大きいので、最初は音量を下げてから。</li>

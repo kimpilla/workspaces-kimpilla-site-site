@@ -155,7 +155,7 @@
   function stopSelf() { clearInterval(pulseTimer); noteOff('d'); noteOff('v'); }
   function setSelf(on) {
     selfPlay = on;
-    const g = $('gsw'); g.classList.toggle('on', on); g.setAttribute('aria-pressed', on); g.querySelector('em').textContent = on ? 'ARMED' : 'SAFE'; click();
+    const g = $('gsw'); g.classList.toggle('on', on); g.setAttribute('aria-pressed', on); g.querySelector('b').textContent = on ? 'ON' : 'OFF'; click();
     if (ACT) { stopSelf(); if (on) startSelf(ACT); }
   }
   $('gsw').addEventListener('click', () => { ensureAudio(); setSelf(!selfPlay); });
@@ -178,6 +178,21 @@
   });
 
   // ---- 自動演奏: OFF / DRONE(一定の高さを鳴らし続ける) / ARP(押さえた鍵盤を順番に鳴らす) ----
+  // ---- 段のあるレバー(モード切り替え用) ----
+  function mkLever(box, opts, get, set) {
+    const n = opts.length;
+    box.innerHTML = '<div class="sl"><div class="slot"><div class="hd"></div></div><div class="labs"></div></div>';
+    const sl = box.firstChild, slot = sl.querySelector('.slot'), hd = sl.querySelector('.hd'), labs = sl.querySelector('.labs');
+    opts.forEach(([v, l, s], i) => { const b = document.createElement('button'); b.type = 'button'; b.innerHTML = l + (s ? '<small>' + s + '</small>' : ''); b.dataset.i = i; labs.appendChild(b); });
+    const sync = () => { const i = Math.max(0, opts.findIndex((o) => o[0] === get())); hd.style.left = (n === 1 ? 50 : i / (n - 1) * 100) + '%'; [...labs.children].forEach((b, k) => b.classList.toggle('on', k === i)); };
+    const at = (e) => { const r = slot.getBoundingClientRect(); return Math.max(0, Math.min(n - 1, Math.round((e.clientX - r.left) / r.width * (n - 1)))); };
+    let on = false;
+    sl.addEventListener('pointerdown', (e) => { if (e.target.closest('.labs button')) return; e.preventDefault(); sl.setPointerCapture(e.pointerId); on = true; set(opts[at(e)][0]); sync(); });
+    sl.addEventListener('pointermove', (e) => { if (!on) return; const v = opts[at(e)][0]; if (v !== get()) { set(v); sync(); } });
+    sl.addEventListener('pointerup', () => { on = false; }); sl.addEventListener('pointercancel', () => { on = false; });
+    labs.addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; set(opts[+b.dataset.i][0]); sync(); });
+    sync(); return sync;
+  }
   let autoMode = 'off', droneNote = null, arpTimer = 0, arpIdx = 0;
   const arpHeld = new Set();
   function setDrone(n) { noteOff('a'); droneNote = n; noteOn('a', n); }
@@ -204,14 +219,16 @@
     noteOff(n);
   }
   function releaseAll() { for (const n of [...voices.keys()]) if (typeof n === 'number') noteOff(n); [...arpHeld].forEach((n) => keyEl(n, false)); arpHeld.clear(); stopArp(); }
+  let autoSync = null;
   function setAuto(m) {
     if (autoMode === 'arp' && m !== 'arp') { [...arpHeld].forEach((n) => keyEl(n, false)); arpHeld.clear(); stopArp(); }
     if (m !== 'drone') stopDrone();
     autoMode = m; ensureAudio();
-    document.querySelectorAll('.seg').forEach((b) => b.classList.toggle('on', b.dataset.a === m));
+    if (autoSync) autoSync();
     $('mTog').classList.toggle('auto', m !== 'off');
   }
-  document.querySelectorAll('.seg').forEach((b) => b.addEventListener('click', () => setAuto(b.dataset.a)));
+  autoSync = mkLever($('autoLv'), [['off', 'OFF'], ['drone', 'DRONE', '鳴りっぱなし'], ['arp', 'ARP', '順番に鳴る']], () => autoMode, setAuto);
+
 
   // ---- 鍵盤(2オクターブ) ----
   let base = 48;
@@ -310,12 +327,8 @@
     // 波のかたちのスイッチ
     const WV = [['sine', 'SIN'], ['triangle', 'TRI'], ['sawtooth', 'SAW'], ['square', 'SQR']];
     [['tg1', 'wave', 'OSC1'], ['tg2', 'wave2', 'OSC2']].forEach(([id, key, name]) => {
-      const box = $(id); box.innerHTML = '<span class="t">' + name + '</span>';
-      WV.forEach(([w, l]) => {
-        const b = document.createElement('button'); b.className = 'tg' + (p[key] === w ? ' on' : ''); b.innerHTML = '<i></i>' + l;
-        b.onclick = () => { p[key] = w; box.querySelectorAll('.tg').forEach((x) => x.classList.toggle('on', x === b)); applyGlobal(); };
-        box.appendChild(b);
-      });
+      const box = $(id); box.innerHTML = '<span class="t">' + name + '</span><div class="slw"></div>';
+      mkLever(box.querySelector('.slw'), WV.map(([w, l]) => [w, l]), () => p[key], (v) => { p[key] = v; applyGlobal(); });
     });
   }
 
