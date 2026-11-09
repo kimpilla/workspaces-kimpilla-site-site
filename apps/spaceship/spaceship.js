@@ -7,16 +7,26 @@
     osc2: 0, detune: 12, sub: 0, release: 0.4, delayTime: 0.35, feedback: 0.35, mix: 0.25, sweep: 0, sweepTime: 0.25, noise: 0, wobble: 0, wobbleRate: 5, arpRate: 6, arpSpan: 2 };
   const p = Object.assign({}, DEFAULTS);
 
-  // ---- ミッション音(押している間だけ上書きする設定。drone=鳴りっぱなし、pulse=くり返し) ----
+  // ---- ミッション音(押すと音色が変わり、自動演奏のパターンがグリッドに出る) ----
   const PRE = {
-    laser: { code: 'LASER', col: '#ff2d8a', p: { wave: 'square', wave2: 'sawtooth', osc2: 0.3, sub: 0, cutoff: 7000, q: 6, sweep: -3, sweepTime: 0.2, release: 0.15, attack: 0.002, decay: 0.2, sustain: 0.2, mix: 0.2, delayTime: 0.12, feedback: 0.3, noise: 0, wobble: 0 }, pulse: { every: 0.34, len: 0.18, note: 84 } },
-    warp: { code: 'WARP', col: '#27e8ff', p: { wave: 'sawtooth', wave2: 'square', osc2: 0.4, sub: 0.5, cutoff: 3500, q: 8, sweep: 2.5, sweepTime: 1.1, attack: 0.3, decay: 1, sustain: 1, release: 1.2, mix: 0.45, feedback: 0.62, delayTime: 0.3, noise: 0, wobble: 0, fm: 'dial' }, pulse: { every: 2, len: 1.5, note: 36 } },
-    alert: { code: 'ALERT', col: '#ff4a4a', p: { wave: 'square', osc2: 0, sub: 0, cutoff: 2600, q: 3, wobble: 0.75, wobbleRate: 1.6, attack: 0.02, sustain: 0.8, release: 0.1, mix: 0.1, noise: 0, sweep: 0 }, drone: 74 },
-    comms: { code: 'COMMS', col: '#2dff9b', p: { wave: 'square', osc2: 0, sub: 0, cutoff: 3200, q: 2, attack: 0.001, sustain: 0.9, release: 0.03, mix: 0.25, delayTime: 0.15, feedback: 0.3, noise: 0, wobble: 0, sweep: 0, fm: 260, fmRatio: 3.5 }, pulse: { every: 1.1, len: 0.07, note: 88, double: true } },
-    thrust: { code: 'THRUST', col: '#ffb000', p: { wave: 'sawtooth', wave2: 'square', osc2: 0.6, sub: 1, cutoff: 420, q: 2, noise: 0.9, wobble: 0.12, wobbleRate: 9, attack: 0.4, sustain: 1, release: 0.6, mix: 0.05, sweep: 0 }, drone: 28 },
-    sonar: { code: 'SONAR', col: '#9bd0ff', p: { wave: 'sine', osc2: 0, sub: 0, cutoff: 5000, q: 0.5, attack: 0.003, decay: 1.2, sustain: 0, release: 0.6, mix: 0.7, feedback: 0.72, delayTime: 0.45, noise: 0, wobble: 0, sweep: 0 }, pulse: { every: 2.4, len: 0.05, note: 81 } },
+    laser: { code: 'LASER', col: '#ff2d8a', p: { wave: 'square', wave2: 'sawtooth', osc2: 0.3, sub: 0, cutoff: 7000, q: 6, sweep: -3, sweepTime: 0.2, release: 0.15, attack: 0.002, decay: 0.2, sustain: 0.2, mix: 0.2, delayTime: 0.12, feedback: 0.3, noise: 0, wobble: 0 } },
+    warp: { code: 'WARP', col: '#27e8ff', p: { wave: 'sawtooth', wave2: 'square', osc2: 0.4, sub: 0.5, cutoff: 3500, q: 8, sweep: 2.5, sweepTime: 1.1, attack: 0.3, decay: 1, sustain: 1, release: 1.2, mix: 0.45, feedback: 0.62, delayTime: 0.3, noise: 0, wobble: 0, fm: 'dial' } },
+    alert: { code: 'ALERT', col: '#ff4a4a', p: { wave: 'square', osc2: 0, sub: 0, cutoff: 2600, q: 3, wobble: 0.75, wobbleRate: 1.6, attack: 0.02, sustain: 0.8, release: 0.1, mix: 0.1, noise: 0, sweep: 0 } },
+    comms: { code: 'COMMS', col: '#2dff9b', p: { wave: 'square', osc2: 0, sub: 0, cutoff: 3200, q: 2, attack: 0.001, sustain: 0.9, release: 0.03, mix: 0.25, delayTime: 0.15, feedback: 0.3, noise: 0, wobble: 0, sweep: 0, fm: 260, fmRatio: 3.5 } },
+    thrust: { code: 'THRUST', col: '#ffb000', p: { wave: 'sawtooth', wave2: 'square', osc2: 0.6, sub: 1, cutoff: 420, q: 2, noise: 0.9, wobble: 0.12, wobbleRate: 9, attack: 0.4, sustain: 1, release: 0.6, mix: 0.05, sweep: 0 } },
+    sonar: { code: 'SONAR', col: '#9bd0ff', p: { wave: 'sine', osc2: 0, sub: 0, cutoff: 5000, q: 0.5, attack: 0.003, decay: 1.2, sustain: 0, release: 0.6, mix: 0.7, feedback: 0.72, delayTime: 0.45, noise: 0, wobble: 0, sweep: 0 } },
   };
-  let ACT = null, LOCKED = false, pressing = null, lockTimer = 0, pulseTimer = 0;
+  // 自動演奏のパターン(root=いちばん下の段の音、rate=1秒あたりのマス数、cells=[段,列]。つながったマスは音が伸びる)
+  const rng = (r, a, b) => { const o = []; for (let c = a; c <= b; c++) o.push([r, c]); return o; };
+  const PAT = {
+    laser: { root: 72, rate: 11.76, cells: [].concat(rng(5, 0, 1), rng(5, 4, 5), rng(5, 8, 9), rng(5, 12, 13)) },
+    warp: { root: 24, rate: 8, cells: rng(5, 0, 11) },
+    alert: { root: 74, rate: 8, cells: rng(0, 0, 15) },
+    comms: { root: 76, rate: 14.5, cells: [[5, 0], [5, 2]] },
+    thrust: { root: 28, rate: 8, cells: rng(0, 0, 15) },
+    sonar: { root: 69, rate: 6.7, cells: [[5, 0]] },
+  };
+  let ACT = null, LOCKED = false, pressing = null, lockTimer = 0;
   const events = [];                                              // 景色用の出来事(レーザー発射、ソナーなど)
 
   // 実際に鳴らす設定 = つまみの設定 + ミッション音の上書き
@@ -125,38 +135,17 @@
     o.connect(g); g.connect(ctx.destination); o.start(t); o.stop(t + 0.04);
   }
 
-  // ---- ミッション音の入り切り ----
-  function fire(name) {
-    const pr = PRE[name]; if (!pr || ACT !== name || !pr.pulse) return;
-    const q = pr.pulse, go = (delayMs) => setTimeout(() => {
-      if (ACT !== name) return;
-      noteOn('v', q.note); events.push({ type: name, t: performance.now() / 1000 });
-      setTimeout(() => noteOff('v'), q.len * 1000);
-    }, delayMs);
-    go(0); if (q.double) go(160);
-  }
-  function stopPreset() {
-    clearInterval(pulseTimer); noteOff('d'); noteOff('v');
-    ACT = null; LOCKED = false; applyGlobal(); syncBtns();
-  }
-  function activate(name) {
-    if (ACT) stopPreset();
-    ensureAudio(); ACT = name; LOCKED = false; applyGlobal();
-    startSelf(name);
-    syncBtns();
-  }
-  // 自動で鳴らす部分(鳴りっぱなし・くり返し)。SELF が OFF のときは、鍵盤の音色だけ変わる
+  // ---- ミッション音の入り切り(音は、シーケンサーが自動で鳴らす) ----
   let selfPlay = true;
-  function startSelf(name) {
-    const pr = PRE[name]; if (!selfPlay || !pr) return;
-    if (pr.drone) { noteOn('d', pr.drone); events.push({ type: name, t: performance.now() / 1000 }); }
-    if (pr.pulse) { fire(name); pulseTimer = setInterval(() => fire(name), pr.pulse.every * 1000); }
+  function stopPreset() { seqHalt(); ACT = null; LOCKED = false; applyGlobal(); syncBtns(); syncSeq(); }
+  function activate(name) {
+    seqHalt(); ensureAudio(); ACT = name; LOCKED = false; applyGlobal();
+    syncBtns(); syncSeq();
   }
-  function stopSelf() { clearInterval(pulseTimer); noteOff('d'); noteOff('v'); }
-  function setSelf(on) {
-    selfPlay = on;
+  function setSelf(on) {                                          // OFF のときは、鍵盤の音色だけ変わる
+    seqHalt(); selfPlay = on;
     const g = $('gsw'); g.classList.toggle('on', on); g.setAttribute('aria-pressed', on); g.querySelector('b').textContent = on ? 'ON' : 'OFF'; click();
-    if (ACT) { stopSelf(); if (on) startSelf(ACT); }
+    syncSeq();
   }
   $('gsw').addEventListener('click', () => { ensureAudio(); setSelf(!selfPlay); });
   function syncBtns() {
@@ -227,52 +216,76 @@
   const NAMES = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
   const OCT_COL = { 0: '#ff5a2d', 1: '#ff2d8a', 2: '#ffb000', 3: '#2dff9b', 4: '#27e8ff', 5: '#a66bff', 6: '#ff5a2d', 7: '#ff2d8a' };   // オクターブごとの蛍光色
   const octCol = (m) => OCT_COL[Math.floor(m / 12) - 1] || '#27e8ff';
-  const seqGrid = Array.from({ length: SEQ_N }, () => new Array(SEQ_W).fill(false));
-  [[0, 0], [3, 2], [4, 4], [3, 6], [0, 8], [2, 10], [3, 12], [5, 14], [0, 14], [8, 12]].forEach(([r, c]) => { seqGrid[r][c] = true; });
-  let seqTimer = 0, seqStep = 0, seqCells = null, seqLabs = null;
+  const mkGrid = (cells) => { const g = Array.from({ length: SEQ_N }, () => new Array(SEQ_W).fill(false)); cells.forEach(([r, c]) => { g[r][c] = true; }); return g; };
+  const USER_RIFF = [[0, 0], [3, 2], [4, 4], [3, 6], [0, 8], [2, 10], [3, 12], [5, 14], [0, 14], [8, 12]];
+  const userGrid = mkGrid(USER_RIFF), PGRID = {};
+  Object.keys(PAT).forEach((k) => { PGRID[k] = mkGrid(PAT[k].cells); });
+  let seqTimer = 0, seqStep = 0, seqCells = null, seqLabs = null, seqSrc = null;      // seqSrc: 鳴らしている元('pre'=ミッション音 / 'user'=SEQ / null)
+  const viewPre = () => !!(ACT && selfPlay);                                          // グリッドに出すのがミッション音か
+  const viewGrid = () => viewPre() ? PGRID[ACT] : userGrid;
+  const viewBase = () => viewPre() ? PAT[ACT].root : base;
   function buildSeq() {
     const g = $('sqGrid'), lab = $('sqLab'); g.innerHTML = ''; lab.innerHTML = ''; seqCells = []; seqLabs = [];
     for (let r = SEQ_N - 1; r >= 0; r--) {
       const l = document.createElement('div'); l.className = 'sqL'; lab.appendChild(l); seqLabs[r] = l;
       for (let c = 0; c < SEQ_W; c++) {
-        const d = document.createElement('div'); d.className = 'sqc' + (c % 4 === 0 ? ' b4' : '') + (seqGrid[r][c] ? ' on' : ''); d.dataset.r = r; d.dataset.c = c;
+        const d = document.createElement('div'); d.className = 'sqc' + (c % 4 === 0 ? ' b4' : ''); d.dataset.r = r; d.dataset.c = c;
         g.appendChild(d); (seqCells[r] = seqCells[r] || [])[c] = d;
       }
     }
-    updateSeqLabels();
+    refreshGrid();
     let paint = null;
     const hit = (e) => { const el = document.elementFromPoint(e.clientX, e.clientY); return el && el.classList.contains('sqc') ? el : null; };
-    const set = (el, v) => { const r = +el.dataset.r, c = +el.dataset.c; if (seqGrid[r][c] === v) return; seqGrid[r][c] = v; el.classList.toggle('on', v); if (v) { ensureAudio(); const id = 'p'; noteOff(id); noteOn(id, base + SEQ_IV[r]); setTimeout(() => noteOff(id), 160); } };
-    g.addEventListener('pointerdown', (e) => { const el = hit(e); if (!el) return; e.preventDefault(); g.setPointerCapture(e.pointerId); paint = !seqGrid[+el.dataset.r][+el.dataset.c]; set(el, paint); });
+    const set = (el, v) => { const G = viewGrid(), r = +el.dataset.r, c = +el.dataset.c; if (G[r][c] === v) return; G[r][c] = v; el.classList.toggle('on', v); if (v) { ensureAudio(); const id = 'p'; noteOff(id); noteOn(id, viewBase() + SEQ_IV[r]); setTimeout(() => noteOff(id), 160); } };
+    g.addEventListener('pointerdown', (e) => { const el = hit(e); if (!el) return; e.preventDefault(); g.setPointerCapture(e.pointerId); paint = !viewGrid()[+el.dataset.r][+el.dataset.c]; set(el, paint); });
     g.addEventListener('pointermove', (e) => { if (paint === null) return; const el = hit(e); if (el) set(el, paint); });
     const up = () => { paint = null; }; g.addEventListener('pointerup', up); g.addEventListener('pointercancel', up);
-    $('sqClr').onclick = () => { seqGrid.forEach((row, r) => row.forEach((v, c) => { row[c] = false; seqCells[r][c].classList.remove('on'); })); };
+    $('sqClr').onclick = () => { viewGrid().forEach((row) => row.fill(false)); refreshGrid(); };
+    $('sqRst').onclick = () => { const G = viewGrid(), src = mkGrid(viewPre() ? PAT[ACT].cells : USER_RIFF); G.forEach((row, r) => row.forEach((v, c) => { row[c] = src[r][c]; })); refreshGrid(); };
+  }
+  function refreshGrid() {
+    if (!seqCells) return;
+    const G = viewGrid(), pre = viewPre(), col = pre ? PRE[ACT].col : '#27e8ff';
+    for (let r = 0; r < SEQ_N; r++) for (let c = 0; c < SEQ_W; c++) seqCells[r][c].classList.toggle('on', G[r][c]);
+    updateSeqLabels();
+    const t = $('sqSrc'); if (t) { t.textContent = pre ? PRE[ACT].code + ' パターン' : 'MY PATTERN'; t.style.color = col; }
   }
   function updateSeqLabels() {
     if (!seqLabs) return;
-    SEQ_IV.forEach((iv, r) => { const m = base + iv; seqLabs[r].textContent = NAMES[m % 12] + (Math.floor(m / 12) - 1); seqLabs[r].style.color = octCol(m); });
-    for (let r = 0; r < SEQ_N; r++) for (let c = 0; c < SEQ_W; c++) seqCells[r][c].style.setProperty('--o', octCol(base + SEQ_IV[r]));
+    const b0 = viewBase();
+    SEQ_IV.forEach((iv, r) => { const m = b0 + iv; seqLabs[r].textContent = NAMES[m % 12] + (Math.floor(m / 12) - 1); seqLabs[r].style.color = octCol(m); });
+    for (let r = 0; r < SEQ_N; r++) for (let c = 0; c < SEQ_W; c++) seqCells[r][c].style.setProperty('--o', octCol(b0 + SEQ_IV[r]));
   }
   function seqTick() {
-    if (autoMode !== 'seq') return;
-    const col = seqStep % SEQ_W; seqStep++;
+    if (!seqSrc) return;
+    const pre = seqSrc === 'pre' && ACT, G = pre ? PGRID[ACT] : userGrid, B = pre ? PAT[ACT].root : base, rate = pre ? PAT[ACT].rate : p.arpRate;
+    const col = seqStep % SEQ_W, prv = (col + SEQ_W - 1) % SEQ_W, nxt = (col + 1) % SEQ_W; seqStep++;
     for (let r = 0; r < SEQ_N; r++) for (let c = 0; c < SEQ_W; c++) seqCells[r][c].classList.toggle('ph', c === col);
-    const iv = 1000 / p.arpRate; let any = false;
-    for (let r = 0; r < SEQ_N; r++) if (seqGrid[r][col]) { any = true; const id = 's' + r; noteOff(id); noteOn(id, base + SEQ_IV[r]); setTimeout(() => noteOff(id), iv * 0.7); }
-    if (any) events.push({ type: 'arp', t: performance.now() / 1000 });
+    const iv = 1000 / rate; let any = false;
+    for (let r = 0; r < SEQ_N; r++) {
+      const id = 's' + r;
+      if (G[r][col]) {
+        if (!G[r][prv] || !voices.has(id)) { any = true; noteOff(id); noteOn(id, B + SEQ_IV[r]); }   // つながったマスは、鳴らしっぱなし
+        if (!G[r][nxt]) setTimeout(() => noteOff(id), iv * 0.75);
+      } else noteOff(id);
+    }
+    if (any) events.push({ type: pre ? ACT : 'arp', t: performance.now() / 1000 });
     seqTimer = setTimeout(seqTick, iv);
   }
-  function startSeq() { if (seqTimer) return; seqStep = 0; seqTick(); }
-  function stopSeq() { clearTimeout(seqTimer); seqTimer = 0; for (let r = 0; r < SEQ_N; r++) noteOff('s' + r); if (seqCells) for (let r = 0; r < SEQ_N; r++) for (let c = 0; c < SEQ_W; c++) seqCells[r][c].classList.remove('ph'); }
+  function seqHalt() { clearTimeout(seqTimer); seqTimer = 0; seqSrc = null; for (let r = 0; r < SEQ_N; r++) noteOff('s' + r); if (seqCells) for (let r = 0; r < SEQ_N; r++) for (let c = 0; c < SEQ_W; c++) seqCells[r][c].classList.remove('ph'); }
+  function syncSeq() {
+    const w = (ACT && selfPlay) ? 'pre' : (autoMode === 'seq' ? 'user' : null);
+    if (w !== seqSrc) { seqHalt(); seqSrc = w; if (w) { seqStep = 0; seqTick(); } }
+    refreshGrid();
+  }
   let autoSync = null;
   function setAuto(m) {
     if (autoMode === 'arp' && m !== 'arp') { [...arpHeld].forEach((n) => keyEl(n, false)); arpHeld.clear(); arpNotes.clear(); stopArp(); }
     if (m !== 'drone') stopDrone();
-    if (autoMode === 'seq' && m !== 'seq') stopSeq();
     autoMode = m; ensureAudio();
     if (m === 'drone') setDrone(droneNote == null ? base : droneNote);                 // 選んだだけで、一定の高さが鳴りはじめる
     if (m === 'arp') { if (!arpNotes.size) [0, 3, 7].forEach((d) => arpNotes.add(base + d)); startArp(); }   // 選んだだけで、和音が順番に鳴りはじめる
-    if (m === 'seq') startSeq();
+    syncSeq();
     if (autoSync) autoSync();
     $('mTog').classList.toggle('auto', m !== 'off');
   }
@@ -512,5 +525,5 @@
   }
 
   buildSeq(); buildKeys(); buildKnobs(); fit(); requestAnimationFrame(frame);
-  window.__ss = { p, E, setAuto, press, release, get autoMode() { return autoMode; }, arpHeld, arpNotes, get ACT() { return ACT; }, get LOCKED() { return LOCKED; }, voices, events, activate, stopPreset };
+  window.__ss = { p, E, setAuto, press, release, get autoMode() { return autoMode; }, arpHeld, arpNotes, get ACT() { return ACT; }, get LOCKED() { return LOCKED; }, voices, events, activate, stopPreset, get seqSrc() { return seqSrc; }, userGrid, PGRID, PAT, setSelf };
 })();

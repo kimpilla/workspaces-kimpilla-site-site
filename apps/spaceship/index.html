@@ -107,7 +107,11 @@
   .wk { position:absolute; top:0; bottom:0; background:#b8d4de; border:1px solid #567; z-index:1; }
   .bk { position:absolute; top:0; height:60%; background:#06090e; border:1px solid #2a4a58; z-index:2; }
   .wk span { position:absolute; bottom:3px; left:0; right:0; text-align:center; font-size:9px; color:#345; pointer-events:none; }
-  .wk { background:linear-gradient(#b8d4de 80%,var(--o) 80%); } .wk.dn { background:var(--o); } .bk { box-shadow:inset 0 -7px 0 var(--o); } .bk.dn { background:var(--o); } .wk span { color:#345; font-weight:700; line-height:1.15; }
+  .wk { background:linear-gradient(180deg,#0f202b,#08121a); border:1px solid color-mix(in srgb,var(--o) 55%,#0a141c); border-top:0; border-radius:0 0 4px 4px; box-shadow:inset 0 -5px 0 var(--o), inset 0 -14px 12px -8px var(--o); }
+  .wk.dn { background:linear-gradient(180deg,color-mix(in srgb,var(--o) 70%,#000),var(--o)); box-shadow:0 0 14px var(--o), inset 0 -5px 0 #fff8; }
+  .bk { background:linear-gradient(180deg,#02050a,#0a1620); border:1px solid color-mix(in srgb,var(--o) 70%,#000); border-top:0; border-radius:0 0 3px 3px; box-shadow:inset 0 -4px 0 var(--o), 0 0 6px color-mix(in srgb,var(--o) 45%,transparent); }
+  .bk.dn { background:var(--o); box-shadow:0 0 14px var(--o); }
+  .wk span { color:var(--o); font-weight:700; line-height:1.15; text-shadow:0 0 5px var(--o); bottom:8px; } .wk.dn span { color:#021; text-shadow:none; }
 </style>
 <script src="../../audio-unlock.js?v=3"></script>
 </head>
@@ -146,9 +150,9 @@
       <canvas class="scr" id="spec"></canvas>
       <div class="tele">CORE TEMP <em id="tT">300K</em> &nbsp; SHLD <em>98%</em> &nbsp; LNK <em>OK</em></div>
     </section>
-    <section class="box seq"><details open><summary>SEQUENCE<small>自動演奏の並び(AUTO を SEQ にすると鳴る。マスを押す・なぞる)</small></summary>
+    <section class="box seq"><details open><summary>SEQUENCE<b id="sqSrc" style="margin-left:8px"></b><small>ミッション音を押すと、その音の並びが出る。マスを押す・なぞるで直せる(AUTO を SEQ にすると、自分の並びが鳴る)</small></summary>
       <div class="sqw"><div class="sqlab" id="sqLab"></div><div class="sqgrid" id="sqGrid"></div></div>
-      <div class="sqbar"><button type="button" id="sqClr" class="tgb" style="margin-left:0;width:auto;padding:8px 14px">🗑 ぜんぶ けす</button></div>
+      <div class="sqbar" style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" id="sqClr" class="tgb" style="margin-left:0;width:auto;padding:8px 14px">🗑 ぜんぶ けす</button><button type="button" id="sqRst" class="tgb" style="margin-left:0;width:auto;padding:8px 14px">↩ もとに もどす</button></div>
     </details></section>
   </div>
 
