@@ -468,7 +468,7 @@
           : '<div class="dial"><i></i></div><div class="kl">' + label + '</div><output></output>';
         const o = el.querySelector('output');
         const render = () => {
-          if (key === 'mix') { const l = $('ecLed'); if (l) l.classList.toggle('on', p.mix >= 0.02); }      // ECHOがかかっている間、LEDが点く
+          if (key === 'mix') { const l = $('ecLed'); if (l) l.classList.toggle('on', p.mix > 0); }      // ECHOがかかっている間、LEDが点く
           const s = toS(p[key], min, max, log); o.textContent = fmt(p[key]);
           if (lever) el.querySelector('.hd').style.bottom = (s * 100) + '%'; else el.querySelector('.dial').style.setProperty('--r', (-135 + 270 * s) + 'deg');
         };
