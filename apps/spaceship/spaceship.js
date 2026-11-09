@@ -142,11 +142,23 @@
   function activate(name) {
     if (ACT) stopPreset();
     ensureAudio(); ACT = name; LOCKED = false; applyGlobal();
-    const pr = PRE[name];
-    if (pr.drone) { noteOn('d', pr.drone); events.push({ type: name, t: performance.now() / 1000 }); }
-    if (pr.pulse) { fire(name); pulseTimer = setInterval(() => fire(name), pr.pulse.every * 1000); }
+    startSelf(name);
     syncBtns();
   }
+  // 自動で鳴らす部分(鳴りっぱなし・くり返し)。SELF が OFF のときは、鍵盤の音色だけ変わる
+  let selfPlay = true;
+  function startSelf(name) {
+    const pr = PRE[name]; if (!selfPlay || !pr) return;
+    if (pr.drone) { noteOn('d', pr.drone); events.push({ type: name, t: performance.now() / 1000 }); }
+    if (pr.pulse) { fire(name); pulseTimer = setInterval(() => fire(name), pr.pulse.every * 1000); }
+  }
+  function stopSelf() { clearInterval(pulseTimer); noteOff('d'); noteOff('v'); }
+  function setSelf(on) {
+    selfPlay = on;
+    document.querySelectorAll('.seg2').forEach((b) => b.classList.toggle('on', (b.dataset.s === '1') === on));
+    if (ACT) { stopSelf(); if (on) startSelf(ACT); }
+  }
+  document.querySelectorAll('.seg2').forEach((b) => b.addEventListener('click', () => setSelf(b.dataset.s === '1')));
   function syncBtns() {
     const tg = $('mTog'); tg.classList.toggle('act', !!ACT); if (ACT) tg.style.setProperty('--k', PRE[ACT].col);
     document.querySelectorAll('.pbtn').forEach((b) => { b.classList.toggle('on', ACT === b.dataset.p); b.classList.toggle('lk', ACT === b.dataset.p && LOCKED); });
