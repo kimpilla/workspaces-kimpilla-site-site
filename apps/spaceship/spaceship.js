@@ -420,7 +420,7 @@
     g6: [['arpRate', 'RATE', '速さ(ARP・SEQ)', 1, 20, 0.5, true, (v) => v.toFixed(1) + '/s'], ['arpSpan', 'ARP SPAN', '何オクターブ', 1, 3, 1, false, (v) => Math.round(v) + 'oct']],
     g5: [['attack', 'ATK', '立ち上がり', 0.001, 2, 0.001, true, f1(2, 's')], ['decay', 'DEC', '減っていく', 0.01, 3, 0.01, true, f1(2, 's')], ['sustain', 'SUS', '押している間', 0, 1, 0.01, false, (v) => Math.round(v * 100) + '%'], ['release', 'REL', '余韻', 0.01, 4, 0.01, true, f1(2, 's')]],
   };
-  const setters = {};
+  const setters = {}, waveSync = {};
   function drag(el, key, min, max, log, step, render) {
     let sy = 0, ss = 0, on = false;
     el.addEventListener('pointerdown', (e) => { e.preventDefault(); el.setPointerCapture(e.pointerId); on = true; sy = e.clientY; ss = toS(p[key], min, max, log); });
@@ -432,6 +432,22 @@
     });
     const up = () => { on = false; }; el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
     el.addEventListener('dblclick', () => { p[key] = DEFAULTS[key]; render(); applyGlobal(); });
+  }
+  // 音色のつまみをランダムにする(音量・ARP/SEQの設定は変えない。大きな音にならない範囲で)
+  function randomize() {
+    const r = (a, b) => a + Math.random() * (b - a), lg = (a, b) => a * Math.pow(b / a, Math.random()), pick = (a) => a[Math.floor(Math.random() * a.length)];
+    const W4 = ['sine', 'triangle', 'sawtooth', 'square'];
+    Object.assign(p, {
+      wave: pick(W4), wave2: pick(W4), cutoff: lg(250, 9000), q: r(0.5, 12), fEnv: Math.random() < 0.5 ? 0 : r(0.5, 4), fDecay: r(0.1, 1.5),
+      fmDepth: Math.random() < 0.4 ? 0 : r(50, 800), fmRatio: pick([0.5, 1, 1.5, 2, 3, 4, 5, 6]),
+      osc2: Math.random() < 0.3 ? 0 : r(0.2, 0.8), detune: r(0, 30), sub: Math.random() < 0.5 ? 0 : r(0.2, 0.6),
+      sweep: Math.random() < 0.7 ? 0 : (Math.random() < 0.5 ? -1 : 1) * r(0.3, 1.5), noise: Math.random() < 0.7 ? 0 : r(0.05, 0.3), wobble: Math.random() < 0.6 ? 0 : r(0.1, 0.5),
+      attack: lg(0.002, 0.5), decay: r(0.1, 2), sustain: r(0.3, 1), release: r(0.1, 2),
+      delayTime: r(0.1, 0.7), feedback: r(0.1, 0.6), mix: Math.random() < 0.2 ? 0 : r(0.1, 0.5),
+    });
+    Object.keys(setters).forEach((k) => { if (k !== 'volume' && k !== 'arpRate' && k !== 'arpSpan') setters[k](); });
+    Object.keys(waveSync).forEach((k) => waveSync[k]());
+    applyGlobal();
   }
   function buildKnobs() {
     for (const g in ctlDefs) {
@@ -472,8 +488,14 @@
     const WV = [['sine', 'SIN'], ['triangle', 'TRI'], ['sawtooth', 'SAW'], ['square', 'SQR']];
     [['tg1', 'wave', 'OSC1'], ['tg2', 'wave2', 'OSC2']].forEach(([id, key, name]) => {
       const box = $(id); box.innerHTML = '<span class="t">' + name + '</span><div class="slw"></div>';
-      mkLever(box.querySelector('.slw'), WV.map(([w, l]) => [w, l]), () => p[key], (v) => { p[key] = v; applyGlobal(); });
+      waveSync[key] = mkLever(box.querySelector('.slw'), WV.map(([w, l]) => [w, l]), () => p[key], (v) => { p[key] = v; applyGlobal(); });
     });
+    // RANDOM(赤いボタン + 警告のふた): ふたを開けると押せる。押したら、ふたは自動で閉まる
+    { const box = $('rbox'); let tm = 0;
+      const close = () => { box.classList.remove('open'); clearTimeout(tm); };
+      $('rndCov').onclick = () => { box.classList.add('open'); clearTimeout(tm); tm = setTimeout(close, 6000); };
+      $('rndBtn').onclick = () => { ensureAudio(); randomize(); close(); };
+      document.addEventListener('pointerdown', (e) => { if (!box.contains(e.target)) close(); }); }
   }
 
   // ---- 窓(操縦席から見える景色) ----
