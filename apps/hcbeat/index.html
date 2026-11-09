@@ -247,7 +247,7 @@ function saveBlob(blob, filename, statusEl) {
   // 1文字 = 16分音符、16文字 = 4/4の1小節
   // 分類(プルダウンと、下の一覧で、この順に並ぶ)
   const GROUPS = [
-    ['基本のビート', ['ツービート', 'ツービート(スネアとハイハット交互)', 'ツービート(裏拍アクセント)', 'ツービート(頭パタッタ×2+裏拍アクセント)', 'ツービート(フロアタム)', 'Dビート', 'Dビート(フロアタム)', 'Dビート(クラッシュ版)', 'パスパス(スネア頭+オープンハット)']],
+    ['基本のビート', ['ツービート', 'ツービート(スネアとハイハット交互)', 'ツービート(裏拍アクセント)', 'ツービート(フロアタム)', 'Dビート', 'Dビート(フロアタム)', 'Dビート(クラッシュ版)', 'パスパス(スネア頭+オープンハット)']],
     ['ブラスト・連打', ['ブラスト(交互)', 'ハンマーブラスト', 'ドコドコ(2バス)']],
     ['ハーフ・遅いビート', ['ハーフ(モッシュ)', 'スロー16ビート(クラッシュ8分)', '8ビート', '8ビート(フロアタム)']],
     ['フィル・タム回し', ['スネア・ロー・スネア(頭クラッシュ2発)', 'スネア連打(スネアだけ)', 'スネア連打(タム回し)', 'タム回し(スネア→ロー→フロア)']],
@@ -260,8 +260,6 @@ function saveBlob(blob, filename, statusEl) {
     'ツービート(スネアとハイハット交互)': { K: 'x...x...x...x...', H: 'x...x...x...x...', S: '..x...x...x...x.' },
     // 裏拍アクセント: 「ドタッ タッ」。キックは1拍目と3拍目、裏拍(「と」)にスネア+オープンハイハットをアクセント
     'ツービート(裏拍アクセント)': { K: 'x.......x.......', S: '..X...X...X...X.', O: '..X...X...X...X.' },
-    // 頭の半小節に「パタッタ パタッタ」(パ=クラッシュ+キックのアクセント、タ=スネア)を入れて、後ろの半小節は「ツービート(裏拍アクセント)」。きんぴらさんの説明からAIが作った形(合っているか確認中)
-    'ツービート(頭パタッタ×2+裏拍アクセント)': { C: 'X...X...........', K: 'X...X...x.......', S: '.x.x.x.x..X...X.', O: '..........X...X.' },
     'ツービート(フロアタム)': { K: 'x...x...x...x...', S: '..x...x...x...x.', T: 'x.x.x.x.x.x.x.x.' },
     // Dビート(Discharge型。Wikipedia「D-beat」の形): スネアは裏拍(「と」)、キックは 1・1の裏の裏…とずれて入る
     // アクセント(X)・ゴースト(o)入り。きんぴらさんが編集した形。クラッシュ版は、キックとスネアをそろえて、クラッシュは1拍目と3拍目の頭にアクセント
@@ -295,7 +293,7 @@ function saveBlob(blob, filename, statusEl) {
   };
   // パターンを選んだときに入るテンポ(目安。あとから直せる。書いていないパターンは、いまのテンポのまま)
   const PBPM = {
-    'ツービート': 200, 'ツービート(スネアとハイハット交互)': 200, 'ツービート(裏拍アクセント)': 200, 'ツービート(頭パタッタ×2+裏拍アクセント)': 200, 'ツービート(フロアタム)': 200,
+    'ツービート': 200, 'ツービート(スネアとハイハット交互)': 200, 'ツービート(裏拍アクセント)': 200, 'ツービート(フロアタム)': 200,
     'Dビート': 200, 'Dビート(フロアタム)': 200, 'Dビート(クラッシュ版)': 200, 'パスパス(スネア頭+オープンハット)': 200,
     'ブラスト(交互)': 240, 'ハンマーブラスト': 240, 'ドコドコ(2バス)': 85,
     'ハーフ(モッシュ)': 85, 'スロー16ビート(クラッシュ8分)': 50, '8ビート': 120, '8ビート(フロアタム)': 120,
@@ -602,29 +600,42 @@ function saveBlob(blob, filename, statusEl) {
     return box;
   }
   // ---- ブロックのコピー&ペースト(コピー: 中身ごと保持 / 貼る: パターンだけ上書き / 挿入: ブロックごと間に入れる) ----
-  let clip = null;
+  let clip = null;                                        // { list: コピーしたブロックの並び, nos: 元の番号 }
+  const picked = new Set();                               // チェックを入れたブロック(まとめてコピーする)
   function pasteOver(b) {
-    if (!clip) return;
+    if (!clip || clip.list.length !== 1) return;
+    const c = clip.list[0];
     if (b.cust && !window.confirm('このブロックの編集内容は、貼ったもので置き換わります')) return;
-    delete b.cust; b.pat = clip.b.pat; if (clip.b.cust) b.cust = clonePat(clip.b.cust);
+    delete b.cust; b.pat = c.pat; if (c.cust) b.cust = clonePat(c.cust);
     renderRows(); changed();
   }
+  const clipCopies = () => clip.list.map(copyBlock);
   function renderClip() {
     const bar = $('clipBar'); if (!bar) return; bar.innerHTML = '';
-    if (!clip) { bar.textContent = '各ブロックの「コピー」を押すと、そのブロックの中身を持てる。そのあと「貼る」(パターンだけ上書き)や「挿入」(そのブロックの後ろにブロックごと入れる)が出る。'; return; }
-    const t = document.createElement('span'); t.textContent = 'コピー中: ブロック' + clip.no + '「' + clip.b.pat + '」' + (clip.b.cust ? '(編集済み)' : '') + ' ';
-    bar.appendChild(t);
     const mk = (label, fn) => { const x = document.createElement('button'); x.textContent = label; x.className = 'rowclear'; x.onclick = fn; bar.appendChild(x); };
-    mk('先頭に挿入', () => { blocks.unshift(copyBlock(clip.b)); renderRows(); changed(); });
-    mk('最後に挿入', () => { blocks.push(copyBlock(clip.b)); renderRows(); changed(); });
-    mk('コピーをやめる', () => { clip = null; renderRows(); });
+    const nPick = blocks.filter((b) => picked.has(b)).length;
+    if (!clip) {
+      bar.append('各ブロックの「コピー」で1つ、左のチェックで複数を選んで「選んだブロックをコピー」でまとめて、中身を持てる。そのあと「貼る」(1つのとき、パターンだけ上書き)や「挿入」(ブロックごと入れる)が出る。 ');
+    } else {
+      const t = clip.list.length === 1 ? 'ブロック' + clip.nos[0] + '「' + clip.list[0].pat + '」' + (clip.list[0].cust ? '(編集済み)' : '') : 'ブロック' + clip.nos.join('・') + '(' + clip.list.length + '個まとめて)';
+      bar.append('コピー中: ' + t + ' ');
+      mk('先頭に挿入', () => { blocks.unshift(...clipCopies()); renderRows(); changed(); });
+      mk('最後に挿入', () => { blocks.push(...clipCopies()); renderRows(); changed(); });
+      mk('コピーをやめる', () => { clip = null; renderRows(); });
+    }
+    if (nPick) {
+      bar.append(document.createElement('br'));
+      mk('選んだブロックをコピー(' + nPick + '個)', () => { const ix = []; blocks.forEach((b, i) => { if (picked.has(b)) ix.push(i); }); clip = { list: ix.map((i) => copyBlock(blocks[i])), nos: ix.map((i) => i + 1) }; renderRows(); });
+      mk('チェックを全部はずす', () => { picked.clear(); renderRows(); });
+    }
   }
   function renderRows() {
     const tb = $('rows'); tb.innerHTML = ''; lastBlock = -1; renderClip();
     blocks.forEach((b, i) => {
       const tr = document.createElement('tr');
       const cell = (el, label) => { const td = document.createElement('td'); if (el) td.appendChild(el); if (label) td.dataset.label = label; tr.appendChild(td); return td; };
-      cell().textContent = i + 1;
+      { const td = cell(), ck = document.createElement('input'); ck.type = 'checkbox'; ck.checked = picked.has(b); ck.title = 'まとめてコピーするときに選ぶ'; ck.setAttribute('aria-label', 'ブロック' + (i + 1) + 'を選ぶ');
+        ck.onchange = () => { if (ck.checked) picked.add(b); else picked.delete(b); renderClip(); }; td.append(ck, ' ' + (i + 1)); }
       const sel = document.createElement('select');
       for (const [gname, list] of GROUPS) {
         const og = document.createElement('optgroup'); og.label = gname;
@@ -664,8 +675,17 @@ function saveBlob(blob, filename, statusEl) {
       cell(num(b.rep, 1, 64, (v) => { b.rep = v; changed(); }), '回数');
       const ops = cell(); ops.className = 'ops';
       const isOpen = openBlocks.has(b);
-      for (const [label, fn] of [[isOpen ? '閉じる' : '編集', () => { if (isOpen) openBlocks.delete(b); else openBlocks.add(b); renderRows(); }], ['↑', () => move(i, -1)], ['↓', () => move(i, 1)], ['複製', () => { blocks.splice(i + 1, 0, copyBlock(b)); renderRows(); changed(); }], ['コピー', () => { clip = { b: copyBlock(b), no: i + 1 }; renderRows(); }]].concat(clip ? [['貼る', () => pasteOver(b)], ['挿入', () => { blocks.splice(i + 1, 0, copyBlock(clip.b)); renderRows(); changed(); }]] : [], [['×', () => { blocks.splice(i, 1); renderRows(); changed(); }]])) {
-        const bt = document.createElement('button'); bt.textContent = label; bt.onclick = fn; ops.appendChild(bt);
+      const items = [[isOpen ? '✕' : '編集', () => { if (isOpen) openBlocks.delete(b); else openBlocks.add(b); renderRows(); }, isOpen ? '編集を閉じる' : 'このブロックのパターンを編集する'],
+        ['↑', () => move(i, -1), '1つ上へ'], ['↓', () => move(i, 1), '1つ下へ'],
+        ['複製', () => { blocks.splice(i + 1, 0, copyBlock(b)); renderRows(); changed(); }, 'このブロックを、すぐ下に複製する'],
+        ['コピー', () => { clip = { list: [copyBlock(b)], nos: [i + 1] }; renderRows(); }, 'このブロック1つをコピー']];
+      if (clip) {
+        if (clip.list.length === 1) items.push(['貼る', () => pasteOver(b), 'コピーしたパターンを、このブロックに上書き(テンポ・長さ・回数はそのまま)']);
+        items.push(['挿入', () => { blocks.splice(i + 1, 0, ...clipCopies()); renderRows(); changed(); }, 'コピーしたブロックを、このブロックの後ろに入れる']);
+      }
+      items.push(['🗑', () => { blocks.splice(i, 1); picked.delete(b); renderRows(); changed(); }, 'このブロックを消す']);
+      for (const [label, fn, tip] of items) {
+        const bt = document.createElement('button'); bt.textContent = label; bt.title = tip; bt.setAttribute('aria-label', tip); bt.onclick = fn; ops.appendChild(bt);
       }
       tb.appendChild(tr);
       if (isOpen) {
