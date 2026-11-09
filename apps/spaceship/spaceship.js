@@ -436,6 +436,7 @@
   window.addEventListener('resize', fit);
   const stars = Array.from({ length: 150 }, () => ({ x: Math.random() * 2 - 1, y: Math.random() * 2 - 1, z: Math.random() * 0.95 + 0.05 }));
   const wf = (w, x) => { const f = x - Math.floor(x); return w === 'sine' ? Math.sin(2 * Math.PI * f) : w === 'triangle' ? (f < 0.5 ? 4 * f - 1 : 3 - 4 * f) : w === 'sawtooth' ? 2 * f - 1 : (f < 0.5 ? 1 : -1); };
+  let onsetT = -99, lastVc = 0, envV = 0;                           // 音を鳴らした時刻と、エンベロープの見かけの値(窓の光り方に使う)
   let phase = 0, phase2 = 0, spd = 0.4, lvl = 0, pitchN = 0.3, last = performance.now() / 1000;
   const tbuf = new Uint8Array(2048), fbuf = new Uint8Array(1024);
 
@@ -467,6 +468,10 @@
     } else lvl *= 0.9;
     let pm = 0, pc = 0; for (const [id, v] of voices) { if (typeof id === 'number') { pm += v.midi; pc++; } }
     pitchN += ((pc ? Math.max(0, Math.min(1, (pm / pc - 30) / 60)) : 0.25) - pitchN) * 0.1;
+    // エンベロープ(ATK・DEC・SUS・REL)の見かけの値。鳴らした瞬間から、立ち上がり→減る→押している間→余韻
+    if (voices.size > lastVc) onsetT = now; lastVc = voices.size;
+    if (voices.size) { const t = now - onsetT, at = Math.max(0.001, e.attack); envV = t < at ? t / at : e.sustain + (1 - e.sustain) * Math.exp(-(t - at) / Math.max(0.02, e.decay)); }
+    else envV *= Math.exp(-dt / Math.max(0.03, e.release * 0.5));
     const warpOn = ACT === 'warp', thrOn = ACT === 'thrust';
     const goal = 0.35 + lvl * 1.2 + (warpOn ? 2.6 : 0) + (thrOn ? 1.2 : 0) + (ACT === 'laser' ? 0.3 : 0);
     spd += (goal - spd) * 0.06;
@@ -477,7 +482,7 @@
     const cx = W / 2, cy = H / 2;
     // 星(中心から手前へ流れる)
     for (const s of stars) {
-      const pz = s.z + spd * dt * 0.3 * (1.5 + spd * 2);
+      const pz = s.z + spd * dt * 0.3 * (1.5 + spd * 2) * Math.max(0.25, Math.min(3, 1 + e.sweep * 0.55));   // PITCH SWP: 星の筋の長さ
       s.z -= spd * dt * 0.3;
       const k = H * 0.35, x = cx + s.x / s.z * k, y = cy + s.y / s.z * k;
       if (s.z < 0.03 || x < -20 || x > W + 20 || y < -20 || y > H + 20) { s.x = Math.random() * 2 - 1; s.y = Math.random() * 2 - 1; s.z = 1; continue; }
@@ -485,20 +490,44 @@
       vg.strokeStyle = warpOn ? 'rgba(130,240,255,' + a + ')' : 'rgba(220,235,255,' + a + ')'; vg.lineWidth = 0.6 + (1 - s.z) * 1.2;
       vg.beginPath(); vg.moveTo(x0, y0); vg.lineTo(x, y); vg.stroke();
     }
+    if (e.noise > 0.02) {                                           // NOISE: 画面にざらつき
+      vg.fillStyle = 'rgba(210,230,255,' + (0.15 + e.noise * 0.45) + ')';
+      for (let i = 0, n = Math.round(e.noise * 260); i < n; i++) vg.fillRect(Math.random() * W, Math.random() * H, 1.2, 1.2);
+    }
     // 惑星・衛星
-    const cn = Math.log(e.cutoff / 80) / Math.log(12000 / 80), hue = 20 + cn * 170, haze = 1 - cn, rim = Math.min(1, e.q / 25) * 0.9 + 0.08;
+    const open = e.fEnv > 0.05 ? e.fEnv * 0.07 * Math.exp(-(now - onsetT) / Math.max(0.02, e.fDecay)) : 0;     // F-ENV・F-DEC: 鳴らした瞬間、もやが晴れて閉じていく
+    const cn = Math.max(0, Math.min(1, Math.log(e.cutoff / 80) / Math.log(12000 / 80) + open)), hue = 20 + cn * 170, haze = 1 - cn, rim = Math.min(1, e.q / 25) * 0.9 + 0.08;
     phase += dt * (0.05 + pitchN * 0.5 + lvl * 0.2); phase2 += dt * (0.05 + pitchN * 0.35);
     const R = H * 0.2 * (1 + 0.06 * Math.sin(now * 0.3)) + lvl * H * 0.025;
     let px = W * 0.68, py = H * 0.42;
     if (warpOn) { px += Math.sin(now * 38) * (e.fmDepth / 400) * 1.6; py += Math.cos(now * 31) * (e.fmDepth / 400) * 1.2; }
-    if (e.osc2 > 0.02) planet(W * 0.24, H * 0.3, R * 0.42, e.wave2, 2.5, phase2, hue + 70, haze, rim * 0.6, 0.45 + e.osc2 * 0.5);
+    if (e.osc2 > 0.02) planet(W * 0.24 + e.detune * 0.18, H * 0.3, R * 0.42, e.wave2, 2.5, phase2, hue + 70, haze, rim * 0.6, 0.45 + e.osc2 * 0.5);
     const moons = e.mix < 0.03 ? [] : Array.from({ length: 1 + Math.floor(e.feedback * 4) }, (_, i) => {
       const a = now * (0.7 - i * 0.1) + i * 2.1, rx = R * (1.35 + e.delayTime * 0.9 * (i + 1) * 0.6), ry = rx * 0.28;
       return { x: px + Math.cos(a) * rx, y: py + Math.sin(a) * ry - Math.cos(a) * rx * 0.12, back: Math.sin(a) < 0, r: R * 0.09 * (1 - i * 0.1), al: (0.3 + e.mix * 0.7) * (1 - i / 7) };
     });
     const dm = (m) => { vg.fillStyle = 'rgba(210,225,245,' + m.al + ')'; vg.beginPath(); vg.arc(m.x, m.y, m.r, 0, 7); vg.fill(); };
     moons.filter((m) => m.back).forEach(dm);
-    planet(px, py, R, e.wave, 2.5, phase, hue, haze, rim, 1);
+    const cyc = 1.6 + e.fmRatio * 0.45;                              // FM RATIO: 縞の細かさ
+    if (envV > 0.02) {                                              // ATK・DEC・SUS・REL: 惑星のまわりの光(エンベロープの形)
+      const gl = vg.createRadialGradient(px, py, R * 0.8, px, py, R * (1.12 + envV * 0.6));
+      gl.addColorStop(0, 'hsla(' + (hue + 160) + ',100%,65%,' + (envV * 0.32) + ')'); gl.addColorStop(1, 'hsla(' + (hue + 160) + ',100%,65%,0)');
+      vg.fillStyle = gl; vg.fillRect(px - R * 2.2, py - R * 2.2, R * 4.4, R * 4.4);
+    }
+    planet(px, py, R, e.wave, cyc, phase, hue, haze, rim, 1);
+    if (e.sub > 0.02) {                                             // SUB: 惑星の下側に重い影
+      vg.save(); vg.beginPath(); vg.arc(px, py, R, 0, 7); vg.clip();
+      const sg2 = vg.createLinearGradient(0, py - R * 0.1, 0, py + R); sg2.addColorStop(0, 'rgba(0,0,12,0)'); sg2.addColorStop(1, 'rgba(0,0,12,' + (e.sub * 0.85) + ')');
+      vg.fillStyle = sg2; vg.fillRect(px - R, py - R, 2 * R, 2 * R); vg.restore();
+    }
+    if (e.detune > 0.5) {                                           // DETUNE: 縁の輪が2重にずれる
+      vg.strokeStyle = 'hsla(' + (hue + 160) + ',100%,70%,.55)'; vg.lineWidth = 1; vg.beginPath(); vg.arc(px + e.detune * 0.22, py - e.detune * 0.05, R, 0, 7); vg.stroke();
+    }
+    if (e.wobble > 0.02) {                                          // WOBBLE: 縁がうねる
+      const wr = e.wobbleRate || 5; vg.strokeStyle = 'hsla(' + (hue + 160) + ',100%,75%,.8)'; vg.lineWidth = 1.2; vg.beginPath();
+      for (let i = 0; i <= 90; i++) { const a = i / 90 * 6.2832, r = R * (1.03 + Math.sin(a * 6 + now * wr * 2) * 0.05 * e.wobble * 2); const x = px + Math.cos(a) * r, y = py + Math.sin(a) * r; i ? vg.lineTo(x, y) : vg.moveTo(x, y); }
+      vg.stroke();
+    }
     moons.filter((m) => !m.back).forEach(dm);
 
     // ミッション音の演出
@@ -515,7 +544,10 @@
         vg.beginPath(); vg.moveTo(sx + (tx - sx) * tl, H + (ty - H) * tl); vg.lineTo(sx + (tx - sx) * h, H + (ty - H) * h); vg.stroke(); vg.shadowBlur = 0;
         if (pr >= 1) { vg.fillStyle = 'rgba(255,200,230,' + (1 - (pr - 1) / 0.9) + ')'; vg.beginPath(); vg.arc(tx, ty, 6 + (pr - 1) * 40, 0, 7); vg.fill(); }
       }
-      if (ev.type === 'arp' && a < 0.35) { vg.strokeStyle = 'rgba(45,255,155,' + (1 - a / 0.35) * 0.7 + ')'; vg.lineWidth = 2; vg.beginPath(); vg.arc(px, py, R * (1.02 + a * 0.9), 0, 7); vg.stroke(); }
+      if (ev.type === 'arp') {                                          // RATE: 速いほど輪が短く消える。ARP SPAN: 輪の数(オクターブ数)
+        const dur = Math.min(0.6, 1.6 / e.arpRate);
+        if (a < dur) for (let k = 0; k < Math.round(e.arpSpan); k++) { vg.strokeStyle = 'rgba(45,255,155,' + (1 - a / dur) * 0.7 * (1 - k * 0.25) + ')'; vg.lineWidth = 2; vg.beginPath(); vg.arc(px, py, R * (1.02 + k * 0.16 + (a / dur) * 0.35), 0, 7); vg.stroke(); }
+      }
       if (ev.type === 'sonar') { for (let j = 0; j < 1 + Math.floor(e.feedback * 3); j++) { const aa = a - j * e.delayTime; if (aa < 0 || aa > 1.8) continue; vg.strokeStyle = 'rgba(155,208,255,' + (1 - aa / 1.8) * 0.6 + ')'; vg.lineWidth = 1.5; vg.beginPath(); vg.arc(px, py, aa * W * 0.45, 0, 7); vg.stroke(); } }
     }
     if (thrOn) { const g = vg.createLinearGradient(0, H, 0, H * 0.55); g.addColorStop(0, 'rgba(255,150,30,' + (0.35 + lvl * 0.4) + ')'); g.addColorStop(1, 'rgba(255,150,30,0)'); vg.fillStyle = g; vg.fillRect(0, H * 0.55, W, H * 0.45); }
