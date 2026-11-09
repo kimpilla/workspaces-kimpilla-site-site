@@ -87,6 +87,7 @@
   .gflow .osub .grid { display:flex; flex-wrap:nowrap; justify-content:flex-start; gap:0 4px; } .oscg .dial { zoom:1.1; } .gflow .oscg .grid .kn { flex:0 0 58px; }
   .osbr { flex-basis:100%; height:0; } @media (max-width:380px) { .gflow .osub.sm .grid .kn { flex-basis:45px !important; } }
   .osub.sm { flex:1 1 0; min-width:0; } .osub.sm .st { font-size:6px; letter-spacing:.06em; white-space:nowrap; } .osub.sm .dial { zoom:.82; } .gflow .osub.sm .grid .kn { flex-basis:52px; } .osub.sm .kl { font-size:6px; letter-spacing:.02em; } .osub.sm .kn output { font-size:6px; }
+  .spd { display:flex; gap:10px 16px; align-items:center; flex-wrap:wrap; } .seq .spd .grid { flex:0 0 auto; } #sqDd { flex:1 1 150px; min-width:150px; display:flex; flex-direction:column; gap:6px; } #sqDd .dd { flex:none; }
   .st { margin:6px 0 2px; font:500 7px Orbitron,monospace; letter-spacing:.14em; color:var(--mu); }
   /* ARP SPANのボタン: 金属のキー + 琥珀のLED */
   .kn.sp .seg { position:relative; color:#0d1620; background:linear-gradient(90deg,#667,#dde 50%,#667); border:1px solid #fff6; border-radius:1px; box-shadow:0 2px 5px #000a, 0 0 6px #27e8ff33; padding:12px 2px 6px; font:700 10px Orbitron,monospace; }
@@ -208,7 +209,7 @@
       <div class="tele">CORE TEMP <em id="tT">300K</em> &nbsp; SHLD <em>98%</em> &nbsp; LNK <em>OK</em></div>
     </section>
     <section class="box seq"><details open><summary>SEQUENCE<b id="sqSrc" style="margin-left:8px"></b></summary>
-      <div class="grp"><p class="gt">SPEED // RATE · ARP SPAN</p><div class="grid" id="g6"></div></div>
+      <div class="grp"><p class="gt">AUTO PLAY // RATE · SPAN · SCALE</p><div class="spd"><div class="grid" id="g6"></div><div id="sqDd"></div></div></div>
       <div id="sqOpt"><select id="sqScale" hidden aria-hidden="true"></select><select id="sqOct" hidden aria-hidden="true"></select><select id="sqLen" hidden aria-hidden="true"></select><div id="sqSk"></div></div>
       <div class="sqw"><div class="sqlab" id="sqLab"></div><div class="sqgrid" id="sqGrid"></div></div>
       <div class="sqbar" style="display:flex;gap:6px;flex-wrap:wrap"><button type="button" id="sqClr" class="tgb" style="margin-left:0;width:auto;padding:8px 14px">🗑 CLEAR</button><button type="button" id="sqRst" class="tgb" style="margin-left:0;width:auto;padding:8px 14px">↩ RESET</button></div>

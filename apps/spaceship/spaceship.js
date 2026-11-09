@@ -280,7 +280,7 @@
     btn.onclick = () => dd.classList.toggle('open');
     document.addEventListener('pointerdown', (e) => { if (!dd.contains(e.target)) dd.classList.remove('open'); });
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') dd.classList.remove('open'); });
-    sk.appendChild(dd);
+    $('sqDd').appendChild(dd);
     const dd2 = document.createElement('div'); dd2.className = 'dd';
     dd2.innerHTML = '<button type="button" aria-haspopup="listbox"><span><small>FROM</small> <b></b></span></button><ul role="listbox"></ul>';
     const ul2 = dd2.querySelector('ul'), btn2 = dd2.querySelector('button');
@@ -297,7 +297,7 @@
       for (let o = 1; o <= 6; o++) add(pc + 12 * (o + 1), noteName(pc + 12 * (o + 1)));
       dd2.querySelector('b').textContent = cur == null ? 'AUTO · ' + noteName(def) : noteName(cur);
     };
-    sk.appendChild(dd2);
+    $('sqDd').appendChild(dd2);
     const seg = (id, label, unit, vals) => { const w = document.createElement('div'); w.className = 'sqseg'; w.innerHTML = '<span>' + label + '</span>'; vals.forEach((v) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'seg'; b.dataset.v = v; b.textContent = v + unit; b.onclick = () => fire(id, v); w.appendChild(b); }); w.dataset.id = id; sk.appendChild(w); };
     seg('sqOct', 'OCT', '', [1, 2, 3]); seg('sqLen', 'STEP', '', [8, 16, 32]);
     skinSync = () => {
