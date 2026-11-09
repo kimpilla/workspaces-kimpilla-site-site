@@ -14,6 +14,7 @@
 }
 :root[data-theme="dark"] { --bg: #111111; --fg: #eeeeee; --muted: #999999; --line: #444444; --accent: #ff4d5e; --key: #dddddd; --key-black: #222222; color-scheme: dark; }
 * { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.7 ui-monospace, "SFMono-Regular", Menlo, Consolas, "Hiragino Kaku Gothic ProN", monospace; }
 header, main, footer { max-width: 760px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
 header { display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: baseline; justify-content: space-between; padding-top: 20px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
@@ -80,7 +81,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   table.steps th .short { display: none; }
   @media (max-width: 700px) {
     /* スマホ: ブロックの表を、1ブロック=1枚のカードにして、全部の項目が横にはみ出さず見えるようにする */
-    .scroll { overflow-x: visible; }
+    .scroll { overflow-x: visible; } .scroll.stw { overflow-x: auto; }
     table.blocks, table.blocks tbody { display: block; width: 100%; }
     table.blocks thead { display: none; }
     #rows > tr:not(.editrow) { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
@@ -122,6 +123,10 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
     select, input[type=text] { max-width: 100%; }
   }
   table.blocks > tbody > tr > td.ops { white-space: nowrap; }
+  #ctl { position: sticky; top: 0; z-index: 20; background: var(--bg); border-bottom: 1px solid var(--line); padding: 6px 0 4px; margin: 8px 0; }
+  #ctl .row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
+  #ctl button { margin: 3px 0; padding: 9px 20px; } #ctl button.sub { padding: 6px 10px; font-size: 12px; white-space: nowrap; }
+  #ctl select { padding: 6px 4px; max-width: calc(100vw - 210px); min-width: 0; } #ctl .row label { min-width: 0; } #ctl .small#status { margin: 0; min-height: 1.4em; font-size: 12px; }
 </style>
 <script src="../../audio-unlock.js?v=3"></script>
 </head>
@@ -134,10 +139,15 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 <h1>ハードコア・ビート</h1>
 <p>ツービート、Dビート、ブラストなどの基本のパターンを並べて、変拍子に切ったり、テンポを変えながらつないだりする。ドラムの音は、最初はこの画面でノイズとサイン波から作っているので、その音で書き出したWAVは自由に使える。「Muldjord Kit」の実録音を選んだときは、Lars Muldjord の録音(CC BY 4.0)を使うので、書き出したWAVを公開するときは作者名の表示が要る(詳しくは「音色」の下のクレジット)。「Big Rusty Drums」は CC0 で、表示は要らない。自分でアップロードした音を使ったときは、その音の権利に従う。</p>
 
-<p><button id="play">再生</button><button id="stop">止める</button><label class="small"><input type="checkbox" id="loop" checked> くり返す</label> <button id="save">WAVで保存</button></p>
-<p class="small" id="status"></p>
+<div id="ctl">
+  <div class="row"><button id="play">▶ 再生</button><button id="stop">■ 止める</button><label class="small"><input type="checkbox" id="loop" checked> くり返す</label></div>
+  <div class="row" style="flex-wrap:nowrap"><label>キット <select id="kit"></select></label><button id="save" class="sub">WAVで保存</button></div>
+  <div class="small" id="status"></div>
+</div>
 
 <h2>並び</h2>
+<p><button id="clear">🗑 全部消す</button><span class="small">(最初に入っている例のブロックを、まとめて消す。「例に戻す」で戻せる)</span></p>
+<p class="small" id="clipBar"></p>
 <div class="scroll">
 <table class="blocks">
   <thead><tr><th>#</th><th>パターン</th><th>長さ</th><th>テンポ(はじめ → おわり)</th><th>回数</th><th></th></tr></thead>
@@ -145,7 +155,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 </table>
 </div>
 <p class="small"><label>全体のテンポ <input type="number" id="allBpm" min="30" max="400" value="200" style="width:5em"></label> <button id="allBpmSet">全ブロックのテンポをそろえる</button> <span>(「はじめ → おわり」は、一定のテンポになる)</span></p>
-<p><button id="add">ブロックを足す</button><button id="example">例に戻す</button><button id="clear">全部消す</button></p>
+<p><button id="add">ブロックを足す</button><button id="example">例に戻す</button></p>
 <p class="small">「編集」を押すと、そのブロックのパターンを、横=拍(16分刻み)・縦=パートの表で直せる。直した内容は、そのブロックだけに効く。</p>
 <p class="small">「長さ」は、何拍で切るか(4分=4分音符、8分=8分音符)。7と8分なら7/8拍子。パターンは頭から読んで、長さで切る(足りなければ頭に戻ってくり返す)。「テンポ」は、はじめ → おわり。140 → 160 のように入れると、そのブロックの中で少しずつ変わる。おわりを空にすると、一定のテンポ。</p>
 
@@ -154,7 +164,6 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 
 <h2>音色</h2>
 <p class="small">キットを選ぶと、7つのパートの音がまとめて変わる(「実録音」は、実際に録音されたドラムの音)(再生中も変えられる)。パートごとに自分の音(WAV・MP3など)をアップロードすると、そのパートだけ差し替わる。短い音のほうが、速いブラストでも潰れにくい。</p>
-<p><label>キット <select id="kit"></select></label></p>
 <div class="scroll"><table class="blocks"><tbody id="sounds"></tbody></table></div>
 
 <p class="small">「生ドラム(実録音)」の音は、Lars Muldjord 録音の <a href="https://github.com/sfzinstruments/DrumGizmo.MuldjordKit">MuldjordKit</a>(Tama Superstar)で、<a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>。ここでは、複数のマイクの音を混ぜ、各パート1発ずつを切り出して使っている(加工あり)。</p>
@@ -171,6 +180,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 <p><button id="fileOut">ファイルに書き出す(JSON)</button><label class="small">ファイルから読み込む <input type="file" id="fileIn" accept=".json,application/json"></label></p>
 <p class="small">ファイルが書き出せないときは、こちら。「テキストで書き出す」で下の枠に出るので、中身を全部コピーして保存したり、人に送ったりできる。読み込むときは、枠に貼ってから「テキストから読み込む」。</p>
 <p><button id="txtOut">テキストで書き出す</button><button id="txtIn">テキストから読み込む</button></p>
+<p><button id="txtOutPick">選んだブロックだけテキストで書き出す</button><button id="txtAdd">テキストのブロックを、後ろに足す</button> <span class="small">(フレーズだけを人に渡す・受け取るとき。キットや音量は変わらない)</span></p>
 <textarea id="txtBox" rows="8" style="width:100%;font:12px/1.4 ui-monospace,Menlo,Consolas,monospace;background:var(--bg);color:var(--fg);border:1px solid var(--line)" spellcheck="false" placeholder="ここに書き出される / 貼って読み込む"></textarea>
 <p class="small" id="slStatus"></p>
 </main>
@@ -240,8 +250,8 @@ function saveBlob(blob, filename, statusEl) {
   const GROUPS = [
     ['基本のビート', ['ツービート', 'ツービート(スネアとハイハット交互)', 'ツービート(裏拍アクセント)', 'ツービート(フロアタム)', 'Dビート', 'Dビート(フロアタム)', 'Dビート(クラッシュ版)', 'パスパス(スネア頭+オープンハット)']],
     ['ブラスト・連打', ['ブラスト(交互)', 'ハンマーブラスト', 'ドコドコ(2バス)']],
-    ['ハーフ・遅いビート', ['ハーフ(モッシュ)', '8ビート', '8ビート(フロアタム)']],
-    ['フィル・タム回し', ['スネア連打(スネアだけ)', 'スネア連打(タム回し)', 'タム回し(スネア→ロー→フロア)']],
+    ['ハーフ・遅いビート', ['ハーフ(モッシュ)', 'スロー16ビート(クラッシュ8分)', '8ビート', '8ビート(フロアタム)']],
+    ['フィル・タム回し', ['スネア・ロー・スネア(頭クラッシュ2発)', 'スネア連打(スネアだけ)', 'スネア連打(タム回し)', 'タム回し(スネア→ロー→フロア)']],
     ['キメ・休み', ['決め(キメ)', '3・3・2(クラッシュ+スネア+キック)', '休み']],
   ];
   const PATTERNS = {
@@ -265,10 +275,14 @@ function saveBlob(blob, filename, statusEl) {
     'ドコドコ(2バス)': { K: 'xxxxxxxxxxxxxxxx', S: '....x.......x...', R: 'x...x...x...x...' },
     // ---- ハーフ・遅いビート ----
     'ハーフ(モッシュ)': { K: 'x.....x...x.....', S: '........x.......', C: 'x.......x.......' },
+    // スロー寄りの16ビート: きんぴらさんが編集した形(テンポ50前後で使う)。クラッシュは8分、キックは1拍目の頭と裏の頭・3拍目の頭、スネアは2・4拍目にゴースト入り
+    'スロー16ビート(クラッシュ8分)': { K: 'X.X.....X.......', S: '....x..o.o..x..o', C: 'X.X.X.X.X.X.X.X.' },
     '8ビート': { K: 'x.......x.x.....', S: '....x.......x...', H: 'x.x.x.x.x.x.x.x.' },
     '8ビート(フロアタム)': { K: 'x.......x.x.....', S: '....x.......x...', T: 'x.x.x.x.x.x.x.x.' },
     // ---- フィル・タム回し ----
     // スネアだけ: 「スネア連打(タム回し)」の、ロータム・フロアタムの部分を、スネアに置き換えた形
+    // きんぴらさんが編集した形に近いフレーズ: 頭にクラッシュ(+キック)が2発入ってアクセント、そのあとスネア4連→ロータム4連→スネア4連
+    'スネア・ロー・スネア(頭クラッシュ2発)': { K: 'X.X.............', C: 'X.X.............', S: '....xxxx....xxxx', M: '........xxxx....' },
     'スネア連打(スネアだけ)': { K: 'x.......x.......', S: '.oooooooxxxxxxXX', C: 'x...............' },
     'スネア連打(タム回し)': { K: 'x.......x.......', S: '.ooooooo........', M: '........xxxx....', T: '............xxXX', C: 'x...............' },
     'タム回し(スネア→ロー→フロア)': { K: 'x...............', S: 'xxxx............', M: '....xxxx........', T: '........xxxxxxxX', C: 'x...............' },
@@ -277,6 +291,15 @@ function saveBlob(blob, filename, statusEl) {
     // 3・3・2: 8分音符を 3+3+2 に区切る「たーーたーーたー」。クラッシュ・スネア・キックを同時に鳴らす(16分では 1・7・13マス目)
     '3・3・2(クラッシュ+スネア+キック)': { K: 'X.....X.....X...', S: 'X.....X.....X...', C: 'X.....X.....X...' },
     '休み': {},
+  };
+  // パターンを選んだときに入るテンポ(目安。あとから直せる。書いていないパターンは、いまのテンポのまま)
+  const PBPM = {
+    'ツービート': 200, 'ツービート(スネアとハイハット交互)': 200, 'ツービート(裏拍アクセント)': 200, 'ツービート(フロアタム)': 200,
+    'Dビート': 200, 'Dビート(フロアタム)': 200, 'Dビート(クラッシュ版)': 200, 'パスパス(スネア頭+オープンハット)': 200,
+    'ブラスト(交互)': 240, 'ハンマーブラスト': 240, 'ドコドコ(2バス)': 85,
+    'ハーフ(モッシュ)': 85, 'スロー16ビート(クラッシュ8分)': 50, '8ビート': 120, '8ビート(フロアタム)': 120,
+    'スネア連打(スネアだけ)': 140, 'スネア・ロー・スネア(頭クラッシュ2発)': 180, 'スネア連打(タム回し)': 140, 'タム回し(スネア→ロー→フロア)': 140,
+    '決め(キメ)': 200, '3・3・2(クラッシュ+スネア+キック)': 200,
   };
   const NAMES = Object.keys(PATTERNS);
   const PARTS = ['C', 'R', 'H', 'O', 'S', 'M', 'T', 'K'];            // 表の上から順(シンバルが上、キックが下)
@@ -542,7 +565,7 @@ function saveBlob(blob, filename, statusEl) {
     const p = b.cust || PATTERNS[b.pat] || {};
     const steps = b.n * (b.unit === 4 ? 4 : 2);
     const edit = (fn) => { const cp = b.cust || (b.cust = clonePat(PATTERNS[b.pat])); fn(cp); renderRows(); liveEdit(); };
-    const wrap = document.createElement('div'); wrap.className = 'scroll';
+    const wrap = document.createElement('div'); wrap.className = 'scroll stw';
     const tb = document.createElement('table'); tb.className = 'steps';
     const head = tb.insertRow(); head.insertCell();
     for (let i = 0; i < 16; i++) {
@@ -577,12 +600,43 @@ function saveBlob(blob, filename, statusEl) {
     }
     return box;
   }
+  // ---- ブロックのコピー&ペースト(コピー: 中身ごと保持 / 貼る: パターンだけ上書き / 挿入: ブロックごと間に入れる) ----
+  let clip = null;                                        // { list: コピーしたブロックの並び, nos: 元の番号 }
+  const picked = new Set();                               // チェックを入れたブロック(まとめてコピーする)
+  function pasteOver(b) {
+    if (!clip || clip.list.length !== 1) return;
+    const c = clip.list[0];
+    if (b.cust && !window.confirm('このブロックの編集内容は、貼ったもので置き換わります')) return;
+    delete b.cust; b.pat = c.pat; if (c.cust) b.cust = clonePat(c.cust);
+    renderRows(); changed();
+  }
+  const clipCopies = () => clip.list.map(copyBlock);
+  function renderClip() {
+    const bar = $('clipBar'); if (!bar) return; bar.innerHTML = '';
+    const mk = (label, fn) => { const x = document.createElement('button'); x.textContent = label; x.className = 'rowclear'; x.onclick = fn; bar.appendChild(x); };
+    const nPick = blocks.filter((b) => picked.has(b)).length;
+    if (!clip) {
+      bar.append('各ブロックの「コピー」で1つ、左のチェックで複数を選んで「選んだブロックをコピー」でまとめて、中身を持てる。そのあと「貼る」(1つのとき、パターンだけ上書き)や「挿入」(ブロックごと入れる)が出る。 ');
+    } else {
+      const t = clip.list.length === 1 ? 'ブロック' + clip.nos[0] + '「' + clip.list[0].pat + '」' + (clip.list[0].cust ? '(編集済み)' : '') : 'ブロック' + clip.nos.join('・') + '(' + clip.list.length + '個まとめて)';
+      bar.append('コピー中: ' + t + ' ');
+      mk('先頭に挿入', () => { blocks.unshift(...clipCopies()); renderRows(); changed(); });
+      mk('最後に挿入', () => { blocks.push(...clipCopies()); renderRows(); changed(); });
+      mk('コピーをやめる', () => { clip = null; renderRows(); });
+    }
+    if (nPick) {
+      bar.append(document.createElement('br'));
+      mk('選んだブロックをコピー(' + nPick + '個)', () => { const ix = []; blocks.forEach((b, i) => { if (picked.has(b)) ix.push(i); }); clip = { list: ix.map((i) => copyBlock(blocks[i])), nos: ix.map((i) => i + 1) }; renderRows(); });
+      mk('チェックを全部はずす', () => { picked.clear(); renderRows(); });
+    }
+  }
   function renderRows() {
-    const tb = $('rows'); tb.innerHTML = ''; lastBlock = -1;
+    const tb = $('rows'); tb.innerHTML = ''; lastBlock = -1; renderClip();
     blocks.forEach((b, i) => {
       const tr = document.createElement('tr');
       const cell = (el, label) => { const td = document.createElement('td'); if (el) td.appendChild(el); if (label) td.dataset.label = label; tr.appendChild(td); return td; };
-      cell().textContent = i + 1;
+      { const td = cell(), ck = document.createElement('input'); ck.type = 'checkbox'; ck.checked = picked.has(b); ck.title = 'まとめてコピーするときに選ぶ'; ck.setAttribute('aria-label', 'ブロック' + (i + 1) + 'を選ぶ');
+        ck.onchange = () => { if (ck.checked) picked.add(b); else picked.delete(b); renderClip(); }; td.append(ck, ' ' + (i + 1)); }
       const sel = document.createElement('select');
       for (const [gname, list] of GROUPS) {
         const og = document.createElement('optgroup'); og.label = gname;
@@ -591,7 +645,7 @@ function saveBlob(blob, filename, statusEl) {
       }
       sel.onchange = () => {
         if (b.cust && !window.confirm('このブロックの編集内容は捨てられます')) { sel.value = b.pat; return; }
-        delete b.cust; b.pat = sel.value; renderRows(); changed();
+        delete b.cust; b.pat = sel.value; if (PBPM[b.pat]) { b.bpm = PBPM[b.pat]; delete b.bpmEnd; } renderRows(); changed();
       };
       const pc = cell(sel, 'パターン');
       if (b.cust) {                                   // 編集済みの表示と、その場で元に戻すボタン
@@ -622,8 +676,17 @@ function saveBlob(blob, filename, statusEl) {
       cell(num(b.rep, 1, 64, (v) => { b.rep = v; changed(); }), '回数');
       const ops = cell(); ops.className = 'ops';
       const isOpen = openBlocks.has(b);
-      for (const [label, fn] of [[isOpen ? '閉じる' : '編集', () => { if (isOpen) openBlocks.delete(b); else openBlocks.add(b); renderRows(); }], ['↑', () => move(i, -1)], ['↓', () => move(i, 1)], ['複製', () => { blocks.splice(i + 1, 0, copyBlock(b)); renderRows(); changed(); }], ['×', () => { blocks.splice(i, 1); renderRows(); changed(); }]]) {
-        const bt = document.createElement('button'); bt.textContent = label; bt.onclick = fn; ops.appendChild(bt);
+      const items = [[isOpen ? '✕' : '編集', () => { if (isOpen) openBlocks.delete(b); else openBlocks.add(b); renderRows(); }, isOpen ? '編集を閉じる' : 'このブロックのパターンを編集する'],
+        ['↑', () => move(i, -1), '1つ上へ'], ['↓', () => move(i, 1), '1つ下へ'],
+        ['複製', () => { blocks.splice(i + 1, 0, copyBlock(b)); renderRows(); changed(); }, 'このブロックを、すぐ下に複製する'],
+        ['コピー', () => { clip = { list: [copyBlock(b)], nos: [i + 1] }; renderRows(); }, 'このブロック1つをコピー']];
+      if (clip) {
+        if (clip.list.length === 1) items.push(['貼る', () => pasteOver(b), 'コピーしたパターンを、このブロックに上書き(テンポ・長さ・回数はそのまま)']);
+        items.push(['挿入', () => { blocks.splice(i + 1, 0, ...clipCopies()); renderRows(); changed(); }, 'コピーしたブロックを、このブロックの後ろに入れる']);
+      }
+      items.push(['🗑', () => { blocks.splice(i, 1); picked.delete(b); renderRows(); changed(); }, 'このブロックを消す']);
+      for (const [label, fn, tip] of items) {
+        const bt = document.createElement('button'); bt.textContent = label; bt.title = tip; bt.setAttribute('aria-label', tip); bt.onclick = fn; ops.appendChild(bt);
       }
       tb.appendChild(tr);
       if (isOpen) {
@@ -673,7 +736,7 @@ function saveBlob(blob, filename, statusEl) {
   }
   const clamp = (x, lo, hi, def) => Number.isFinite(+x) ? Math.max(lo, Math.min(hi, +x)) : def;
   const cleanPat = (p) => { if (!p || typeof p !== 'object') return null; const q = {}; for (const d of PARTS) if (typeof p[d] === 'string' && /^[.xXo]{1,16}$/.test(p[d])) q[d] = p[d].padEnd(16, '.'); return q; };
-  async function restore(o) {
+  async function restore(o, append) {
     if (!o || o.v !== 1 || !Array.isArray(o.blocks)) throw new Error('このアプリの保存データではありません');
     const old = o.patterns && typeof o.patterns === 'object' ? o.patterns : {};     // 前の版の「自作パターン」も、ブロックの編集内容として引き継ぐ
     const bl = o.blocks.slice(0, 200).map((b) => {
@@ -695,6 +758,7 @@ function saveBlob(blob, filename, statusEl) {
         if (from !== bl[i].bpm) { bl[i].bpmEnd = bl[i].bpm; bl[i].bpm = from; }
       }
     });
+    if (append) { blocks = blocks.concat(bl).slice(0, 200); renderRows(); changed(); return bl.length; }   // フレーズだけ読み込む: キット・音量は変えず、ブロックを後ろに足す
     const kit = typeof o.kit === 'string' && Object.prototype.hasOwnProperty.call(KITS, o.kit) ? o.kit : kitName;
     if (KITS[kit] && KITS[kit].real) await loadReal(KITS[kit].real);
     blocks = bl; kitName = kit;
@@ -732,6 +796,15 @@ function saveBlob(blob, filename, statusEl) {
   };
   $('txtIn').onclick = async () => {
     try { await restore(JSON.parse($('txtBox').value)); slStatus('読み込みました'); } catch (err) { slStatus('読み込めませんでした: ' + err.message); }
+  };
+  $('txtAdd').onclick = async () => {
+    try { const n = await restore(JSON.parse($('txtBox').value), true); slStatus(n + '個のブロックを、後ろに足しました(キット・音量はそのまま)'); } catch (err) { slStatus('読み込めませんでした: ' + err.message); }
+  };
+  $('txtOutPick').onclick = () => {
+    const list = blocks.filter((b) => picked.has(b));
+    if (!list.length) { slStatus('先に、書き出したいブロックの左のチェックを入れてください'); return; }
+    $('txtBox').value = JSON.stringify({ v: 1, kit: kitName, vol: Object.assign({}, vol), blocks: JSON.parse(JSON.stringify(list)) });
+    slStatus(list.length + '個のブロックを、下の枠に書き出しました。中身を全部コピーして使えます');
   };
   $('fileIn').onchange = async (e) => {
     const f = e.target.files[0]; if (!f) return;
