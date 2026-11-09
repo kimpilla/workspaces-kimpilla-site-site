@@ -437,7 +437,7 @@
   // 対象(OSC / FILTER / ALL)のつまみだけをランダムにする
   let rndScope = 'all', undoSnap = null;
   const RKEYS = ['wave', 'wave2', 'cutoff', 'q', 'fEnv', 'fDecay', 'fmDepth', 'fmRatio', 'osc2', 'detune', 'sub', 'sweep', 'noise', 'wobble', 'attack', 'decay', 'sustain', 'release', 'delayTime', 'feedback', 'mix'];
-  const RSCOPE = { osc: ['wave', 'wave2', 'fmDepth', 'fmRatio', 'osc2', 'detune', 'sub', 'sweep', 'noise', 'wobble'], filter: ['cutoff', 'q', 'fEnv', 'fDecay'], all: RKEYS };
+  const RSCOPE = { voice: ['wave', 'wave2', 'fmDepth', 'fmRatio', 'osc2', 'detune', 'sub', 'sweep', 'noise', 'wobble', 'attack', 'decay', 'sustain', 'release'], filter: ['cutoff', 'q', 'fEnv', 'fDecay'], all: RKEYS };
   function randomize() {
     undoSnap = {}; RKEYS.forEach((k) => { undoSnap[k] = p[k]; });
     const r = (a, b) => a + Math.random() * (b - a), lg = (a, b) => a * Math.pow(b / a, Math.random()), pick = (a) => a[Math.floor(Math.random() * a.length)];
