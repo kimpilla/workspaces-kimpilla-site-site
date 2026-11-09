@@ -222,17 +222,61 @@
     noteOff(n);
   }
   function releaseAll() { for (const n of [...voices.keys()]) if (typeof n === 'number') noteOff(n); [...arpHeld].forEach((n) => keyEl(n, false)); arpHeld.clear(); }
+  // ---- シーケンサー(音階をグリッドに並べて、自動で鳴らす) ----
+  const SEQ_IV = [0, 3, 5, 7, 10, 12, 15, 17, 19, 22], SEQ_N = SEQ_IV.length, SEQ_W = 16;      // ド・ミ♭・ファ・ソ・シ♭の2オクターブ(マイナーペンタトニック)
+  const NAMES = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
+  const OCT_COL = { 0: '#ff5a2d', 1: '#ff2d8a', 2: '#ffb000', 3: '#2dff9b', 4: '#27e8ff', 5: '#a66bff', 6: '#ff5a2d', 7: '#ff2d8a' };   // オクターブごとの蛍光色
+  const octCol = (m) => OCT_COL[Math.floor(m / 12) - 1] || '#27e8ff';
+  const seqGrid = Array.from({ length: SEQ_N }, () => new Array(SEQ_W).fill(false));
+  [[0, 0], [3, 2], [4, 4], [3, 6], [0, 8], [2, 10], [3, 12], [5, 14], [0, 14], [8, 12]].forEach(([r, c]) => { seqGrid[r][c] = true; });
+  let seqTimer = 0, seqStep = 0, seqCells = null, seqLabs = null;
+  function buildSeq() {
+    const g = $('sqGrid'), lab = $('sqLab'); g.innerHTML = ''; lab.innerHTML = ''; seqCells = []; seqLabs = [];
+    for (let r = SEQ_N - 1; r >= 0; r--) {
+      const l = document.createElement('div'); l.className = 'sqL'; lab.appendChild(l); seqLabs[r] = l;
+      for (let c = 0; c < SEQ_W; c++) {
+        const d = document.createElement('div'); d.className = 'sqc' + (c % 4 === 0 ? ' b4' : '') + (seqGrid[r][c] ? ' on' : ''); d.dataset.r = r; d.dataset.c = c;
+        g.appendChild(d); (seqCells[r] = seqCells[r] || [])[c] = d;
+      }
+    }
+    updateSeqLabels();
+    let paint = null;
+    const hit = (e) => { const el = document.elementFromPoint(e.clientX, e.clientY); return el && el.classList.contains('sqc') ? el : null; };
+    const set = (el, v) => { const r = +el.dataset.r, c = +el.dataset.c; if (seqGrid[r][c] === v) return; seqGrid[r][c] = v; el.classList.toggle('on', v); if (v) { ensureAudio(); const id = 'p'; noteOff(id); noteOn(id, base + SEQ_IV[r]); setTimeout(() => noteOff(id), 160); } };
+    g.addEventListener('pointerdown', (e) => { const el = hit(e); if (!el) return; e.preventDefault(); g.setPointerCapture(e.pointerId); paint = !seqGrid[+el.dataset.r][+el.dataset.c]; set(el, paint); });
+    g.addEventListener('pointermove', (e) => { if (paint === null) return; const el = hit(e); if (el) set(el, paint); });
+    const up = () => { paint = null; }; g.addEventListener('pointerup', up); g.addEventListener('pointercancel', up);
+    $('sqClr').onclick = () => { seqGrid.forEach((row, r) => row.forEach((v, c) => { row[c] = false; seqCells[r][c].classList.remove('on'); })); };
+  }
+  function updateSeqLabels() {
+    if (!seqLabs) return;
+    SEQ_IV.forEach((iv, r) => { const m = base + iv; seqLabs[r].textContent = NAMES[m % 12] + (Math.floor(m / 12) - 1); seqLabs[r].style.color = octCol(m); });
+    for (let r = 0; r < SEQ_N; r++) for (let c = 0; c < SEQ_W; c++) seqCells[r][c].style.setProperty('--o', octCol(base + SEQ_IV[r]));
+  }
+  function seqTick() {
+    if (autoMode !== 'seq') return;
+    const col = seqStep % SEQ_W; seqStep++;
+    for (let r = 0; r < SEQ_N; r++) for (let c = 0; c < SEQ_W; c++) seqCells[r][c].classList.toggle('ph', c === col);
+    const iv = 1000 / p.arpRate; let any = false;
+    for (let r = 0; r < SEQ_N; r++) if (seqGrid[r][col]) { any = true; const id = 's' + r; noteOff(id); noteOn(id, base + SEQ_IV[r]); setTimeout(() => noteOff(id), iv * 0.7); }
+    if (any) events.push({ type: 'arp', t: performance.now() / 1000 });
+    seqTimer = setTimeout(seqTick, iv);
+  }
+  function startSeq() { if (seqTimer) return; seqStep = 0; seqTick(); }
+  function stopSeq() { clearTimeout(seqTimer); seqTimer = 0; for (let r = 0; r < SEQ_N; r++) noteOff('s' + r); if (seqCells) for (let r = 0; r < SEQ_N; r++) for (let c = 0; c < SEQ_W; c++) seqCells[r][c].classList.remove('ph'); }
   let autoSync = null;
   function setAuto(m) {
     if (autoMode === 'arp' && m !== 'arp') { [...arpHeld].forEach((n) => keyEl(n, false)); arpHeld.clear(); arpNotes.clear(); stopArp(); }
     if (m !== 'drone') stopDrone();
+    if (autoMode === 'seq' && m !== 'seq') stopSeq();
     autoMode = m; ensureAudio();
     if (m === 'drone') setDrone(droneNote == null ? base : droneNote);                 // 選んだだけで、一定の高さが鳴りはじめる
     if (m === 'arp') { if (!arpNotes.size) [0, 3, 7].forEach((d) => arpNotes.add(base + d)); startArp(); }   // 選んだだけで、和音が順番に鳴りはじめる
+    if (m === 'seq') startSeq();
     if (autoSync) autoSync();
     $('mTog').classList.toggle('auto', m !== 'off');
   }
-  autoSync = mkLever($('autoLv'), [['off', 'OFF'], ['drone', 'DRONE', '鳴りっぱなし'], ['arp', 'ARP', '順番に鳴る']], () => autoMode, setAuto);
+  autoSync = mkLever($('autoLv'), [['off', 'OFF'], ['drone', 'DRONE', '鳴りっぱなし'], ['arp', 'ARP', '順番に鳴る'], ['seq', 'SEQ', 'グリッド']], () => autoMode, setAuto);
 
 
   // ---- 鍵盤(2オクターブ) ----
@@ -245,13 +289,13 @@
     for (let i = 0; i < 24; i++) {
       const n = base + i, isW = WHITE.includes(i % 12);
       const k = document.createElement('div');
-      k.className = isW ? 'wk' : 'bk'; k.dataset.note = n;
+      k.className = isW ? 'wk' : 'bk'; k.dataset.note = n; k.style.setProperty('--o', octCol(n));
       if (isW) { k.style.left = (wi * ww) + '%'; k.style.width = ww + '%'; wi++; }
       else { k.style.left = (wi * ww - ww * 0.3) + '%'; k.style.width = (ww * 0.6) + '%'; }
-      if (isW) k.innerHTML = '<span>' + PC[i].toUpperCase() + '</span>';
+      if (isW) k.innerHTML = '<span>' + (i % 12 === 0 ? 'C' + (n / 12 - 1) + '<br>' : '') + PC[i].toUpperCase() + '</span>';
       box.appendChild(k);
     }
-    $('octl').textContent = 'OCT C' + (base / 12 - 1);
+    $('octl').textContent = 'OCT C' + (base / 12 - 1); updateSeqLabels();
   }
   function keyEl(id, on) {
     if (typeof id !== 'number') return;
@@ -291,7 +335,7 @@
     g2: [['osc2', 'OSC2 MIX', '2つ目の量', 0, 1, 0.01, false, (v) => v < 0.02 ? 'OFF' : Math.round(v * 100) + '%'], ['detune', 'DETUNE', 'ずらし', 0, 50, 0.5, false, f1(1, 'ct')], ['sub', 'SUB', '1オクターブ下', 0, 1, 0.01, false, (v) => v < 0.02 ? 'OFF' : Math.round(v * 100) + '%']],
     g3: [['sweep', 'PITCH SWP', '音程すべり', -3, 3, 0.05, false, (v) => Math.abs(v) < 0.05 ? 'OFF' : (v > 0 ? '↑' : '↓') + Math.abs(v).toFixed(1) + 'oct'], ['noise', 'NOISE', 'ノイズ', 0, 1, 0.01, false, (v) => v < 0.02 ? 'OFF' : Math.round(v * 100) + '%'], ['wobble', 'WOBBLE', 'うねり', 0, 1, 0.01, false, (v) => v < 0.02 ? 'OFF' : Math.round(v * 100) + '%']],
     g4: [['delayTime', 'ECHO TIME', '間隔', 0.05, 1.2, 0.01, false, f1(2, 's')], ['feedback', 'ECHO FDBK', 'くり返し', 0, 0.9, 0.01, false, (v) => Math.round(v * 100) + '%'], ['mix', 'ECHO MIX', '量', 0, 1, 0.01, false, (v) => Math.round(v * 100) + '%']],
-    g6: [['arpRate', 'ARP RATE', '速さ', 1, 20, 0.5, true, (v) => v.toFixed(1) + '/s'], ['arpSpan', 'ARP SPAN', '何オクターブ', 1, 3, 1, false, (v) => Math.round(v) + 'oct']],
+    g6: [['arpRate', 'RATE', '速さ(ARP・SEQ)', 1, 20, 0.5, true, (v) => v.toFixed(1) + '/s'], ['arpSpan', 'ARP SPAN', '何オクターブ', 1, 3, 1, false, (v) => Math.round(v) + 'oct']],
     g5: [['attack', 'ATK', '立ち上がり', 0.001, 2, 0.001, true, f1(2, 's')], ['decay', 'DEC', '減っていく', 0.01, 3, 0.01, true, f1(2, 's')], ['sustain', 'SUS', '押している間', 0, 1, 0.01, false, (v) => Math.round(v * 100) + '%'], ['release', 'REL', '余韻', 0.01, 4, 0.01, true, f1(2, 's')]],
   };
   const setters = {};
@@ -467,6 +511,6 @@
     }
   }
 
-  buildKeys(); buildKnobs(); fit(); requestAnimationFrame(frame);
+  buildSeq(); buildKeys(); buildKnobs(); fit(); requestAnimationFrame(frame);
   window.__ss = { p, E, setAuto, press, release, get autoMode() { return autoMode; }, arpHeld, arpNotes, get ACT() { return ACT; }, get LOCKED() { return LOCKED; }, voices, events, activate, stopPreset };
 })();
