@@ -75,6 +75,10 @@
   .pbtn i { position:absolute; right:7px; top:5px; width:6px; height:6px; background:#12303a; }
   .pbtn.on { background:linear-gradient(#162c3a,#0a1a24); box-shadow:inset 0 0 16px var(--k),0 0 12px var(--k); transform:translateY(1px); }
   .pbtn.on i { background:var(--k); box-shadow:0 0 8px var(--k); }
+  .pbtn { --k:#2dff9b!important; }
+  @keyframes blinkOn { 0%,100% { box-shadow:inset 0 0 16px var(--k),0 0 12px var(--k); filter:brightness(1.25); } 50% { box-shadow:inset 0 0 2px var(--k),0 0 0 var(--k); filter:brightness(.7); } }
+  .pbtn.on, .mtog.act { animation:blinkOn 1s ease-in-out infinite; }
+  @media (prefers-reduced-motion:reduce) { .pbtn.on, .mtog.act { animation:none; } }
   .pbtn.lk { background:linear-gradient(#2a0a18,#12060c); }
   .pbtn.lk small:after { content:"  ▮LOCK"; color:var(--m); }
   .haz { height:6px; margin:10px 0 8px; background:repeating-linear-gradient(-45deg,var(--a) 0 6px,#000 6px 12px); }
@@ -174,7 +178,7 @@
         <li>AUTOPILOT はミッション音の自動演奏の入り切り、AUTO は自分用の自動演奏(DRONE・ARP・SEQ)の選択。DRONE と ARP は、並びとは別に鳴る。</li>
       </ul></li>
     <li><b>AUTO</b>: 窓のマークの中のレバーで切り替える。DRONE=選ぶだけで、一定の高さが鳴りはじめる(鍵盤を弾くと、その高さに変わる)。ARP=選ぶだけで、和音が順番にくり返し鳴りはじめる(鍵盤を新しく押さえると、その音に入れ替わる。離しても続く)。SEQ=SEQUENCE の並びが鳴る。OFF に戻すと止まる。速さと範囲は SYSTEM の AUTO のつまみ。</li>
-    <li><b>窓の色</b>: 緑=自分で操作できるもの・いま入れているもの(音量、AUTO、ミッション音の ON)。青=機械の状態を見せるだけの表示(速度、ランプ、波形)。黄・赤=注意(ECHO・OVL・FX)。</li>
+    <li><b>窓の色</b>: 緑=自分で操作できるもの(音量、AUTO、ミッション音のボタン)。ミッション音は、OFF のときが緑で、ON になると点滅する。青=機械の状態を見せるだけの表示(速度、ランプ、波形)。黄・赤=注意(ECHO・OVL・FX)。</li>
     <li><b>WARP</b>: WARP FM のつまみで、ワープの強さを決める。</li>
     <li>鍵盤はパソコンのキーボードでも弾ける(A S D F G H J K、黒鍵は W E T Y U)。音が大きいので、最初は音量を下げてから。</li>
     <li class="cr">素材: フォント Orbitron(SIL OFL 1.1)。アイコンは <a href="https://game-icons.net" target="_blank" rel="noopener">game-icons.net</a>(CC BY 3.0)。Icons made by Lorc(laser-blast・vortex・radar-sweep)、Delapouite(rocket-thruster・radio-tower)、Skoll(siren)。Available on game-icons.net。</li>

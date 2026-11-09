@@ -149,7 +149,7 @@
   }
   $('gsw').addEventListener('click', () => { ensureAudio(); setSelf(!selfPlay); });
   function syncBtns() {
-    const tg = $('mTog'); tg.classList.toggle('act', !!ACT); if (ACT) tg.style.setProperty('--k', PRE[ACT].col);
+    const tg = $('mTog'); tg.classList.toggle('act', !!ACT); if (ACT) tg.style.setProperty('--k', '#2dff9b');
     document.querySelectorAll('.pbtn').forEach((b) => { b.classList.toggle('on', ACT === b.dataset.p); b.classList.toggle('lk', ACT === b.dataset.p && LOCKED); });
   }
   let mpTimer = 0;
@@ -527,7 +527,7 @@
     // HUD
     vg.font = '500 9px Orbitron,monospace'; vg.fillStyle = '#27e8ff';   // 青=機械の状態表示。緑=自分で操作しているもの
     vg.fillText('FWD CAM 01   SPD ' + (0.1 + (spd / 4) * 0.89).toFixed(2) + 'c   HDG 214.7', 8, 14);
-    if (ACT) { vg.textAlign = 'right'; vg.fillStyle = '#2dff9b'; vg.fillText(PRE[ACT].code + '  ON', W - 8, 14); vg.textAlign = 'left'; }
+    if (ACT && Math.floor(now * 2) % 2 === 0) { vg.textAlign = 'right'; vg.fillStyle = '#2dff9b'; vg.fillText(PRE[ACT].code + '  ON', W - 8, 14); vg.textAlign = 'left'; }   // ON の間は点滅
     if (autoMode !== 'off') { vg.textAlign = 'right'; vg.fillStyle = '#2dff9b'; vg.fillText('AUTO ' + autoMode.toUpperCase(), W - 8, ACT ? 26 : 14); vg.textAlign = 'left'; }
     vg.strokeStyle = 'rgba(39,232,255,.22)'; vg.lineWidth = 1; vg.beginPath(); vg.moveTo(cx - 16, cy); vg.lineTo(cx - 5, cy); vg.moveTo(cx + 5, cy); vg.lineTo(cx + 16, cy); vg.moveTo(cx, cy - 16); vg.lineTo(cx, cy - 5); vg.moveTo(cx, cy + 5); vg.lineTo(cx, cy + 16); vg.stroke();
     vg.restore();
