@@ -218,9 +218,9 @@
   // ---- シーケンサー(音階をグリッドに並べて、自動で鳴らす) ----
   const PRE_IV = [0, 3, 5, 7, 10, 12, 15, 17, 19, 22], PRE_N = 10, PRE_W = 16;     // ミッション音のパターンは、この枠(マイナーペンタ2オクターブ×16マス)で作ってある
   const MAXR = 36, MAXW = 32;
-  const SCALES = { mp: ['マイナーペンタ', [0, 3, 5, 7, 10]], Mp: ['メジャーペンタ', [0, 2, 4, 7, 9]], mi: ['マイナー', [0, 2, 3, 5, 7, 8, 10]], ma: ['ドレミ(メジャー)', [0, 2, 4, 5, 7, 9, 11]], ry: ['琉球', [0, 4, 5, 7, 11]], ch: ['半音ぜんぶ', [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]] };
-  const SCF = { user: { scale: 'mp', oct: 2, len: 16 } };       // 範囲の設定(自分のパターンと、ミッション音ごとに別々)
-  Object.keys(PAT).forEach((k) => { SCF[k] = { scale: 'mp', oct: 2, len: 16 }; });
+  const SCALES = { mp: ['MINOR PENTA', [0, 3, 5, 7, 10]], Mp: ['MAJOR PENTA', [0, 2, 4, 7, 9]], mi: ['MINOR', [0, 2, 3, 5, 7, 8, 10]], ma: ['MAJOR', [0, 2, 4, 5, 7, 9, 11]], ry: ['RYUKYU', [0, 4, 5, 7, 11]], ch: ['CHROMATIC', [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]] };
+  const SCF = { user: { scale: 'mp', oct: 2, len: 16, root: null } };       // 範囲の設定(自分のパターンと、ミッション音ごとに別々)
+  Object.keys(PAT).forEach((k) => { SCF[k] = { scale: 'mp', oct: 2, len: 16, root: null }; });
   const curSC = () => viewPre() ? SCF[ACT] : SCF.user;
   const cfgFor = (sc) => { const base0 = SCALES[sc.scale][1], iv = []; for (let k = 0; k < sc.oct; k++) base0.forEach((v) => iv.push(v + 12 * k)); return { iv, N: iv.length, W: sc.len, key: iv.length + 'x' + sc.len + ':' + sc.scale }; };
   const NAMES = ['C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
@@ -233,7 +233,8 @@
   let seqTimer = 0, seqStep = 0, seqCells = null, seqLabs = null, seqSrc = null, seqDim = '';      // seqSrc: 鳴らしている元('pre'=ミッション音 / 'user'=SEQ / null)
   const viewPre = () => !!ACT;                                                        // グリッドに出すのは、選んでいるミッション音のパターン(AUTOPILOT の ON/OFF に関係なく)。何も選んでいなければ MY PATTERN
   const viewGrid = () => viewPre() ? PGRID[ACT] : userGrid;
-  const viewBase = () => viewPre() ? PAT[ACT].root : base;
+  const rootFor = (pre) => { const sc = pre ? SCF[ACT] : SCF.user; return sc.root != null ? sc.root : (pre ? PAT[ACT].root : base); };   // 範囲の一番下の音。ふだん(AUTO)は、自分用=鍵盤のOCT、ミッション音=その音の元の高さ
+  const viewBase = () => rootFor(viewPre());
   function buildCells() {
     const g = $('sqGrid'), lab = $('sqLab'), c0 = cfgFor(curSC()); g.innerHTML = ''; lab.innerHTML = ''; seqCells = []; seqLabs = [];
     const rh = c0.N > 12 ? Math.max(11, Math.floor(288 / c0.N)) : 24;
@@ -256,7 +257,7 @@
     g.addEventListener('pointermove', (e) => { if (paint === null) return; const el = hit(e); if (el) set(el, paint); });
     const up = () => { paint = null; }; g.addEventListener('pointerup', up); g.addEventListener('pointercancel', up);
     $('sqClr').onclick = () => { viewGrid().forEach((row) => row.fill(false)); refreshGrid(); };
-    $('sqRst').onclick = () => { Object.assign(curSC(), { scale: 'mp', oct: 2, len: 16 }); const G = viewGrid(), src = mkGrid(viewPre() ? PAT[ACT].cells : USER_RIFF); G.forEach((row, r) => row.forEach((v, c) => { row[c] = src[r][c]; })); seqHalt(); syncSeq(); };
+    $('sqRst').onclick = () => { Object.assign(curSC(), { scale: 'mp', oct: 2, len: 16, root: null }); const G = viewGrid(), src = mkGrid(viewPre() ? PAT[ACT].cells : USER_RIFF); G.forEach((row, r) => row.forEach((v, c) => { row[c] = src[r][c]; })); seqHalt(); syncSeq(); };
     const nearest = (iv, v) => { let bi = 0; iv.forEach((x, i) => { if (Math.abs(x - v) < Math.abs(iv[bi] - v)) bi = i; }); return bi; };
     const change = (key, val) => {                                 // 範囲を変える。いまのパターンは、できるだけ同じ高さ・同じ位置に引き継ぐ
       const sc = curSC(), G = viewGrid(), old = cfgFor(sc), oldLen = sc.len; sc[key] = val; const nw = cfgFor(sc);
@@ -268,18 +269,54 @@
     };
     const sel = (id, key, opts, conv) => { const el = $(id); el.innerHTML = opts.map(([v, l]) => '<option value="' + v + '">' + l + '</option>').join(''); el.onchange = () => change(key, conv(el.value)); };
     sel('sqScale', 'scale', Object.keys(SCALES).map((k) => [k, SCALES[k][0]]), (v) => v);
-    sel('sqOct', 'oct', [[1, '1オクターブ'], [2, '2オクターブ'], [3, '3オクターブ']], Number);
-    sel('sqLen', 'len', [[8, '8マス'], [16, '16マス'], [32, '32マス']], Number);
+    sel('sqOct', 'oct', [[1, '1'], [2, '2'], [3, '3']], Number);
+    sel('sqLen', 'len', [[8, '8'], [16, '16'], [32, '32']], Number);
+    // 見た目: 本物の<select>は隠して、操作盤に合わせた部品で操作する(値は<select>に入れて、onchangeを呼ぶ)
+    const sk = $('sqSk'), fire = (id, v) => { const el = $(id); el.value = v; el.onchange(); skinSync(); };
+    const dd = document.createElement('div'); dd.className = 'dd';
+    dd.innerHTML = '<button type="button" aria-haspopup="listbox"><span><small>SCALE</small> <b></b></span></button><ul role="listbox"></ul>';
+    const ul = dd.querySelector('ul'), btn = dd.querySelector('button');
+    Object.keys(SCALES).forEach((k) => { const li = document.createElement('li'); li.dataset.v = k; li.textContent = SCALES[k][0]; li.setAttribute('role', 'option'); li.onclick = () => { dd.classList.remove('open'); fire('sqScale', k); }; ul.appendChild(li); });
+    btn.onclick = () => dd.classList.toggle('open');
+    document.addEventListener('pointerdown', (e) => { if (!dd.contains(e.target)) dd.classList.remove('open'); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') dd.classList.remove('open'); });
+    $('sqDd').appendChild(dd);
+    const dd2 = document.createElement('div'); dd2.className = 'dd';
+    dd2.innerHTML = '<button type="button" aria-haspopup="listbox"><span><small>FROM</small> <b></b></span></button><ul role="listbox"></ul>';
+    const ul2 = dd2.querySelector('ul'), btn2 = dd2.querySelector('button');
+    btn2.onclick = () => { dd.classList.remove('open'); dd2.classList.toggle('open'); }; btn.onclick = () => { dd2.classList.remove('open'); dd.classList.toggle('open'); };
+    document.addEventListener('pointerdown', (e) => { if (!dd2.contains(e.target)) dd2.classList.remove('open'); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') dd2.classList.remove('open'); });
+    const noteName = (m) => NAMES[m % 12] + (Math.floor(m / 12) - 1);
+    const setRoot = (m) => { curSC().root = m; updateSeqLabels(); skinSync(); };
+    skinRoot = () => {      // 選べる「一番下の音」を作り直す(音名は、元の高さの音名に合わせる)
+      const pre = viewPre(), def = pre ? PAT[ACT].root : base, pc = def % 12, cur = curSC().root;
+      ul2.innerHTML = '';
+      const add = (v, label) => { const li = document.createElement('li'); li.textContent = label; li.dataset.v = v == null ? '' : v; li.className = (cur == null ? v == null : cur === v) ? 'on' : ''; li.onclick = () => { dd2.classList.remove('open'); setRoot(v); }; ul2.appendChild(li); };
+      add(null, 'AUTO (' + noteName(def) + ')');
+      for (let o = 1; o <= 6; o++) add(pc + 12 * (o + 1), noteName(pc + 12 * (o + 1)));
+      dd2.querySelector('b').textContent = cur == null ? 'AUTO · ' + noteName(def) : noteName(cur);
+    };
+    $('sqDd').appendChild(dd2);
+    const seg = (id, label, unit, vals) => { const w = document.createElement('div'); w.className = 'sqseg'; w.innerHTML = '<span>' + label + '</span>'; vals.forEach((v) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'seg'; b.dataset.v = v; b.textContent = v + unit; b.onclick = () => fire(id, v); w.appendChild(b); }); w.dataset.id = id; sk.appendChild(w); };
+    seg('sqOct', 'OCT', '', [1, 2, 3]); seg('sqLen', 'STEP', '', [8, 16, 32]);
+    skinSync = () => {
+      const sc = curSC(); dd.querySelector('b').textContent = SCALES[sc.scale][0]; skinRoot();
+      ul.querySelectorAll('li').forEach((li) => li.classList.toggle('on', li.dataset.v === sc.scale));
+      sk.querySelectorAll('.sqseg').forEach((w) => w.querySelectorAll('button').forEach((b) => b.classList.toggle('on', +b.dataset.v === sc[w.dataset.id === 'sqOct' ? 'oct' : 'len'])));
+    };
+    skinSync();
     refreshGrid();
   }
+  let skinSync = () => {}, skinRoot = () => {};
   function refreshGrid() {
     const pre = viewPre(), c0 = cfgFor(curSC());
     if (!seqCells || seqDim !== c0.key) buildCells();
     const G = viewGrid(), col = pre ? PRE[ACT].col : '#27e8ff';
     for (let r = 0; r < c0.N; r++) for (let c = 0; c < c0.W; c++) seqCells[r][c].classList.toggle('on', G[r][c]);
     updateSeqLabels();
-    const t = $('sqSrc'); if (t) { t.textContent = pre ? PRE[ACT].code + ' パターン' : 'MY PATTERN'; t.style.color = col; }
-    const sc = curSC(); $('sqScale').value = sc.scale; $('sqOct').value = sc.oct; $('sqLen').value = sc.len;
+    const t = $('sqSrc'); if (t) { t.textContent = pre ? PRE[ACT].code + ' PATTERN' : 'MY PATTERN'; t.style.color = col; }
+    const sc = curSC(); $('sqScale').value = sc.scale; $('sqOct').value = sc.oct; $('sqLen').value = sc.len; skinSync();
   }
   function updateSeqLabels() {
     if (!seqLabs) return;
@@ -289,7 +326,7 @@
   }
   function seqTick() {
     if (!seqSrc) return;
-    const pre = seqSrc === 'pre' && ACT, sc = pre ? SCF[ACT] : SCF.user, c0 = cfgFor(sc), W = c0.W, G = pre ? PGRID[ACT] : userGrid, B = pre ? PAT[ACT].root : base, rate = pre ? PAT[ACT].rate : p.arpRate;
+    const pre = seqSrc === 'pre' && ACT, sc = pre ? SCF[ACT] : SCF.user, c0 = cfgFor(sc), W = c0.W, G = pre ? PGRID[ACT] : userGrid, B = rootFor(pre), rate = pre ? PAT[ACT].rate : p.arpRate;
     const col = seqStep % W, prv = (col + W - 1) % W, nxt = (col + 1) % W; seqStep++;
     if (seqCells && seqDim === c0.key && viewPre() === !!pre) for (let r = 0; r < c0.N; r++) for (let c = 0; c < W; c++) seqCells[r][c].classList.toggle('ph', c === col);
     const iv = 1000 / rate; let any = false;
@@ -320,7 +357,7 @@
     if (autoSync) autoSync();
     $('mTog').classList.toggle('auto', m !== 'off');
   }
-  autoSync = mkLever($('autoLv'), [['off', 'OFF'], ['drone', 'DRONE', '鳴りっぱなし'], ['arp', 'ARP', '順番に鳴る'], ['seq', 'SEQ', 'グリッド']], () => autoMode, setAuto);
+  autoSync = mkLever($('autoLv'), [['off', 'OFF'], ['drone', 'DRONE'], ['arp', 'ARP'], ['seq', 'SEQ']], () => autoMode, setAuto);
 
 
   // ---- 鍵盤(2オクターブ) ----
@@ -375,10 +412,11 @@
   const fromS = (s, min, max, log) => log ? min * Math.pow(max / min, s) : min + s * (max - min);
   const f1 = (n, u) => (v) => v.toFixed(n) + u;
   const ctlDefs = {
-    g1: [['cutoff', 'CUTOFF', '明るさ', 80, 12000, 1, true, (v) => Math.round(v) + 'Hz'], ['q', 'RESO', 'クセ', 0.1, 25, 0.1, false, f1(1, '')], ['fmDepth', 'WARP FM', 'ワープの強さ', 0, 2000, 1, false, (v) => Math.round(v)], ['fmRatio', 'FM RATIO', '比率', 0.5, 8, 0.5, false, (v) => '×' + v], ['fEnv', 'F-ENV', '押した瞬間の開き', 0, 6, 0.1, false, (v) => v < 0.05 ? 'OFF' : '+' + v.toFixed(1)], ['fDecay', 'F-DEC', '閉じる時間', 0.02, 3, 0.01, true, f1(2, 's')]],
+    g1: [['cutoff', 'CUTOFF', '明るさ', 80, 12000, 1, true, (v) => Math.round(v) + 'Hz'], ['q', 'RESO', 'クセ', 0.1, 25, 0.1, false, f1(1, '')], ['fEnv', 'F-ENV', '押した瞬間の開き', 0, 6, 0.1, false, (v) => v < 0.05 ? 'OFF' : '+' + v.toFixed(1)], ['fDecay', 'F-DEC', '閉じる時間', 0.02, 3, 0.01, true, f1(2, 's')]],
+    g7: [['fmDepth', 'WARP FM', 'ワープの強さ', 0, 2000, 1, false, (v) => Math.round(v)], ['fmRatio', 'FM RATIO', '比率', 0.5, 8, 0.5, false, (v) => '×' + v]],
     g2: [['osc2', 'OSC2 MIX', '2つ目の量', 0, 1, 0.01, false, (v) => v < 0.02 ? 'OFF' : Math.round(v * 100) + '%'], ['detune', 'DETUNE', 'ずらし', 0, 50, 0.5, false, f1(1, 'ct')], ['sub', 'SUB', '1オクターブ下', 0, 1, 0.01, false, (v) => v < 0.02 ? 'OFF' : Math.round(v * 100) + '%']],
     g3: [['sweep', 'PITCH SWP', '音程すべり', -3, 3, 0.05, false, (v) => Math.abs(v) < 0.05 ? 'OFF' : (v > 0 ? '↑' : '↓') + Math.abs(v).toFixed(1) + 'oct'], ['noise', 'NOISE', 'ノイズ', 0, 1, 0.01, false, (v) => v < 0.02 ? 'OFF' : Math.round(v * 100) + '%'], ['wobble', 'WOBBLE', 'うねり', 0, 1, 0.01, false, (v) => v < 0.02 ? 'OFF' : Math.round(v * 100) + '%']],
-    g4: [['delayTime', 'ECHO TIME', '間隔', 0.05, 1.2, 0.01, false, f1(2, 's')], ['feedback', 'ECHO FDBK', 'くり返し', 0, 0.9, 0.01, false, (v) => Math.round(v * 100) + '%'], ['mix', 'ECHO MIX', '量', 0, 1, 0.01, false, (v) => Math.round(v * 100) + '%']],
+    g4: [['delayTime', 'TIME', '間隔', 0.05, 1.2, 0.01, false, f1(2, 's')], ['feedback', 'FDBK', 'くり返し', 0, 0.9, 0.01, false, (v) => Math.round(v * 100) + '%'], ['mix', 'MIX', '量', 0, 1, 0.01, false, (v) => Math.round(v * 100) + '%']],
     g6: [['arpRate', 'RATE', '速さ(ARP・SEQ)', 1, 20, 0.5, true, (v) => v.toFixed(1) + '/s'], ['arpSpan', 'ARP SPAN', '何オクターブ', 1, 3, 1, false, (v) => Math.round(v) + 'oct']],
     g5: [['attack', 'ATK', '立ち上がり', 0.001, 2, 0.001, true, f1(2, 's')], ['decay', 'DEC', '減っていく', 0.01, 3, 0.01, true, f1(2, 's')], ['sustain', 'SUS', '押している間', 0, 1, 0.01, false, (v) => Math.round(v * 100) + '%'], ['release', 'REL', '余韻', 0.01, 4, 0.01, true, f1(2, 's')]],
   };
@@ -399,10 +437,18 @@
     for (const g in ctlDefs) {
       const box = $(g);
       for (const [key, label, jp, min, max, step, log, fmt] of ctlDefs[g]) {
-        const el = document.createElement('div'); el.className = 'kn';
+        const el = document.createElement('div'); el.className = 'kn' + ((key === 'cutoff' || key === 'q') ? ' big' : '');
+        if (key === 'arpSpan') {      // 1・2・3の3択なので、つまみでなくボタン
+          el.classList.add('sp');
+          el.innerHTML = '<div class="spbtn"></div><div class="kl">' + label + '</div><output></output>';
+          const row = el.querySelector('.spbtn'), o = el.querySelector('output');
+          const bs = [1, 2, 3].map((n) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'seg'; b.textContent = n; b.onclick = () => { p.arpSpan = n; render(); applyGlobal(); }; row.appendChild(b); return b; });
+          const render = () => { bs.forEach((b, i) => b.classList.toggle('on', Math.round(p.arpSpan) === i + 1)); o.textContent = Math.round(p.arpSpan) + 'oct'; };
+          render(); setters[key] = render; box.appendChild(el); continue;
+        }
         const lever = g === 'g5';
         el.innerHTML = lever
-          ? '<div class="lv sm"><div class="tr"></div><div class="tk"></div><div class="hd"></div></div><div class="kl">' + label + '<small>' + jp + '</small></div><output></output>'
+          ? '<div class="lv sm"><div class="tr"></div><div class="tk"></div><div class="hd"></div></div><div class="kl">' + label + '</div><output></output>'
           : '<div class="dial"><i></i></div><div class="kl">' + label + '</div><output></output>';
         const o = el.querySelector('output');
         const render = () => {
