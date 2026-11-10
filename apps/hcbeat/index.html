@@ -643,7 +643,8 @@ function saveBlob(blob, filename, statusEl) {
     const edit = (fn) => { const cp = b.cust || (b.cust = clonePat(PATTERNS[b.pat])); fn(cp); renderRows(); liveEdit(); };
     const wrap = document.createElement('div'); wrap.className = 'scroll stw';
     // マスを押すと表が作り直されるので、横のスクロール位置を覚えておいて戻す(左端に戻らないように。2026-11-10)
-    wrap.addEventListener('scroll', () => stepScroll.set(b, wrap.scrollLeft), { passive: true });
+    let wrapScrollAt = 0;
+    wrap.addEventListener('scroll', () => { stepScroll.set(b, wrap.scrollLeft); wrapScrollAt = Date.now(); }, { passive: true });
     if (stepScroll.has(b)) requestAnimationFrame(() => { wrap.scrollLeft = stepScroll.get(b); });
     const tb = document.createElement('table'); tb.className = 'steps';
     const head = tb.insertRow(); head.insertCell();
@@ -689,7 +690,13 @@ function saveBlob(blob, filename, statusEl) {
         tr.insertCell().appendChild(bt);
       }
       const x = document.createElement('button'); x.textContent = '消す'; x.className = 'rowclear';
-      x.title = PN[d] + 'を全部消す'; x.onclick = () => edit((cp) => { delete cp[d]; });
+      // スクロールの指がそのまま「消す」に当たって全部消えることがあった(2026-11-10)。スクロール直後は効かせず、消す前に確かめる
+      x.title = PN[d] + 'を全部消す'; x.onclick = () => {
+        if (Date.now() - wrapScrollAt < 400) return;
+        if (!/[xXo]/.test(rowStr(b.cust || PATTERNS[b.pat] || {}, d, steps))) return;
+        if (!window.confirm(PN[d] + 'のマスを、全部消しますか？')) return;
+        edit((cp) => { delete cp[d]; });
+      };
       tr.insertCell().appendChild(x);
     }
     wrap.appendChild(tb); box.appendChild(wrap);
