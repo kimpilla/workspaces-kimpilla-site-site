@@ -142,6 +142,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 <div id="ctl">
   <div class="row"><button id="play">▶ 再生</button><button id="stop">■ 止める</button><label class="small"><input type="checkbox" id="loop" checked> くり返す</label></div>
   <div class="row" style="flex-wrap:nowrap"><label>キット <select id="kit"></select></label><button id="save" class="sub">WAVで保存</button></div>
+  <div class="row" style="flex-wrap:nowrap"><label>テンポ <input type="number" id="allBpm" min="30" max="400" value="200" inputmode="numeric" style="width:4.2em"></label><button id="tap" class="sub" style="touch-action:manipulation;padding:6px 16px">タップ</button><button id="allBpmSet" class="sub" title="全ブロックのテンポを、この数字にそろえる">全部に</button></div>
   <div class="small" id="status"></div>
 </div>
 
@@ -154,7 +155,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   <tbody id="rows"></tbody>
 </table>
 </div>
-<p class="small"><label>全体のテンポ <input type="number" id="allBpm" min="30" max="400" value="200" style="width:5em"></label> <button id="tap" style="touch-action:manipulation">タップ</button> <button id="allBpmSet">全ブロックのテンポをそろえる</button> <span>(「はじめ → おわり」は、一定のテンポになる)</span></p>
+<p class="small">上の「テンポ」の数字は、「タップ」を拍に合わせて押しても入る。「全部に」で、全ブロックのテンポをその数字にそろえる(「はじめ → おわり」は、一定のテンポになる)。</p>
 <p><button id="add">ブロックを足す</button><button id="example">例に戻す</button></p>
 <p class="small">「編集」を押すと、そのブロックのパターンを、横=拍(16分刻み)・縦=パートの表で直せる。直した内容は、そのブロックだけに効く。</p>
 <p class="small">「長さ」は、何拍で切るか(2分=2分音符、4分=4分音符、8分=8分音符、16分=16分音符)。7と8分なら7/8拍子、11と16分なら11/16拍子。1ブロックは16分音符128個ぶん(4/4で8小節)まで。パターンは頭から読んで、長さで切る(足りなければ頭に戻ってくり返す)。「テンポ」は、はじめ → おわり。140 → 160 のように入れると、そのブロックの中で少しずつ変わる。おわりを空にすると、一定のテンポ。</p>
@@ -889,7 +890,7 @@ function saveBlob(blob, filename, statusEl) {
     if (taps.length < 2) { $('status').textContent = 'タップ: 続けて拍に合わせて押してください'; return; }
     const v = Math.round(Math.max(30, Math.min(400, 60000 / ((taps[taps.length - 1] - taps[0]) / (taps.length - 1)))));
     $('allBpm').value = v;
-    $('status').textContent = 'タップ: ' + v + ' BPM(' + taps.length + '回)。「全ブロックのテンポをそろえる」で全部に入る';
+    $('status').textContent = 'タップ: ' + v + ' BPM(' + taps.length + '回)。「全部に」で全ブロックに入る';
   });
   $('allBpmSet').onclick = () => {      // 全ブロックのテンポを、1つの値にそろえる(だんだん変わる設定は、やめる)
     if (!blocks.length) return;
