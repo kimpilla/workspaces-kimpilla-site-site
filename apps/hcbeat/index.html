@@ -602,12 +602,16 @@ function saveBlob(blob, filename, statusEl) {
   const rowStr = (p, d, n) => { const r = p[d] || ''; n = n || 16; if (!r) return '.'.repeat(n); let o = ''; for (let i = 0; i < n; i++) o += r[i % r.length]; return o; };
   const clonePat = (p) => JSON.parse(JSON.stringify(p || {}));
   const copyBlock = (b) => JSON.parse(JSON.stringify(b));
+  const stepScroll = new WeakMap();                 // ブロックごとの、編集の表の横スクロール位置
   function stepsEditor(b) {
     const box = document.createElement('div');
     const p = b.cust || PATTERNS[b.pat] || {};
     const steps = Math.min(MAXSTEPS, b.n * perOf(b));
     const edit = (fn) => { const cp = b.cust || (b.cust = clonePat(PATTERNS[b.pat])); fn(cp); renderRows(); liveEdit(); };
     const wrap = document.createElement('div'); wrap.className = 'scroll stw';
+    // マスを押すと表が作り直されるので、横のスクロール位置を覚えておいて戻す(左端に戻らないように。2026-11-10)
+    wrap.addEventListener('scroll', () => stepScroll.set(b, wrap.scrollLeft), { passive: true });
+    if (stepScroll.has(b)) requestAnimationFrame(() => { wrap.scrollLeft = stepScroll.get(b); });
     const tb = document.createElement('table'); tb.className = 'steps';
     const head = tb.insertRow(); head.insertCell();
     // 表の横の長さ = このブロックの長さ(5/4なら20マス、7/8なら14マス)。/4は 1 e & a、/8は 8分ごとに番号
