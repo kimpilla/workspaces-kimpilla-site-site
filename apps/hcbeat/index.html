@@ -154,10 +154,10 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   <tbody id="rows"></tbody>
 </table>
 </div>
-<p class="small"><label>全体のテンポ <input type="number" id="allBpm" min="30" max="400" value="200" style="width:5em"></label> <button id="allBpmSet">全ブロックのテンポをそろえる</button> <span>(「はじめ → おわり」は、一定のテンポになる)</span></p>
+<p class="small"><label>全体のテンポ <input type="number" id="allBpm" min="30" max="400" value="200" style="width:5em"></label> <button id="tap" style="touch-action:manipulation">タップ</button> <button id="allBpmSet">全ブロックのテンポをそろえる</button> <span>(「はじめ → おわり」は、一定のテンポになる)</span></p>
 <p><button id="add">ブロックを足す</button><button id="example">例に戻す</button></p>
 <p class="small">「編集」を押すと、そのブロックのパターンを、横=拍(16分刻み)・縦=パートの表で直せる。直した内容は、そのブロックだけに効く。</p>
-<p class="small">「長さ」は、何拍で切るか(4分=4分音符、8分=8分音符)。7と8分なら7/8拍子。パターンは頭から読んで、長さで切る(足りなければ頭に戻ってくり返す)。「テンポ」は、はじめ → おわり。140 → 160 のように入れると、そのブロックの中で少しずつ変わる。おわりを空にすると、一定のテンポ。</p>
+<p class="small">「長さ」は、何拍で切るか(2分=2分音符、4分=4分音符、8分=8分音符、16分=16分音符)。7と8分なら7/8拍子、11と16分なら11/16拍子。1ブロックは16分音符128個ぶん(4/4で8小節)まで。パターンは頭から読んで、長さで切る(足りなければ頭に戻ってくり返す)。「テンポ」は、はじめ → おわり。140 → 160 のように入れると、そのブロックの中で少しずつ変わる。おわりを空にすると、一定のテンポ。</p>
 
 <h2>音量・ひずみ</h2>
 <div class="knobs" id="knobs"></div>
@@ -361,7 +361,7 @@ function saveBlob(blob, filename, statusEl) {
     const ev = [], marks = [];
     let t = 0;
     blocks.forEach((b, bi) => {
-      const steps = b.n * (b.unit === 4 ? 4 : 2);
+      const steps = Math.min(MAXSTEPS, b.n * perOf(b));
       const total = steps * b.rep, from = b.bpm, to = b.bpmEnd || b.bpm;   // はじめ → おわり のテンポ
       marks.push({ t, bi });
       const pat = b.cust || PATTERNS[b.pat] || {};     // cust = このブロックだけの編集済みパターン
@@ -581,6 +581,10 @@ function saveBlob(blob, filename, statusEl) {
   const NEXT = { '.': 'x', x: 'X', X: 'o', o: '.' };      // 休み → 鳴る → アクセント → ゴースト → 休み
   const CLS = { x: ' on', X: ' acc', o: ' gh' };
   const BEATLAB = ['', 'e', '&', 'a'];
+  // 長さの単位: /2=2分音符(8マス)、/4=4分音符(4マス)、/8=8分音符(2マス)、/16=16分音符(1マス)。1ブロックは128マス(4/4で8小節)まで
+  const UNITS = [2, 4, 8, 16], PER = { 2: 8, 4: 4, 8: 2, 16: 1 }, MAXSTEPS = 128;
+  const perOf = (b) => PER[b.unit] || 4;
+  const maxN = (unit) => Math.floor(MAXSTEPS / (PER[unit] || 4));
   // 1行の文字列を、n マスぶんにする(短ければ、その行をくり返して埋める。空の行は休み)
   const rowStr = (p, d, n) => { const r = p[d] || ''; n = n || 16; if (!r) return '.'.repeat(n); let o = ''; for (let i = 0; i < n; i++) o += r[i % r.length]; return o; };
   const clonePat = (p) => JSON.parse(JSON.stringify(p || {}));
@@ -588,15 +592,22 @@ function saveBlob(blob, filename, statusEl) {
   function stepsEditor(b) {
     const box = document.createElement('div');
     const p = b.cust || PATTERNS[b.pat] || {};
-    const steps = b.n * (b.unit === 4 ? 4 : 2);
+    const steps = Math.min(MAXSTEPS, b.n * perOf(b));
     const edit = (fn) => { const cp = b.cust || (b.cust = clonePat(PATTERNS[b.pat])); fn(cp); renderRows(); liveEdit(); };
     const wrap = document.createElement('div'); wrap.className = 'scroll stw';
     const tb = document.createElement('table'); tb.className = 'steps';
     const head = tb.insertRow(); head.insertCell();
     // 表の横の長さ = このブロックの長さ(5/4なら20マス、7/8なら14マス)。/4は 1 e & a、/8は 8分ごとに番号
-    const per = b.unit === 4 ? 4 : 2, isHead = (i) => i % per === 0;
-    const lab = (i) => b.unit === 4 ? (i % 4 === 0 ? String(i / 4 + 1) : BEATLAB[i % 4]) : (i % 2 === 0 ? String(i / 2 + 1) : '・');
-    const where = (i) => b.unit === 4 ? (Math.floor(i / 4) + 1) + '拍目' + (i % 4 === 0 ? 'の頭' : 'の' + BEATLAB[i % 4]) : (Math.floor(i / 2) + 1) + 'つ目の8分' + (i % 2 === 0 ? '' : 'のうら');
+    const per = perOf(b), isHead = (i) => i % per === 0;
+    const UN = { 2: '2分', 4: '4分', 8: '8分', 16: '16分' }[b.unit] || '4分';
+    const lab = (i) => {
+      if (b.unit === 4) return i % 4 === 0 ? String(i / 4 + 1) : BEATLAB[i % 4];
+      if (b.unit === 2) return i % 8 === 0 ? String(i / 8 + 1) : i % 4 === 0 ? '・' : '';
+      if (b.unit === 8) return i % 2 === 0 ? String(i / 2 + 1) : '・';
+      return String(i + 1);                                   // /16 は1マスずつ番号
+    };
+    const where = (i) => b.unit === 4 ? (Math.floor(i / 4) + 1) + '拍目' + (i % 4 === 0 ? 'の頭' : 'の' + BEATLAB[i % 4])
+      : (Math.floor(i / per) + 1) + 'つ目の' + UN + (i % per === 0 ? 'の頭' : '');
     for (let i = 0; i < steps; i++) {
       const th = document.createElement('th'); th.className = 'lab' + (isHead(i) ? ' beat' : '');
       th.textContent = lab(i); head.appendChild(th);
@@ -622,7 +633,7 @@ function saveBlob(blob, filename, statusEl) {
     }
     wrap.appendChild(tb); box.appendChild(wrap);
     const note = document.createElement('p'); note.className = 'small';
-    note.textContent = 'マスを押すたびに、休み → 鳴る(黒) → アクセント(赤) → ゴースト(薄く小さく) → 休み。横はこのブロックの長さぶんのマス(1マス=16分音符。' + (b.unit === 4 ? '1 e & a で1拍' : '番号が8分音符の頭、・がそのうら') + ')、縦はパート。元のパターンは4拍(16マス)なので、それより長いブロックでは、5拍目からは頭に戻ってくり返した音が入っている。押して直せる。';
+    note.textContent = 'マスを押すたびに、休み → 鳴る(黒) → アクセント(赤) → ゴースト(薄く小さく) → 休み。横はこのブロックの長さぶんのマス(1マス=16分音符。' + ({ 4: '1 e & a で1拍', 8: '番号が8分音符の頭、・がそのうら', 2: '番号が2分音符の頭、・がその半分', 16: '番号が16分音符' }[b.unit] || '') + ')、縦はパート。元のパターンは4拍(16マス)なので、それより長いブロックでは、5拍目からは頭に戻ってくり返した音が入っている。押して直せる。';
     box.appendChild(note);
     if (b.cust) {
       const rv = document.createElement('button'); rv.textContent = '元のパターン(' + b.pat + ')に戻す';
@@ -687,10 +698,10 @@ function saveBlob(blob, filename, statusEl) {
         e.appendChild(rv); pc.appendChild(e);
       }
       const len = document.createElement('span');
-      const n = num(b.n, 1, 32, (v) => { b.n = v; renderRows(); changed(); });
+      const n = num(b.n, 1, maxN(b.unit), (v) => { b.n = v; renderRows(); changed(); });
       const u = document.createElement('select');
-      for (const v of [4, 8]) { const o = document.createElement('option'); o.value = v; o.textContent = '/' + v; o.selected = v === b.unit; u.appendChild(o); }
-      u.onchange = () => { b.unit = +u.value; renderRows(); changed(); };
+      for (const v of UNITS) { const o = document.createElement('option'); o.value = v; o.textContent = '/' + v; o.selected = v === b.unit; u.appendChild(o); }
+      u.onchange = () => { b.unit = +u.value; b.n = Math.min(b.n, maxN(b.unit)); renderRows(); changed(); };   // 128マスを超える長さは、上限まで縮める
       len.append(n, ' ', u);
       cell(len, '長さ');
       const tempo = document.createElement('span');
@@ -774,7 +785,7 @@ function saveBlob(blob, filename, statusEl) {
       b = b || {};
       if (b.pat === 'スネア連打(フィル)') b.pat = 'スネア連打(スネアだけ)';   // 名前を変えた前の版の保存データ
       if (b.pat === 'パスパス(スネア頭+裏オープンハット)') b.pat = 'パスパス(スネア頭+オープンハット)';   // 名前を変えた前の版の保存データ
-      const nb = { pat: NAMES.includes(b.pat) ? b.pat : 'ツービート', n: Math.round(clamp(b.n, 1, 32, 4)), unit: +b.unit === 8 ? 8 : 4,
+      const nb = { pat: NAMES.includes(b.pat) ? b.pat : 'ツービート', unit: UNITS.includes(+b.unit) ? +b.unit : 4, n: Math.round(clamp(b.n, 1, maxN(UNITS.includes(+b.unit) ? +b.unit : 4), 4)),
         bpm: Math.round(clamp(b.bpm, 30, 400, 120)), rep: Math.round(clamp(b.rep, 1, 64, 1)) };
       let c = cleanPat(b.cust);
       if (!c && typeof b.pat === 'string' && !NAMES.includes(b.pat) && Object.prototype.hasOwnProperty.call(old, b.pat)) c = cleanPat(old[b.pat]);
@@ -856,6 +867,18 @@ function saveBlob(blob, filename, statusEl) {
     try { row.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (e) { row.scrollIntoView(); }
     if (!timer) $('status').textContent = 'ブロックを足しました(#' + blocks.length + '、一番下)。直前のブロックと同じ内容です。';
   };
+  // タップテンポ: 「タップ」を拍に合わせて何回か押すと、間の平均から「全体のテンポ」の数字を入れる(2秒あくと、数え直し)
+  let taps = [];
+  $('tap').addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    const t = performance.now();
+    if (taps.length && t - taps[taps.length - 1] > 2000) taps = [];
+    taps.push(t); if (taps.length > 8) taps.shift();
+    if (taps.length < 2) { $('status').textContent = 'タップ: 続けて拍に合わせて押してください'; return; }
+    const v = Math.round(Math.max(30, Math.min(400, 60000 / ((taps[taps.length - 1] - taps[0]) / (taps.length - 1)))));
+    $('allBpm').value = v;
+    $('status').textContent = 'タップ: ' + v + ' BPM(' + taps.length + '回)。「全ブロックのテンポをそろえる」で全部に入る';
+  });
   $('allBpmSet').onclick = () => {      // 全ブロックのテンポを、1つの値にそろえる(だんだん変わる設定は、やめる)
     if (!blocks.length) return;
     const v = Math.round(Math.max(30, Math.min(400, +$('allBpm').value || 200)));
