@@ -123,6 +123,10 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
     select, input[type=text] { max-width: 100%; }
   }
   table.blocks > tbody > tr > td.ops { white-space: nowrap; }
+  /* 長押しで文字の選択や「コピー」が出ないように(マスの長押しでアクセントにするため)。文字を入れる欄と、パターン一覧は選べるまま(2026-11-10) */
+  body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
+  textarea, input[type=text], input[type=number], pre, code { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
+  table.steps, table.steps * { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
   #ctl { position: sticky; top: 0; z-index: 20; background: var(--bg); border-bottom: 1px solid var(--line); padding: 6px 0 4px; margin: 8px 0; }
   #ctl .row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
   #ctl button { margin: 3px 0; padding: 9px 20px; } #ctl button.sub { padding: 6px 10px; font-size: 12px; white-space: nowrap; }
