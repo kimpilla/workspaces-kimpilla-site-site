@@ -669,7 +669,7 @@ function saveBlob(blob, filename, statusEl) {
         const bt = document.createElement('button'), ch = str[i];
         bt.className = 'st' + (isHead(i) ? ' beat' : '') + (CLS[ch] || '');
         bt.title = PN[d] + '・' + where(i);
-        // タップ: 鳴る/休みの切り替え。長押し: アクセント(アクセントのマスを長押しすると、ゴースト)(2026-11-10、ユーザー「オンオフの単純化、長押しでアクセント」)
+        // タップ: 鳴る/休みの切り替え。長押し: 休み→ゴースト、鳴る→アクセント、アクセント→鳴る、ゴースト→アクセント(2026-11-10、ユーザー「休みのマスの長押しをゴースト」)(2026-11-10、ユーザー「オンオフの単純化、長押しでアクセント」)
         const setCell = (f) => edit((cp) => {
           // 16マスより長いブロックで押したら、その行をブロックの長さに広げてから直す(広げた所は、それまでのくり返しと同じ音)
           const cur = cp[d] || '', len = Math.max(cur.length || 16, i >= (cur.length || 16) ? steps : 0);
@@ -680,7 +680,7 @@ function saveBlob(blob, filename, statusEl) {
         const lpClear = () => { if (lpT) { clearTimeout(lpT); lpT = null; } };
         bt.addEventListener('pointerdown', (e) => {
           lpDone = false; sx = e.clientX; sy = e.clientY; lpClear();
-          lpT = setTimeout(() => { lpT = null; lpDone = true; lpHeld = true; if (navigator.vibrate) navigator.vibrate(15); setCell((c) => c === 'X' ? 'o' : 'X'); }, 450);
+          lpT = setTimeout(() => { lpT = null; lpDone = true; lpHeld = true; if (navigator.vibrate) navigator.vibrate(15); setCell((c) => ({ '.': 'o', x: 'X', X: 'x', o: 'X' }[c] || 'X')); }, 450);
         });
         bt.addEventListener('pointermove', (e) => { if (Math.abs(e.clientX - sx) > 10 || Math.abs(e.clientY - sy) > 10) lpClear(); });
         ['pointerup', 'pointercancel', 'pointerleave'].forEach((t) => bt.addEventListener(t, lpClear));
@@ -694,7 +694,7 @@ function saveBlob(blob, filename, statusEl) {
     }
     wrap.appendChild(tb); box.appendChild(wrap);
     const note = document.createElement('p'); note.className = 'small';
-    note.textContent = 'マスをタップで、鳴る(黒)/休みの切り替え。長押しでアクセント(赤)。アクセントのマスを長押しすると、ゴースト(薄く小さく)。横はこのブロックの長さぶんのマス(1マス=16分音符。' + ({ 4: '1 e & a で1拍', 8: '番号が8分音符の頭、・がそのうら', 2: '番号が2分音符の頭、・がその半分', 16: '番号が16分音符' }[b.unit] || '') + ')、縦はパート。元のパターンは4拍(16マス)なので、それより長いブロックでは、5拍目からは頭に戻ってくり返した音が入っている。押して直せる。';
+    note.textContent = 'マスをタップで、鳴る(黒)/休みの切り替え。休みのマスを長押しでゴースト(薄く小さく)、鳴っているマスを長押しでアクセント(赤)。アクセントを長押しすると、ふつうの音に戻る。横はこのブロックの長さぶんのマス(1マス=16分音符。' + ({ 4: '1 e & a で1拍', 8: '番号が8分音符の頭、・がそのうら', 2: '番号が2分音符の頭、・がその半分', 16: '番号が16分音符' }[b.unit] || '') + ')、縦はパート。元のパターンは4拍(16マス)なので、それより長いブロックでは、5拍目からは頭に戻ってくり返した音が入っている。押して直せる。';
     box.appendChild(note);
     // くり返して2倍: いまの長さぶんの中身を2回並べて、長さを2倍にする(1/4 → 2/4 → 4/4 → 8/4 のように、少し作ってから広げられる)
     const dbl = document.createElement('button');
