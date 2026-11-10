@@ -127,7 +127,9 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
   textarea, input[type=text], input[type=number], pre, code { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
   table.steps, table.steps * { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
-  #ctl { position: sticky; top: 0; z-index: 20; background: var(--bg); border-bottom: 1px solid var(--line); padding: 6px 0 4px; margin: 8px 0; }
+  #ctl.pin { position: fixed; top: 0; left: 0; right: 0; margin: 0; padding: 6px max(16px, env(safe-area-inset-left)) 4px; }
+  #ctlSpace { display: none; } #ctlSpace.on { display: block; }
+  #ctl { position: -webkit-sticky; position: sticky; top: 0; z-index: 20; background: var(--bg); border-bottom: 1px solid var(--line); padding: 6px 0 4px; margin: 8px 0; }
   #ctl .row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
   #ctl button { margin: 3px 0; padding: 9px 20px; } #ctl button.sub { padding: 6px 10px; font-size: 12px; white-space: nowrap; }
   #ctl select { padding: 6px 4px; max-width: calc(100vw - 210px); min-width: 0; } #ctl .row label { min-width: 0; } #ctl .small#status { margin: 0; min-height: 1.4em; font-size: 12px; }
@@ -143,6 +145,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 <h1>ハードコア・ビート</h1>
 <p>ツービート、Dビート、ブラストなどの基本のパターンを並べて、変拍子に切ったり、テンポを変えながらつないだりする。ドラムの音は、最初はこの画面でノイズとサイン波から作っているので、その音で書き出したWAVは自由に使える。「Muldjord Kit」の実録音を選んだときは、Lars Muldjord の録音(CC BY 4.0)を使うので、書き出したWAVを公開するときは作者名の表示が要る(詳しくは「音色」の下のクレジット)。「Big Rusty Drums」は CC0 で、表示は要らない。自分でアップロードした音を使ったときは、その音の権利に従う。</p>
 
+<div id="ctlMark"></div><div id="ctlSpace"></div>
 <div id="ctl">
   <div class="row"><button id="play">▶ 再生</button><button id="stop">■ 止める</button><label class="small"><input type="checkbox" id="loop" checked> くり返す</label></div>
   <div class="row" style="flex-wrap:nowrap"><label>キット <select id="kit"></select></label><button id="save" class="sub">WAVで保存</button></div>
@@ -538,6 +541,14 @@ function saveBlob(blob, filename, statusEl) {
   const away = () => { stop(); if (ctx) { try { ctx.close(); } catch (e) {} ctx = null; audOut = null; } };
   document.addEventListener('visibilitychange', () => { if (document.hidden) away(); });
   window.addEventListener('pagehide', away);
+  // 再生の欄を上に固定する。sticky だけだと、iPhoneで下へスクロールすると消えた(2026-11-10)ので、
+  // 元の場所が画面の上へ出たら、画面に貼りつける(fixed)。元の場所には同じ高さの空きを置いて、ずれないようにする
+  {
+    const ctl = $('ctl'), sp = $('ctlSpace');
+    const pin = (on) => { if (on === ctl.classList.contains('pin')) return; if (on) sp.style.height = ctl.offsetHeight + 'px'; ctl.classList.toggle('pin', on); sp.classList.toggle('on', on); };
+    const check = () => pin($('ctlMark').getBoundingClientRect().top < 0);
+    window.addEventListener('scroll', check, { passive: true }); window.addEventListener('resize', check); check();
+  }
   async function start() {
     if (!blocks.length) return;
     await wakeCtx();
