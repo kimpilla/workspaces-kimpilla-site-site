@@ -515,11 +515,23 @@ function saveBlob(blob, filename, statusEl) {
   }
 
   // ---- 再生(先読みしながら、少しずつ予約する) ----
+  let audOut = null;                                    // 音色の画面で1発鳴らす出口(音の部品を作り直したら、作り直す)
   let ctx = null, nb = null, timer = null, play0 = 0, tl = null, cursor = 0, outNode = null, lastBlock = -1;
-  function start() {
+  // 音の部品(AudioContext)を、鳴らせる状態にする。ブラウザから離れて戻ると、iPhoneでは止まったまま
+  // (「interrupted」)になり、時計が進まず再生されなかった(2026-11-10)。動かし直しても戻らなければ、作り直す
+  function makeCtx() {
+    if (ctx) { try { ctx.close(); } catch (e) {} }
+    ctx = new (window.AudioContext || window.webkitAudioContext)(); nb = noiseBuffer(ctx); audOut = null;
+  }
+  async function wakeCtx() {
+    if (!ctx || ctx.state === 'closed') makeCtx();
+    if (ctx.state === 'running') return;
+    try { await Promise.race([ctx.resume(), new Promise((r) => setTimeout(r, 300))]); } catch (e) {}
+    if (ctx.state !== 'running') { makeCtx(); try { await ctx.resume(); } catch (e) {} }
+  }
+  async function start() {
     if (!blocks.length) return;
-    if (!ctx) { ctx = new (window.AudioContext || window.webkitAudioContext)(); nb = noiseBuffer(ctx); }
-    if (ctx.state === 'suspended') ctx.resume();
+    await wakeCtx();
     stop();
     tl = timeline(); cursor = 0; play0 = ctx.currentTime + 0.08;
     outNode = outChain(ctx, ctx.destination);
@@ -904,10 +916,9 @@ function saveBlob(blob, filename, statusEl) {
   $('clear').onclick = () => { stop(); blocks = []; renderRows(); autosave(); };
   // ---- 音色の画面 ----
   function ensureCtx() {
-    if (!ctx) { ctx = new (window.AudioContext || window.webkitAudioContext)(); nb = noiseBuffer(ctx); }
-    if (ctx.state === 'suspended') ctx.resume();
+    if (!ctx || ctx.state === 'closed') makeCtx();
+    if (ctx.state !== 'running') wakeCtx();
   }
-  let audOut = null;
   function audition(d) {                                // 1発だけ鳴らして確かめる
     ensureCtx();
     if (!audOut) audOut = outChain(ctx, ctx.destination);
