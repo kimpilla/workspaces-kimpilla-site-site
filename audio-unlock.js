@@ -23,7 +23,10 @@
     }
   }
   ['pointerdown', 'touchend', 'click', 'keydown'].forEach((ev) => document.addEventListener(ev, unlock, { capture: true, passive: true }));
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) unlock(); });
+  // ブラウザから離れたら、音を止める(iPhoneでは、離れている間も鳴りつづけていた。2026-11-10)。戻ったら、さわったときに動かしなおす
+  const sleep = () => { ctxs.forEach((c) => { if (c.state === 'running') c.suspend().catch(() => {}); }); if (silent) { try { silent.pause(); } catch (e) {} silent = null; } };
+  document.addEventListener('visibilitychange', () => { if (document.hidden) sleep(); });
+  window.addEventListener('pagehide', sleep);
 })();
 
 // さわって あそぶ ページで、iPad・iPhoneの ゆびの うごきで ズーム(ピンチ・ダブルタップ)や、
