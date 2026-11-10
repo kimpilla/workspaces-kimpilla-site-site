@@ -127,6 +127,10 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
   textarea, input[type=text], input[type=number], pre, code { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
   table.steps, table.steps * { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+  .grip { display: inline-block; padding: 8px 8px 8px 2px; margin-right: 2px; cursor: grab; touch-action: none; color: var(--muted); font-size: 18px; line-height: 1; vertical-align: middle; }
+  #rows tr.dragging { opacity: .45; }
+  #rows tr.dropbefore > td { box-shadow: inset 0 3px 0 var(--accent); }
+  #rows tr.dropafter > td { box-shadow: inset 0 -3px 0 var(--accent); }
   #ctl.pin { position: fixed; top: 0; left: 0; right: 0; margin: 0; padding: 6px max(16px, env(safe-area-inset-left)) 4px; }
   #ctlSpace { display: none; } #ctlSpace.on { display: block; }
   #ctl { position: -webkit-sticky; position: sticky; top: 0; z-index: 20; background: var(--bg); border-bottom: 1px solid var(--line); padding: 6px 0 4px; margin: 8px 0; }
@@ -737,18 +741,13 @@ function saveBlob(blob, filename, statusEl) {
     const bar = $('clipBar'); if (!bar) return; bar.innerHTML = '';
     const mk = (label, fn) => { const x = document.createElement('button'); x.textContent = label; x.className = 'rowclear'; x.onclick = fn; bar.appendChild(x); };
     const nPick = blocks.filter((b) => picked.has(b)).length;
-    if (!clip) {
-      bar.append('各ブロックの「コピー」で1つ、左のチェックで複数を選んで「選んだブロックをコピー」でまとめて、中身を持てる。そのあと「貼る」(1つのとき、パターンだけ上書き)や「挿入」(ブロックごと入れる)が出る。 ');
-    } else {
-      const t = clip.list.length === 1 ? 'ブロック' + clip.nos[0] + '「' + clip.list[0].pat + '」' + (clip.list[0].cust ? '(編集済み)' : '') : 'ブロック' + clip.nos.join('・') + '(' + clip.list.length + '個まとめて)';
-      bar.append('コピー中: ' + t + ' ');
-      mk('先頭に挿入', () => { blocks.unshift(...clipCopies()); renderRows(); changed(); });
-      mk('最後に挿入', () => { blocks.push(...clipCopies()); renderRows(); changed(); });
-      mk('コピーをやめる', () => { clip = null; renderRows(); });
-    }
+    bar.append('左の ≡ をドラッグすると、ブロックを並べ替えられる(画面の上・下の端まで持っていくと、スクロールする)。左のチェックで選ぶと、まとめて複製できる。');
     if (nPick) {
       bar.append(document.createElement('br'));
-      mk('選んだブロックをコピー(' + nPick + '個)', () => { const ix = []; blocks.forEach((b, i) => { if (picked.has(b)) ix.push(i); }); clip = { list: ix.map((i) => copyBlock(blocks[i])), nos: ix.map((i) => i + 1) }; renderRows(); });
+      mk('選んだブロックを複製(' + nPick + '個。選んだ一番下のブロックの後ろへ)', () => {
+        const ix = []; blocks.forEach((b, i) => { if (picked.has(b)) ix.push(i); });
+        blocks.splice(ix[ix.length - 1] + 1, 0, ...ix.map((i) => copyBlock(blocks[i]))); renderRows(); changed();
+      });
       mk('チェックを全部はずす', () => { picked.clear(); renderRows(); });
     }
   }
@@ -757,8 +756,11 @@ function saveBlob(blob, filename, statusEl) {
     blocks.forEach((b, i) => {
       const tr = document.createElement('tr');
       const cell = (el, label) => { const td = document.createElement('td'); if (el) td.appendChild(el); if (label) td.dataset.label = label; tr.appendChild(td); return td; };
-      { const td = cell(), ck = document.createElement('input'); ck.type = 'checkbox'; ck.checked = picked.has(b); ck.title = 'まとめてコピーするときに選ぶ'; ck.setAttribute('aria-label', 'ブロック' + (i + 1) + 'を選ぶ');
-        ck.onchange = () => { if (ck.checked) picked.add(b); else picked.delete(b); renderClip(); }; td.append(ck, ' ' + (i + 1)); }
+      { const td = cell(), ck = document.createElement('input'); ck.type = 'checkbox'; ck.checked = picked.has(b); ck.title = 'まとめて複製・書き出しするときに選ぶ'; ck.setAttribute('aria-label', 'ブロック' + (i + 1) + 'を選ぶ');
+        ck.onchange = () => { if (ck.checked) picked.add(b); else picked.delete(b); renderClip(); };
+        const g = document.createElement('span'); g.className = 'grip'; g.textContent = '≡'; g.title = 'ドラッグして並べ替え'; g.setAttribute('aria-label', 'ブロック' + (i + 1) + 'をドラッグして並べ替え');
+        g.addEventListener('pointerdown', (e) => dragStart(e, i, tr));
+        td.append(g, ck, ' ' + (i + 1)); }
       const sel = document.createElement('select');
       for (const [gname, list] of GROUPS) {
         const og = document.createElement('optgroup'); og.label = gname;
@@ -798,14 +800,9 @@ function saveBlob(blob, filename, statusEl) {
       cell(num(b.rep, 1, 64, (v) => { b.rep = v; changed(); }), '回数');
       const ops = cell(); ops.className = 'ops';
       const isOpen = openBlocks.has(b);
+      // 並べ替えは左の ≡ のドラッグで。↑↓・コピー・貼る・挿入は外した(2026-11-10、ユーザー「コピーと複製が見分けがつきにくい、ドラッグがつけば挿入とかのボタンが減る、貼るのボタンは基本使わない」)
       const items = [[isOpen ? '✕' : '編集', () => { if (isOpen) openBlocks.delete(b); else openBlocks.add(b); renderRows(); }, isOpen ? '編集を閉じる' : 'このブロックのパターンを編集する'],
-        ['↑', () => move(i, -1), '1つ上へ'], ['↓', () => move(i, 1), '1つ下へ'],
-        ['複製', () => { blocks.splice(i + 1, 0, copyBlock(b)); renderRows(); changed(); }, 'このブロックを、すぐ下に複製する'],
-        ['コピー', () => { clip = { list: [copyBlock(b)], nos: [i + 1] }; renderRows(); }, 'このブロック1つをコピー']];
-      if (clip) {
-        if (clip.list.length === 1) items.push(['貼る', () => pasteOver(b), 'コピーしたパターンを、このブロックに上書き(テンポ・長さ・回数はそのまま)']);
-        items.push(['挿入', () => { blocks.splice(i + 1, 0, ...clipCopies()); renderRows(); changed(); }, 'コピーしたブロックを、このブロックの後ろに入れる']);
-      }
+        ['複製', () => { blocks.splice(i + 1, 0, copyBlock(b)); renderRows(); changed(); }, 'このブロックを、すぐ下に複製する']];
       items.push(['🗑', () => { blocks.splice(i, 1); picked.delete(b); renderRows(); changed(); }, 'このブロックを消す']);
       for (const [label, fn, tip] of items) {
         const bt = document.createElement('button'); bt.textContent = label; bt.title = tip; bt.setAttribute('aria-label', tip); bt.onclick = fn; ops.appendChild(bt);
@@ -823,6 +820,37 @@ function saveBlob(blob, filename, statusEl) {
     const i = document.createElement('input'); i.type = 'number'; i.min = min; i.max = max; i.value = v;
     i.onchange = () => { const x = Math.max(min, Math.min(max, Math.round(+i.value || min))); i.value = x; set(x); };
     return i;
+  }
+  // ---- ドラッグで並べ替え(≡ を押したまま上下へ。画面の端では自動でスクロール) ----
+  function dragStart(e, from, row) {
+    e.preventDefault();
+    const g = e.currentTarget; try { g.setPointerCapture(e.pointerId); } catch (err) {}
+    const mains = () => [...$('rows').children].filter((r) => !r.classList.contains('editrow'));
+    row.classList.add('dragging');
+    let to = from, y = e.clientY, raf = 0, alive = true;
+    const mark = () => {
+      const rs = mains(); rs.forEach((r) => r.classList.remove('dropbefore', 'dropafter'));
+      to = rs.length;
+      for (let k = 0; k < rs.length; k++) { const bb = rs[k].getBoundingClientRect(); if (y < bb.top + bb.height / 2) { to = k; break; } }
+      if (to < rs.length) rs[to].classList.add('dropbefore'); else if (rs.length) rs[rs.length - 1].classList.add('dropafter');
+    };
+    const loop = () => {
+      if (!alive) return;
+      const top = Math.max(70, ($('ctl').classList.contains('pin') ? $('ctl').getBoundingClientRect().bottom : 0) + 50), bot = window.innerHeight - 60;
+      const v = y < top ? -Math.min(24, (top - y) / 3 + 4) : y > bot ? Math.min(24, (y - bot) / 3 + 4) : 0;
+      if (v) { window.scrollBy(0, v); mark(); }
+      raf = requestAnimationFrame(loop);
+    };
+    const move = (ev) => { y = ev.clientY; mark(); };
+    const end = () => {
+      alive = false; cancelAnimationFrame(raf);
+      g.removeEventListener('pointermove', move); g.removeEventListener('pointerup', end); g.removeEventListener('pointercancel', end);
+      const dest = to > from ? to - 1 : to;
+      if (dest !== from) { const [bk] = blocks.splice(from, 1); blocks.splice(dest, 0, bk); renderRows(); changed(); }
+      else { row.classList.remove('dragging'); mains().forEach((r) => r.classList.remove('dropbefore', 'dropafter')); }
+    };
+    g.addEventListener('pointermove', move); g.addEventListener('pointerup', end); g.addEventListener('pointercancel', end);
+    mark(); loop();
   }
   function move(i, d) {
     const j = i + d; if (j < 0 || j >= blocks.length) return;
