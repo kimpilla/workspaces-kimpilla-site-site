@@ -635,6 +635,18 @@ function saveBlob(blob, filename, statusEl) {
     const note = document.createElement('p'); note.className = 'small';
     note.textContent = 'マスを押すたびに、休み → 鳴る(黒) → アクセント(赤) → ゴースト(薄く小さく) → 休み。横はこのブロックの長さぶんのマス(1マス=16分音符。' + ({ 4: '1 e & a で1拍', 8: '番号が8分音符の頭、・がそのうら', 2: '番号が2分音符の頭、・がその半分', 16: '番号が16分音符' }[b.unit] || '') + ')、縦はパート。元のパターンは4拍(16マス)なので、それより長いブロックでは、5拍目からは頭に戻ってくり返した音が入っている。押して直せる。';
     box.appendChild(note);
+    // くり返して2倍: いまの長さぶんの中身を2回並べて、長さを2倍にする(1/4 → 2/4 → 4/4 → 8/4 のように、少し作ってから広げられる)
+    const dbl = document.createElement('button');
+    dbl.textContent = '×2 くり返して倍の長さにする(' + b.n + '/' + b.unit + ' → ' + (b.n * 2) + '/' + b.unit + ')';
+    dbl.disabled = steps * 2 > MAXSTEPS;
+    if (dbl.disabled) dbl.title = '1ブロックは16分音符' + MAXSTEPS + '個ぶんまで';
+    dbl.onclick = () => {
+      const src = b.cust || PATTERNS[b.pat] || {}, cp = {};
+      for (const d of PARTS) if (src[d]) { const r = rowStr(src, d, steps); if (!/^\.+$/.test(r)) cp[d] = r + r; }
+      b.cust = cp; b.n *= 2;
+      renderRows(); changed();
+    };
+    box.appendChild(dbl);
     if (b.cust) {
       const rv = document.createElement('button'); rv.textContent = '元のパターン(' + b.pat + ')に戻す';
       rv.onclick = () => { delete b.cust; renderRows(); liveEdit(); };
