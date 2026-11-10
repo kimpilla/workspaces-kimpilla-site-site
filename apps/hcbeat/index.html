@@ -366,9 +366,9 @@ function saveBlob(blob, filename, statusEl) {
       marks.push({ t, bi });
       const pat = b.cust || PATTERNS[b.pat] || {};     // cust = このブロックだけの編集済みパターン
       for (let k = 0; k < total; k++) {
-        const s = k % steps, idx = s % 16;
+        const s = k % steps;                             // ブロックの中のマス(16分)。パターンは行ごとの長さでくり返す
         const bpm = from + (to - from) * (k / Math.max(1, total));       // 1ステップごとに少しずつ
-        for (const d of Object.keys(pat)) { const ch = pat[d][idx]; if (ch === 'x' || ch === 'X' || ch === 'o') ev.push({ t, d, bi, lv: ch, idx: s, bpm }); }   // x=普通 X=アクセント o=ゴースト。idx=小節の中の16分の位置
+        for (const d of Object.keys(pat)) { const r = pat[d], ch = r[s % r.length]; if (ch === 'x' || ch === 'X' || ch === 'o') ev.push({ t, d, bi, lv: ch, idx: s, bpm }); }   // x=普通 X=アクセント o=ゴースト。idx=小節の中の16分の位置
         t += 60 / bpm / 4;
       }
     });
@@ -581,7 +581,8 @@ function saveBlob(blob, filename, statusEl) {
   const NEXT = { '.': 'x', x: 'X', X: 'o', o: '.' };      // 休み → 鳴る → アクセント → ゴースト → 休み
   const CLS = { x: ' on', X: ' acc', o: ' gh' };
   const BEATLAB = ['', 'e', '&', 'a'];
-  const rowStr = (p, d) => (p[d] || '').padEnd(16, '.').slice(0, 16);
+  // 1行の文字列を、n マスぶんにする(短ければ、その行をくり返して埋める。空の行は休み)
+  const rowStr = (p, d, n) => { const r = p[d] || ''; n = n || 16; if (!r) return '.'.repeat(n); let o = ''; for (let i = 0; i < n; i++) o += r[i % r.length]; return o; };
   const clonePat = (p) => JSON.parse(JSON.stringify(p || {}));
   const copyBlock = (b) => JSON.parse(JSON.stringify(b));
   function stepsEditor(b) {
@@ -592,19 +593,25 @@ function saveBlob(blob, filename, statusEl) {
     const wrap = document.createElement('div'); wrap.className = 'scroll stw';
     const tb = document.createElement('table'); tb.className = 'steps';
     const head = tb.insertRow(); head.insertCell();
-    for (let i = 0; i < 16; i++) {
-      const th = document.createElement('th'); th.className = 'lab' + (i % 4 === 0 ? ' beat' : '');
-      th.textContent = i % 4 === 0 ? String(i / 4 + 1) : BEATLAB[i % 4]; head.appendChild(th);
+    // 表の横の長さ = このブロックの長さ(5/4なら20マス、7/8なら14マス)。/4は 1 e & a、/8は 8分ごとに番号
+    const per = b.unit === 4 ? 4 : 2, isHead = (i) => i % per === 0;
+    const lab = (i) => b.unit === 4 ? (i % 4 === 0 ? String(i / 4 + 1) : BEATLAB[i % 4]) : (i % 2 === 0 ? String(i / 2 + 1) : '・');
+    const where = (i) => b.unit === 4 ? (Math.floor(i / 4) + 1) + '拍目' + (i % 4 === 0 ? 'の頭' : 'の' + BEATLAB[i % 4]) : (Math.floor(i / 2) + 1) + 'つ目の8分' + (i % 2 === 0 ? '' : 'のうら');
+    for (let i = 0; i < steps; i++) {
+      const th = document.createElement('th'); th.className = 'lab' + (isHead(i) ? ' beat' : '');
+      th.textContent = lab(i); head.appendChild(th);
     }
     for (const d of PARTS) {
       const tr = tb.insertRow(), th = document.createElement('th'); th.innerHTML = '<span class="long"></span><span class="short"></span>'; th.firstChild.textContent = PN[d]; th.lastChild.textContent = PS[d]; th.title = PN[d]; tr.appendChild(th);
-      const str = rowStr(p, d);
-      for (let i = 0; i < 16; i++) {
+      const str = rowStr(p, d, steps);
+      for (let i = 0; i < steps; i++) {
         const bt = document.createElement('button'), ch = str[i];
-        bt.className = 'st' + (i % 4 === 0 ? ' beat' : '') + (CLS[ch] || '') + (i >= steps && steps < 16 ? ' out' : '');
-        bt.title = PN[d] + '・' + (Math.floor(i / 4) + 1) + '拍目' + (i % 4 === 0 ? 'の頭' : 'の' + BEATLAB[i % 4]);
+        bt.className = 'st' + (isHead(i) ? ' beat' : '') + (CLS[ch] || '');
+        bt.title = PN[d] + '・' + where(i);
         bt.onclick = () => edit((cp) => {
-          const s = rowStr(cp, d).split(''); s[i] = NEXT[s[i]] || 'x';
+          // 16マスより長いブロックで押したら、その行をブロックの長さに広げてから直す(広げた所は、それまでのくり返しと同じ音)
+          const cur = cp[d] || '', len = Math.max(cur.length || 16, i >= (cur.length || 16) ? steps : 0);
+          const s = rowStr(cp, d, len).split(''); s[i] = NEXT[s[i]] || 'x';
           const nw = s.join(''); if (/^\.+$/.test(nw)) delete cp[d]; else cp[d] = nw;
         });
         tr.insertCell().appendChild(bt);
@@ -615,7 +622,7 @@ function saveBlob(blob, filename, statusEl) {
     }
     wrap.appendChild(tb); box.appendChild(wrap);
     const note = document.createElement('p'); note.className = 'small';
-    note.textContent = 'マスを押すたびに、休み → 鳴る(黒) → アクセント(赤) → ゴースト(薄く小さく) → 休み。横は拍(1 e & a = 16分音符)、縦はパート。' + (steps < 16 ? ' 薄いマスは、このブロックの長さでは使われない。' : '');
+    note.textContent = 'マスを押すたびに、休み → 鳴る(黒) → アクセント(赤) → ゴースト(薄く小さく) → 休み。横はこのブロックの長さぶんのマス(1マス=16分音符。' + (b.unit === 4 ? '1 e & a で1拍' : '番号が8分音符の頭、・がそのうら') + ')、縦はパート。元のパターンは4拍(16マス)なので、それより長いブロックでは、5拍目からは頭に戻ってくり返した音が入っている。押して直せる。';
     box.appendChild(note);
     if (b.cust) {
       const rv = document.createElement('button'); rv.textContent = '元のパターン(' + b.pat + ')に戻す';
@@ -759,7 +766,7 @@ function saveBlob(blob, filename, statusEl) {
     autoT = setTimeout(() => { try { localStorage.setItem(STORE + ':auto', JSON.stringify(snapshot())); } catch (e) {} }, 300);
   }
   const clamp = (x, lo, hi, def) => Number.isFinite(+x) ? Math.max(lo, Math.min(hi, +x)) : def;
-  const cleanPat = (p) => { if (!p || typeof p !== 'object') return null; const q = {}; for (const d of PARTS) if (typeof p[d] === 'string' && /^[.xXo]{1,16}$/.test(p[d])) q[d] = p[d].padEnd(16, '.'); return q; };
+  const cleanPat = (p) => { if (!p || typeof p !== 'object') return null; const q = {}; for (const d of PARTS) if (typeof p[d] === 'string' && /^[.xXo]{1,128}$/.test(p[d])) q[d] = p[d].length < 16 ? p[d].padEnd(16, '.') : p[d]; return q; };
   async function restore(o, append) {
     if (!o || o.v !== 1 || !Array.isArray(o.blocks)) throw new Error('このアプリの保存データではありません');
     const old = o.patterns && typeof o.patterns === 'object' ? o.patterns : {};     // 前の版の「自作パターン」も、ブロックの編集内容として引き継ぐ
