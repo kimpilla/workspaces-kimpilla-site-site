@@ -111,11 +111,21 @@
   }
   const effRows = (b, bi, bar, E) => {
     if (b.intro) return copyRows(b.fillRows);
-    if (E.rows) return copyRows(E.rows);
-    const m = blockMain(E, bi, bar);
-    if (E.fill) ROWS.forEach((n) => { for (let i = E.fill.from; i < 16; i++) m[n][i] = E.fill.rows[n][i]; });
+    let m;
+    if (E.rows) m = copyRows(E.rows);
+    else { m = blockMain(E, bi, bar); if (E.fill) ROWS.forEach((n) => { for (let i = E.fill.from; i < 16; i++) m[n][i] = E.fill.rows[n][i]; }); }
+    OFFS.forEach(([k]) => { if (b.off && b.off[k]) OFF_ROWS[k].forEach((n) => { m[n].fill(0); }); });     // ミュートは、グリッドを直した小節にも効く
     return m;
   };
+  // ミュートをかける前の、その小節の形(グリッド編集の元)。クラッシュも、グリッドの中に入れておく
+  function baseRows(b, bi, bar) {
+    const E = barEff(b, bar), E2 = Object.assign({}, E, { off: {} });
+    let m;
+    if (E.rows) m = copyRows(E.rows);
+    else { m = blockMain(E2, bi, bar); if (E.fill) ROWS.forEach((n) => { for (let i = E.fill.from; i < 16; i++) m[n][i] = E.fill.rows[n][i]; }); }
+    if (E.crashAt && !E.rows) m.CRASH[E.crashAt === 3 ? 8 : 0] = 1;
+    return m;
+  }
 
   let previewBlocks = null, previewInfo = { kind: 'list', bi: 0 };      // 1ブロックだけ鳴らしている間
   const warp = (frac, s) => (frac < 0.5 ? frac * (s / 0.5) : s + (frac - 0.5) * ((1 - s) / 0.5));
@@ -128,7 +138,7 @@
         for (let bar = 0; bar < b.bars; bar++) {
           const E = b.intro ? { crashAt: 0, fill: b.fillType !== 'none' ? {} : null } : barEff(b, bar);
           const rows = effRows(b, bi, bar, E), t0 = t, seedBar = bi * 1000 + rep * 100 + bar;
-          const withFill = !!E.fill;
+          const withFill = !!E.fill || !!(b.ov && b.ov[bar] && b.ov[bar].fl);
           const landing = landNext && $('land').checked;
           if (landing && !rows.CRASH[0]) ev.push({ t: t0, row: 'CRASH', vel: 0.9, bi });
           if (E.crashAt) { const st = E.crashAt === 3 ? 8 : 0; if (!rows.CRASH[st] && !(st === 0 && landing)) ev.push({ t: t0 + (st / 4) * spb, row: 'CRASH', vel: 0.9, bi }); }
@@ -191,7 +201,8 @@
     if (!playing || !ctx) return;
     const now = ctx.currentTime; let seg = null;
     segs.forEach((sg) => { if (sg.t0 <= now && now < sg.t0 + sg.dur) seg = sg; });
-    if (!seg || Math.floor(now * 4) % 2) return;       // 0.25秒ごとに、つく・消える
+    if (!seg || Math.floor(now * 4) % 2) return;
+    if (seg.audition) { const q = document.querySelector('.bar.sel'); if (q) q.classList.add('play'); return; }       // 0.25秒ごとに、つく・消える
     const barDur = 4 * 60 / S.song.bpm; let el = now - seg.t0;
     for (let bi = 0; bi < seg.blocks.length; bi++) {
       const b = seg.blocks[bi], len = b.reps * b.bars * barDur;
@@ -213,20 +224,21 @@
       if (!playing || my !== session) return;
       const { ev, dur } = timeline(previewBlocks, previewInfo.bi), t0 = Math.max(ctx.currentTime + 0.08, nodesUntil);
       ev.forEach((e) => hit(ctx, (row) => partGain[PART_OF[row]], t0 + e.t, e.row, e.vel));
-      segs.push({ t0, dur, preview: !!previewBlocks, pk: previewInfo.kind, pbi: previewInfo.bi, blocks: (previewBlocks || S.blocks).map((x) => ({ bars: x.bars, reps: x.reps })) }); if (segs.length > 3) segs.shift();
+      segs.push({ audition: !!S.audition, t0, dur, preview: !!previewBlocks, pk: previewInfo.kind, pbi: previewInfo.bi, blocks: (previewBlocks || S.blocks).map((x) => ({ bars: x.bars, reps: x.reps })) }); if (segs.length > 3) segs.shift();
       nodesUntil = t0 + dur;
-      if ($('loop').checked) timer = setTimeout(run, Math.max(50, (nodesUntil - ctx.currentTime - 1) * 1000));
+      if ($('loop').checked || S.audition) timer = setTimeout(run, Math.max(50, (nodesUntil - ctx.currentTime - 1) * 1000));
       else timer = setTimeout(() => { if (my === session) stopAll(); }, (nodesUntil - ctx.currentTime + 1.5) * 1000);
     };
     run();
   }
   function stopAll() {
-    playing = false; session++; clearTimeout(timer); cancelAnimationFrame(raf); segs = []; document.querySelectorAll('.bar.play').forEach((x) => x.classList.remove('play')); $('play').textContent = '▶ 再生'; previewBlocks = null; nodesUntil = 0; document.querySelectorAll('.bplay').forEach((x) => { x.textContent = '▶'; });
+    const wasAud = S.audition; playing = false; session++; clearTimeout(timer); cancelAnimationFrame(raf); segs = []; document.querySelectorAll('.bar.play').forEach((x) => x.classList.remove('play')); $('play').textContent = '▶ 再生'; previewBlocks = null; S.audition = false; nodesUntil = 0; document.querySelectorAll('.bplay').forEach((x) => { x.textContent = '▶'; });
     if (ctx) {      // 予約済みの音を、まとめて止める(出力を作り直す)
       master.disconnect(); master = ctx.createGain(); master.gain.value = 0.9; master.connect(ctx.destination);
       PARTS.forEach(([k]) => { partGain[k].disconnect(); const g = ctx.createGain(); g.connect(master); partGain[k] = g; });
       updateGains();
     }
+    if (wasAud) drawSheet();
   }
 
   // ---- 書き出し ----
@@ -288,7 +300,7 @@
     if (b.intro) return;
     d.appendChild(el('div', { className: 'ttl2', textContent: '全小節の標準(小節ごとに、あとから変えられる)' }));
     const offs = el('span'); OFFS.forEach(([k, n]) => { offs.appendChild(chip(n, b.off[k] ? 'cut' : '', () => { b.off[k] = !b.off[k]; changed(true); redraw(); })); });
-    d.appendChild(line('抜く音', offs));
+    d.appendChild(line('ミュート', offs));
     ADDS.forEach(([k, n]) => { const w = el('span'); LEVELS.forEach(([v, t]) => { w.appendChild(chip(t, b.add[k] === v ? 'on' : '', () => { b.add[k] = v; changed(true); redraw(); })); }); d.appendChild(line(n, w)); });
     const cr = el('span'); [[0, 'なし'], [1, '1拍目'], [3, '3拍目']].forEach(([v, n]) => { cr.appendChild(chip(n, b.crashAt === v ? 'on' : '', () => { b.crashAt = v; changed(true); redraw(); })); });
     cr.appendChild(el('small', { className: 'small', textContent: ' 最初の小節だけ' })); d.appendChild(line('クラッシュ', cr));
@@ -308,18 +320,11 @@
 
   // ---- 並び: 小節の四角 ----
   function barCell(b, bi, k, kind) {
-    const E = barEff(b, k), isSel = S.cur && S.cur.k === kind && S.cur.bi === bi && S.cur.bar === k;
-    const x = el('button', { type: 'button', className: 'bar' + (E.fill ? ' fl' : E.ex ? ' ex' : '') + (isSel ? ' sel' : '') });
+    const E = barEff(b, k), o = b.ov && b.ov[k], isSel = S.cur && S.cur.k === kind && S.cur.bi === bi && S.cur.bar === k;
+    const dirty = isSel && S.work && S.work.dirty;
+    const x = el('button', { type: 'button', className: 'bar' + (E.fill || (o && o.fl) ? ' fl' : E.ex ? ' ex' : '') + (isSel ? ' sel' : '') + (dirty ? ' pend' : ''), textContent: String(k + 1) });
     x.dataset.kind = kind; x.dataset.bi = bi; x.dataset.bar = k;
-    x.appendChild(el('span', { className: 'bn', textContent: String(k + 1) + (E.fill ? ' F' : '') }));
-    const marks = [];
-    if (E.crashAt) marks.push('C' + E.crashAt);
-    if (E.add.open || E.add.ghost) marks.push('+' + (E.add.open ? 'O' : '') + (E.add.ghost ? 'ゴ' : ''));
-    const cuts = OFFS.filter(([key]) => E.off[key]).map(([key]) => OFF_SHORT[key]).join('');
-    if (cuts) marks.push('抜' + cuts);
-    if (E.accent !== 'keep') marks.push(ACC_SHORT[E.accent]);
-    if (marks.length) x.appendChild(el('i', { textContent: marks.join(' ') }));
-    x.onclick = () => { const same = isSel; S.cur = same ? null : { k: kind, bi, bar: k }; S.pg.bar = 0; drawSeq(); drawSheet(); };
+    x.onclick = () => { S.cur = { k: kind, bi, bar: k }; S.work = null; drawSeq(); drawSheet(); const q = document.querySelector('.bar.sel'); if (q) q.scrollIntoView({ block: 'nearest' }); };
     return x;
   }
   function playOnly(b, kind, bi, btn) {
@@ -330,7 +335,7 @@
   function blockCard(b, kind, bi) {
     const d = el('div', { className: 'bcard' + (kind === 'draft' ? ' draft' : '') });
     const head = el('div', { className: 'bt' });
-    const title = kind === 'draft' ? 'ためす(まだ並びに入れていない)' : 'ブロック ' + (bi + 1) + (b.intro ? '(曲頭ロール)' : '') + '　× ' + b.reps + '回';
+    const mu = OFFS.filter(([k]) => b.off && b.off[k]).map(([, n]) => n).join('・'), title = 'ブロック ' + (bi + 1) + (b.intro ? '・曲頭ロール' : '・' + b.bars + '小節・' + b.reps + '回') + (mu ? '・ミュート: ' + mu : '');
     head.appendChild(el('span', { className: 'btt', textContent: title }));
     const btns = el('span', { className: 'bbtns' });
     const pl = el('button', { type: 'button', className: 'sbtn bplay', textContent: '▶' }); pl.onclick = () => playOnly(b, kind, bi, pl); pl.title = 'このブロックだけ鳴らす'; btns.appendChild(pl);
@@ -360,67 +365,116 @@
   }
   function drawSeq() {
     const box = $('seq'); box.innerHTML = '';
-    box.appendChild(blockCard(S.draft, 'draft', 0));
-    if (!S.blocks.length) box.appendChild(el('p', { className: 'small', textContent: 'まだブロックがない。上の「ためす」を直して、「＋ 並びに入れる」で足す。' }));
+    if (!S.blocks.length) box.appendChild(el('p', { className: 'small', textContent: 'まだブロックがない。「＋ ブロック」で足す。' }));
     S.blocks.forEach((b, i) => box.appendChild(blockCard(b, 'list', i)));
     const bt = el('div', { className: 'row' });
-    const ai = el('button', { type: 'button', className: 'sbtn', textContent: '＋ 曲頭ロール' }); ai.onclick = () => { S.blocks.unshift(newIntro()); S.cur = null; changed(true); }; bt.appendChild(ai);
-    const rs = el('button', { type: 'button', className: 'sbtn', textContent: 'ブロックを全部消す' }); rs.onclick = () => { if (!S.blocks.length || !window.confirm('並びのブロックを、全部消しますか？')) return; S.blocks = initial(); S.cur = null; changed(true); }; bt.appendChild(rs);
+    const addB = (n) => { S.blocks.push(newBlock(n)); S.cur = { k: 'list', bi: S.blocks.length - 1, bar: 0 }; S.work = null; changed(true); };
+    if (S.askLen) { bt.appendChild(el('span', { className: 'small', textContent: '長さ: ' })); [4, 8].forEach((n) => { const x = el('button', { type: 'button', className: 'sbtn', textContent: n + '小節' }); x.onclick = () => { S.askLen = false; addB(n); }; bt.appendChild(x); }); }
+    else { const ab = el('button', { type: 'button', className: 'sbtn', textContent: '＋ ブロック' }); ab.onclick = () => { S.askLen = true; drawSeq(); }; bt.appendChild(ab); }
+    const ai = el('button', { type: 'button', className: 'sbtn', textContent: '＋ 曲頭ロール' }); ai.onclick = () => { S.blocks.unshift(newIntro()); S.cur = null; S.work = null; changed(true); }; bt.appendChild(ai);
+    const rs = el('button', { type: 'button', className: 'sbtn', textContent: 'ブロックを全部消す' }); rs.onclick = () => { if (!S.blocks.length || !window.confirm('並びのブロックを、全部消しますか？')) return; S.blocks = initial(); S.cur = null; S.work = null; changed(true); }; bt.appendChild(rs);
     box.appendChild(bt);
-    box.appendChild(el('p', { className: 'small', textContent: '白=標準　黒=その小節だけ変えた　赤=フィル。C1・C3=クラッシュ(拍)　+O=オープン　+ゴ=ゴースト　抜=抜く音　A=アクセント。点滅=いま鳴っている小節。' }));
+    box.appendChild(el('p', { className: 'small', textContent: '白=標準　黒=変えた小節　赤=フィル　点線=まだ保存していない　点滅=いま鳴っている小節' }));
   }
 
-  // ---- 選んだ小節の編集(下に固定) ----
-  function barPanel(d, b, bar, bi) {
-    const ovs = b.ov || (b.ov = {}), ov = () => ovs[bar] || (ovs[bar] = {}), E = barEff(b, bar);
-    if (E.rows) d.appendChild(el('p', { className: 'small', textContent: 'この小節は、グリッドの形がそのまま鳴る。抜く音・足す音・アクセントは、効かない(「標準に戻す」で、また効く)。' }));
-    const offs = el('span'); OFFS.forEach(([k, n]) => { offs.appendChild(chip(n, E.off[k] ? 'cut' : '', () => { const o = ov(); o.off = Object.assign({}, E.off); o.off[k] = !E.off[k]; changed(true); })); });
-    d.appendChild(line('抜く音', offs));
-    ADDS.forEach(([k, n]) => { const w = el('span'); LEVELS.forEach(([v, t]) => { w.appendChild(chip(t, E.add[k] === v ? 'on' : '', () => { const o = ov(); o.add = Object.assign({}, E.add); o.add[k] = v; changed(true); })); }); d.appendChild(line(n, w)); });
-    const cr = el('span'); [[0, 'なし'], [1, '1拍目'], [3, '3拍目']].forEach(([v, n]) => { cr.appendChild(chip(n, E.crashAt === v ? 'on' : '', () => { ov().crashAt = v; changed(true); })); });
-    d.appendChild(line('クラッシュ', cr));
-    const ac = el('span'); ACCENTS.forEach(([k, n]) => { ac.appendChild(chip(n, E.accent === k ? 'on' : '', () => { ov().accent = k; changed(true); })); });
-    d.appendChild(line('アクセント', ac));
-    const fs = el('select'); FILL_TYPES.forEach(([k, n]) => { const o = el('option', { value: k, textContent: n }); if (k === (E.fill ? E.fill.type : 'none')) o.selected = true; fs.appendChild(o); });
-    const setFill = (type, alt) => {
-      const o = ov();
-      if (type === 'none') { o.fill = { type: 'none' }; }
-      else {
-        const g = genFill(type, alt, false); o.fill = { type, alt, from: g.from, rows: g.rows }; focusFrom(g.from);
-        if (o.rows) ROWS.forEach((n) => { for (let i = g.from; i < 16; i++) o.rows[n][i] = g.rows[n][i]; });   // グリッドを直した小節は、グリッドにフィルを書き込む
-      }
-      changed(true);
-    };
-    fs.onchange = () => setFill(fs.value, 0);
-    const idea = el('button', { type: 'button', className: 'chip', textContent: '案を出す' }); idea.onclick = () => setFill(E.fill && E.fill.type ? E.fill.type : 'tom', ((E.fill && E.fill.alt) || 0) + 1);
-    d.appendChild(line('フィル', fs, idea));
-  }
-  const focusFrom = (from) => { S.pg.bar = from >= 8 ? 1 : 0; };
+  // ---- 選んだ小節の編集(下に固定): 直して → 聞いて → 保存 ----
   S.pg = { song: 0, bar: 0 };
-  S.sheetTab = 'grid';
+  S.sheetTab = 'grid'; S.fillHalf = 1; S.fillSel = ''; S.scope = 'this';
+  const MUTE_OF = (b) => (n) => OFFS.some(([k]) => b.off && b.off[k] && OFF_ROWS[k].includes(n));
+  const FILLS = {
+    short: { 'タム下り': [['T-HI', 0], ['T-HI', 1], ['T-MID', 2], ['T-MID', 3], ['T-LO', 4], ['T-LO', 5]], 'スネア連打': [0, 1, 2, 3, 4, 5].map((i) => ['SNARE', i]), 'スネア+タム': [['SNARE', 0], ['SNARE', 2], ['T-MID', 3], ['T-MID', 4], ['T-LO', 5]], 'ハット細かく': [0, 1, 2, 3, 4, 5].map((i) => ['HAT', i]), 'ハット→オープン': [['HAT', 0], ['HAT', 1], ['HAT', 2], ['HAT', 3], ['HAT', 4], ['OPEN', 5]] },
+    long: { 'タム回し(長)': [['SNARE', 0], ['SNARE', 2], ['SNARE', 4], ['T-HI', 5], ['T-HI', 6], ['T-HI', 7], ['T-MID', 8], ['T-MID', 9], ['T-MID', 10], ['T-MID', 11], ['T-LO', 12], ['T-LO', 13], ['T-LO', 14], ['T-LO', 15]], 'スネアロール(長)': [0, 2, 4, 6, 8, 9, 10, 11, 12, 13, 14, 15].map((i) => ['SNARE', i]), 'ハット→タム(長)': [0, 1, 2, 3, 4, 5, 6, 7].map((i) => ['HAT', i]).concat([['T-HI', 8], ['T-HI', 9], ['T-MID', 10], ['T-MID', 11], ['T-LO', 12], ['T-LO', 13], ['T-LO', 14], ['T-LO', 15]]) },
+  };
+  const FILL_KEEP = ['ハット細かく', 'ハット→オープン'];
+  function getWork(b, bi, bar) {
+    const key = S.cur.k + '-' + bi + '-' + bar;
+    if (!S.work || S.work.key !== key) {
+      const rows = baseRows(b, bi, bar), E = barEff(b, bar);
+      S.work = { key, rows, dirty: false, fl: !!(b.ov[bar] && b.ov[bar].fl) || !!E.fill, opts: { add: Object.assign({}, E.add), accent: E.accent, crashAt: rows.CRASH[0] ? 1 : rows.CRASH[8] ? 3 : 0 } };
+    }
+    return S.work;
+  }
+  function auditionBar() {
+    if (playing && S.audition) { stopAll(); drawSheet(); return; }
+    if (playing) stopAll();
+    const b = curBlock(), w = S.work;
+    const tmp = { bars: 1, reps: 1, ov: { 0: { rows: w.rows, fl: w.fl } }, off: b.off, add: { open: 0, ghost: 0 }, crashAt: 0, accent: 'keep', fillType: 'none', fillFrom: 0, fillBar: 0, fillRows: zero(), alt: 0, intro: false };
+    previewBlocks = [tmp]; previewInfo = { kind: S.cur.k, bi: curBi() }; S.audition = true; play().then(drawSheet);
+  }
   function drawSheet() {
     const box = $('sheet'); box.innerHTML = '';
     const b = curBlock();
-    if (!b || b.intro || S.cur.bar >= b.bars) { box.appendChild(el('p', { className: 'small', textContent: '小節の四角をタップすると、ここで、その小節のグリッドを直せる。' })); return; }
-    const bar = S.cur.bar, bi = curBi(), ovs = b.ov || (b.ov = {});
+    if (!b || b.intro || S.cur.bar >= b.bars) { box.appendChild(el('p', { className: 'small', textContent: '小節の四角をタップすると、ここで、その小節を直せる。' })); return; }
+    const bar = S.cur.bar, bi = curBi(), ovs = b.ov || (b.ov = {}), w = getWork(b, bi, bar);
     const sh = el('div', { className: 'sh' });
-    sh.appendChild(el('b', { textContent: (S.cur.k === 'draft' ? 'ためす' : 'ブロック ' + (bi + 1)) + '・' + (bar + 1) + '小節目' + (ovs[bar] ? ' (変えた)' : '') }));
-    const sb = el('span');
-    const rb = el('button', { type: 'button', className: 'sbtn', textContent: '標準に戻す' }); rb.disabled = !ovs[bar]; rb.onclick = () => { delete ovs[bar]; changed(true); }; sb.appendChild(rb);
-    const cb = el('button', { type: 'button', className: 'sbtn', textContent: '前の小節をコピー' }); cb.disabled = !(bar > 0 && ovs[bar - 1]); cb.onclick = () => { ovs[bar] = JSON.parse(JSON.stringify(ovs[bar - 1])); changed(true); }; sb.appendChild(cb);
-    sh.appendChild(sb); box.appendChild(sh);
+    sh.appendChild(el('b', { textContent: 'ブロック ' + (bi + 1) + '・' + (bar + 1) + '小節目' }));
+    sh.appendChild(el('span', { className: w.dirty ? 'pendtxt' : 'small', textContent: w.dirty ? 'まだ保存していない' : (ovs[bar] ? '変えた小節' : '標準') }));
+    box.appendChild(sh);
+    const act = el('div', { className: 'row' });
+    const pl = el('button', { type: 'button', className: 'sbtn' + (playing && S.audition ? ' on' : ''), textContent: playing && S.audition ? '■ 止める' : '▶ この小節を鳴らす' }); pl.onclick = auditionBar; act.appendChild(pl);
+    const sv = el('button', { type: 'button', className: 'sbtn', textContent: '保存' }); sv.disabled = !w.dirty;
+    sv.onclick = () => {
+      const from = S.scope === 'all' ? 0 : bar, to = S.scope === 'this' ? bar : b.bars - 1;
+      for (let k = from; k <= to; k++) { const o = ovs[k] || (ovs[k] = {}); o.rows = copyRows(w.rows); o.fl = !!w.fl; o.crashAt = 0; delete o.fill; delete o.off; delete o.add; delete o.accent; }
+      S.work = null; changed(true);
+    };
+    act.appendChild(sv);
+    const rs = el('button', { type: 'button', className: 'sbtn', textContent: '元に戻す' }); rs.disabled = !w.dirty; rs.onclick = () => { S.work = null; changed(true); }; act.appendChild(rs);
+    box.appendChild(act);
+    const act2 = el('div', { className: 'row' });
+    act2.appendChild(el('span', { className: 'small', textContent: '保存する範囲' }));
+    const sc = el('select'); [['this', 'この小節だけ'], ['tail', 'この小節から最後まで'], ['all', 'ブロックの全部']].forEach(([v, t]) => { const o = el('option', { value: v, textContent: t }); if (v === S.scope) o.selected = true; sc.appendChild(o); });
+    sc.onchange = () => { S.scope = sc.value; }; act2.appendChild(sc);
+    const std = el('button', { type: 'button', className: 'sbtn', textContent: '標準にする' }); std.disabled = !ovs[bar]; std.onclick = () => { delete ovs[bar]; S.work = null; changed(true); }; act2.appendChild(std);
+    const cp = el('button', { type: 'button', className: 'sbtn', textContent: '前の小節をコピー' }); cp.disabled = !(bar > 0 && ovs[bar - 1]); cp.onclick = () => { ovs[bar] = JSON.parse(JSON.stringify(ovs[bar - 1])); S.work = null; changed(true); }; act2.appendChild(cp);
+    box.appendChild(act2);
     const tabs = el('div', { className: 'stabs' });
-    [['grid', 'グリッド'], ['how', '変え方']].forEach(([k, n]) => { const x = el('button', { type: 'button', className: 'stab' + (S.sheetTab === k ? ' on' : ''), textContent: n }); x.onclick = () => { S.sheetTab = k; drawSheet(); }; tabs.appendChild(x); });
+    [['grid', 'グリッド'], ['fill', 'フィル'], ['how', '足す音・クラッシュ'], ['mute', 'ミュート(ブロック全体)']].forEach(([k, n]) => { const x = el('button', { type: 'button', className: 'stab' + (S.sheetTab === k ? ' on' : ''), textContent: n }); x.onclick = () => { S.sheetTab = k; drawSheet(); }; tabs.appendChild(x); });
     box.appendChild(tabs);
-    if (S.sheetTab === 'how') { const d = el('div', { className: 'shbody' }); barPanel(d, b, bar, bi); box.appendChild(d); return; }
-    const E = barEff(b, bar), g = el('div', { className: 'g sm' });
-    const cur = () => (ovs[bar] && ovs[bar].rows) || effRows(b, bi, bar, barEff(b, bar));
-    gridInto(g, {
-      get: (n, i) => cur()[n][i],
-      set: (n, i, v) => { const o = ovs[bar] || (ovs[bar] = {}); if (!o.rows) o.rows = copyRows(effRows(b, bi, bar, barEff(b, bar))); o.rows[n][i] = v; },
-      tintFrom: E.fill ? E.fill.from : null,
-    }, 'bar');
-    box.appendChild(g);
+    const muted = MUTE_OF(b), edit = (n, i, v) => { w.rows[n][i] = v; w.dirty = true; };
+    const grid = (page) => { const g = el('div', { className: 'g sm' }); gridInto(g, { get: (n, i) => w.rows[n][i], set: edit, tintFrom: null, muted, onChange: () => { drawSeq(); drawSheet(); } }, 'bar', page); return g; };
+    const body = el('div', { className: 'shbody' });
+    if (S.sheetTab === 'grid') { body.appendChild(grid()); body.appendChild(el('p', { className: 'small', textContent: 'タップ=鳴る/休み。長押し=アクセント・ゴースト。薄い行は、ミュート中。' })); }
+    else if (S.sheetTab === 'mute') {
+      const offs = el('span'); OFFS.forEach(([k, n]) => { offs.appendChild(chip(n, b.off[k] ? 'cut' : '', () => { b.off[k] = !b.off[k]; changed(true); })); });
+      body.appendChild(line('ミュート', offs));
+      body.appendChild(el('p', { className: 'small', textContent: '押した楽器は、このブロックの全部の小節で鳴らない(書き出しでも抜ける)。もう一度押すと戻る。保存はいらない。' }));
+    } else if (S.sheetTab === 'how') {
+      const recompute = () => {
+        const E = barEff(b, bar), o = w.opts, m = blockMain({ off: {}, add: o.add, accent: o.accent }, bi, bar);
+        if (o.crashAt) m.CRASH[o.crashAt === 3 ? 8 : 0] = 1;
+        w.rows = m; w.dirty = true; w.fl = false; changed(true);
+      };
+      ADDS.forEach(([k, n]) => { const wv = el('span'); LEVELS.forEach(([v, t]) => { wv.appendChild(chip(t, w.opts.add[k] === v ? 'on' : '', () => { w.opts.add[k] = v; recompute(); })); }); body.appendChild(line(n, wv)); });
+      const cr = el('span'); [[0, 'なし'], [1, '1拍目'], [3, '3拍目']].forEach(([v, n]) => { cr.appendChild(chip(n, w.opts.crashAt === v ? 'on' : '', () => { w.opts.crashAt = v; recompute(); })); }); body.appendChild(line('クラッシュ', cr));
+      const ac = el('span'); ACCENTS.forEach(([k, n]) => { ac.appendChild(chip(n, w.opts.accent === k ? 'on' : '', () => { w.opts.accent = k; recompute(); })); }); body.appendChild(line('アクセント', ac));
+      body.appendChild(el('p', { className: 'small', textContent: '押すと、この小節のグリッドが作り直される(グリッドで手直しした分は消える)。聞いて、良ければ「保存」。' }));
+    } else {
+      const half = S.fillHalf, whole = half === 2, e0 = whole ? 16 : half * 8 + 8, s0 = whole ? 0 : e0 - 6;
+      const rg = el('div', { className: 'row' }); rg.appendChild(el('span', { className: 'small', textContent: '入れる場所' }));
+      [[0, '1〜2拍目'], [1, '3〜4拍目'], [2, '1〜4拍目(長め)']].forEach(([h, t]) => { const x = el('button', { type: 'button', className: 'sbtn' + (half === h ? ' on' : ''), textContent: t }); x.onclick = () => { S.fillHalf = h; S.fillSel = ''; S.pg.bar = h === 2 ? 0 : h; drawSheet(); }; rg.appendChild(x); });
+      body.appendChild(rg);
+      const types = Object.assign({}, whole ? FILLS.long : FILLS.short), fr = el('div', { className: 'row' });
+      const none = '標準に戻す'; [none].concat(Object.keys(types)).forEach((t) => {
+        const x = el('button', { type: 'button', className: 'sbtn' + (S.fillSel === t ? ' on' : ''), textContent: t });
+        x.onclick = () => {
+          S.fillSel = t;
+          const std = blockMain({ off: {}, add: w.opts.add, accent: w.opts.accent }, bi, bar);
+          ROWS.forEach((n) => { if (n !== 'CRASH') for (let i = s0; i < e0; i++) w.rows[n][i] = std[n][i]; });
+          w.fl = t !== none;
+          if (t !== none) {
+            if (!FILL_KEEP.includes(t)) ROWS.forEach((n) => { if (n !== 'CRASH') for (let i = s0; i < e0; i++) w.rows[n][i] = 0; });
+            types[t].forEach(([n, i]) => { w.rows[n][s0 + i - (whole ? 0 : 0)] = 1; });
+          }
+          w.dirty = true; S.pg.bar = whole ? 0 : half; drawSeq(); drawSheet();
+        };
+        fr.appendChild(x);
+      });
+      body.appendChild(fr);
+      body.appendChild(grid(whole ? undefined : half));
+      body.appendChild(el('p', { className: 'small', textContent: '場所と種類を押すと、下のグリッドがそのフィルに変わる。タム・スネアのフィルは他の音が止まり、ハットのフィルは他の音を残す。手でも直せる。場所を替えて、もう一度押すと、1〜2拍目と3〜4拍目の両方に入れられる。' }));
+    }
+    box.appendChild(body);
   }
 
   // ---- グリッド(曲のリズム / 選んだ小節)----
@@ -429,23 +483,23 @@
   document.addEventListener('pointerup', () => { if (lpHeld) { lpHeld = false; lpSwallow = true; setTimeout(() => { lpSwallow = false; }, 250); } }, true);
   document.addEventListener('pointercancel', () => { lpHeld = false; }, true);
   document.addEventListener('click', (e) => { if (lpSwallow) { lpSwallow = false; e.stopPropagation(); e.preventDefault(); } }, true);
-  function gridInto(g, o, key) {
+  function gridInto(g, o, key, pageOverride) {
     g.innerHTML = '';
-    const pg = S.pg[key] || 0;
+    const pg = pageOverride !== undefined ? pageOverride : (S.pg[key] || 0);
     const nav = el('div', { className: 'gnav' });
-    const arrow = (txt, to) => { const x = el('button', { type: 'button', className: 'garrow', textContent: txt }); x.disabled = pg === to; x.onclick = () => { S.pg[key] = to; (key === 'song' ? drawSongGrid : drawSheet)(); }; return x; };
+    const arrow = (txt, to) => { const x = el('button', { type: 'button', className: 'garrow', textContent: txt }); x.disabled = pg === to; x.onclick = () => { S.pg[key] = to; if (pageOverride !== undefined && key === 'bar') S.fillHalf = to; (key === 'song' ? drawSongGrid : drawSheet)(); }; return x; };
     nav.appendChild(arrow('←', 0)); nav.appendChild(el('span', { className: 'gpage', textContent: pg ? '3〜4拍目' : '1〜2拍目' })); nav.appendChild(arrow('→', 1));
     g.appendChild(nav);
     const hd = el('div', { className: 'ln hd' }); hd.appendChild(el('span', { className: 'nm' }));
     for (let i = pg * 8; i < pg * 8 + 8; i++) hd.appendChild(el('b', { textContent: i % 4 === 0 ? String(i / 4 + 1) : '' })); g.appendChild(hd);
     ROWS.forEach((n) => {
-      const ln = el('div', { className: 'ln' }); ln.appendChild(el('span', { className: 'nm', textContent: n }));
+      const ln = el('div', { className: 'ln' }); ln.appendChild(el('span', { className: 'nm', textContent: n })); if (o.muted && o.muted(n)) ln.style.opacity = '.35';
       for (let i = pg * 8; i < pg * 8 + 8; i++) {
         const v = o.get(n, i), c = el('button', { type: 'button', className: 'c' + (i % 4 === 0 ? ' q' : '') + (v ? ' on' : '') + (v === 2 ? ' ac' : '') + (v === 3 ? ' gh' : '') + (n === 'HAT' && v === 1 ? ' hat' : '') });
         if (n === 'HAT' && v === 1) c.style.opacity = String(Math.min(1, Math.max(0.3, 0.25 + 0.75 * (hatFactor(curBi(), i) * 0.9) / 1.3)));
         if (o.tintFrom !== null && o.tintFrom !== undefined && i >= o.tintFrom) c.classList.add('fz');
         // タップ: 鳴る/休み。長押し: 休み→ゴースト、鳴る→アクセント、アクセント→鳴る、ゴースト→アクセント(ハードコアのビートと同じ)
-        const setV = (f) => { o.set(n, i, f(o.get(n, i))); changed(true); };
+        const setV = (f) => { o.set(n, i, f(o.get(n, i))); if (o.onChange) o.onChange(); else changed(true); };
         let lpT = null, lpDone = false, sx = 0, sy = 0;
         const lpClear = () => { if (lpT) { clearTimeout(lpT); lpT = null; } };
         c.addEventListener('pointerdown', (e) => {
@@ -487,6 +541,7 @@
 
   // ---- タブ ----
   function showTab(k) {
+    $('sheet').hidden = k !== 's'; document.body.classList.toggle('onS', k === 's');
     ['r', 's', 'o'].forEach((t) => { $('pane' + t.toUpperCase()).hidden = t !== k; $('tab' + t.toUpperCase()).classList.toggle('on', t === k); });
     if (k === 'o') drawBlockExports();
     if (k === 's') { drawSeq(); drawSheet(); }
