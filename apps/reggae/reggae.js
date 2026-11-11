@@ -63,7 +63,7 @@
     if (b.fillType === 'none') { b.fillRows = zero(); b.fillFrom = 0; return; }
     const f = genFill(b.fillType, b.alt, b.intro); b.fillRows = f.rows; b.fillFrom = f.from;
   }
-  const initial = () => [newBlock(8), newBlock(4, 'tom'), newBlock(8, 'light')];
+  const initial = () => [];      // 最初は、ブロックなし。「ブロックを作る」で足す
 
   const S = { song: { pat: 'ワンドロップ', rows: PATTERNS['ワンドロップ'](), bpm: 76 }, blocks: initial(), draft: newBlock(8), sel: 0, mute: {}, solo: {}, p: { shuffle: 58, accvar: 35, sway: 30 } };
   const KEY = 'kimpilla_reggae_v2';
@@ -72,7 +72,7 @@
   function load() {
     try {
       const o = JSON.parse(localStorage.getItem(KEY) || 'null');
-      if (o && o.song && okRows(o.song.rows) && Array.isArray(o.blocks) && o.blocks.length) {
+      if (o && o.song && okRows(o.song.rows) && Array.isArray(o.blocks)) {
         o.blocks.forEach((b) => { if (!okRows(b.fillRows)) b.fillRows = zero(); b.off = b.off || {}; b.add = Object.assign({ open: 0, ghost: 0 }, b.add); b.alt = b.alt || 0; b.fillBar = b.fillBar || 0; b.crashAt = b.crashAt || 0; b.accent = b.accent || 'keep'; });
         S.song = { pat: o.song.pat, rows: o.song.rows, bpm: o.song.bpm || 76 }; S.blocks = o.blocks; if (o.draft && okRows(o.draft.fillRows)) { S.draft = Object.assign(newBlock(8), o.draft); S.draft.add = Object.assign({ open: 0, ghost: 0 }, S.draft.add); S.draft.off = S.draft.off || {}; } if (o.p) Object.assign(S.p, o.p);
       }
@@ -176,6 +176,7 @@
   // ---- 再生 ----
   let playing = false, timer = 0, session = 0, nodesUntil = 0;
   async function play() {
+    if (!previewBlocks && !S.blocks.length) { $('status').textContent = 'ブロックがまだない。「ブロックを作る」で足すか、「これだけ鳴らす」で聞く。'; return; }
     await ensure(); await loading;
     if (playing) return;
     playing = true; $('play').textContent = '▶ 再生中';
@@ -222,6 +223,7 @@
     return o;
   }
   async function exportWav(only, label, blk) {
+    if (!S.blocks.length) { $('status').textContent = 'ブロックがまだない。'; return; }
     $('status').textContent = '書き出し中…';
     try { const buf = await render(only, blk, $('unify').checked), blob = audioBufferToWav(buf); saveBlob(blob, 'reggae_' + label + '.wav', $('status')); if (!window.claude) $('status').textContent = '書き出した: reggae_' + label + '.wav(' + (buf.length / buf.sampleRate).toFixed(1) + '秒)'; }
     catch (e) { $('status').textContent = '書き出せませんでした: ' + e.message; }
@@ -232,7 +234,7 @@
   const fillBarLabel = (b) => (b.fillBar > 0 ? Math.min(b.fillBar, b.bars) : b.bars) + '小節目';
   const beatName = (st) => (st / 4 + 1).toFixed(2).replace(/0$/, '').replace(/\.0$/, '') + '拍目';
   function fmtTime(sec) { const m = Math.floor(sec / 60); return m + '分' + Math.round(sec - m * 60) + '秒'; }
-  function updateTotal() { const { dur } = timeline(), bars = S.blocks.reduce((a, b) => a + b.bars * b.reps, 0); $('total').textContent = '全体で ' + bars + '小節、' + fmtTime(dur); }
+  function updateTotal() { if (!S.blocks.length) { $('total').textContent = 'ブロックはまだない。下の「ブロックを作る」で足す。'; return; } const { dur } = timeline(), bars = S.blocks.reduce((a, b) => a + b.bars * b.reps, 0); $('total').textContent = '全体で ' + bars + '小節、' + fmtTime(dur); }
   function changed(redrawGrid) { save(); updateTotal(); if (redrawGrid) drawGrid(); }
   const chip = (txt, cls, fn) => { const x = el('button', { type: 'button', className: 'chip' + (cls ? ' ' + cls : ''), textContent: txt }); x.onclick = fn; return x; };
   const line = (label, ...kids) => { const r = el('div', { className: 'bl' }); r.appendChild(el('span', { className: 'bk', textContent: label })); const w = el('span', { className: 'bv' }); kids.forEach((k) => w.appendChild(k)); r.appendChild(w); return r; };
@@ -270,6 +272,7 @@
 
   function drawBlocks() {
     const box = $('rows'); box.innerHTML = '';
+    if (!S.blocks.length) box.appendChild(el('p', { className: 'small', textContent: 'まだブロックがない。上の「ブロックを作る」で、気に入った形を入れていく。' }));
     S.blocks.forEach((b, i) => {
       const d = el('div', { className: 'blk' + (i === S.sel ? ' sel' : '') });
       d.innerHTML = '<div class="ttl">ブロック ' + (i + 1) + '　' + (b.intro ? '' : b.bars + '小節 × ') + b.reps + '回' + (b.intro ? '<span class="tag">曲頭ロール</span>' : '') + (b.fillType !== 'none' && !b.intro ? '<span class="tag fl">フィル ' + fillBarLabel(b) + ' ' + beatName(b.fillFrom) + 'から</span>' : '') + '</div>';
@@ -281,7 +284,7 @@
       mk('↑', () => { if (i > 0) { [S.blocks[i - 1], S.blocks[i]] = [S.blocks[i], S.blocks[i - 1]]; if (S.sel === i) S.sel = i - 1; changed(true); drawBlocks(); } });
       mk('↓', () => { if (i < S.blocks.length - 1) { [S.blocks[i + 1], S.blocks[i]] = [S.blocks[i], S.blocks[i + 1]]; if (S.sel === i) S.sel = i + 1; changed(true); drawBlocks(); } });
       mk('複製', () => { S.blocks.splice(i + 1, 0, JSON.parse(JSON.stringify(b))); changed(true); drawBlocks(); });
-      mk('🗑', () => { if (S.blocks.length > 1) { S.blocks.splice(i, 1); S.sel = Math.min(S.sel, S.blocks.length - 1); changed(true); drawBlocks(); } });
+      mk('🗑', () => { { S.blocks.splice(i, 1); S.sel = Math.max(0, Math.min(S.sel, S.blocks.length - 1)); changed(true); drawBlocks(); } });
       d.appendChild(bt); box.appendChild(d);
     });
   }
