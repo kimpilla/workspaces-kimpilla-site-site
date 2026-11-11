@@ -45,6 +45,15 @@
   .c.fz.on { background: var(--fg); }
   .c.fz.ac { background: var(--accent); }
   .c.on.hat { background: var(--fg); }
+  /* スマホでは、タップしたマスにホバーが残って、サイト共通の「押している間は黒」が効き続けてしまう(オフなのに黒く見える・赤にならない)。状態ごとの色を、ホバーより強くする */
+  .c:hover:not(:disabled) { background: var(--bg); color: var(--bg); }
+  .c.on:hover:not(:disabled) { background: var(--fg); }
+  .c.ac:hover:not(:disabled) { background: var(--accent); }
+  .c.fz:hover:not(:disabled) { background: color-mix(in srgb, var(--accent) 12%, var(--bg)); }
+  .c.fz.on:hover:not(:disabled) { background: var(--fg); }
+  .c.fz.ac:hover:not(:disabled) { background: var(--accent); }
+  .chip:hover:not(:disabled), .parts button:hover:not(:disabled) { background: var(--bg); color: var(--fg); }
+  .chip.on:hover:not(:disabled), .parts button.on:hover:not(:disabled) { background: var(--fg); color: var(--bg); }
   .chip { padding: 3px 9px; margin: 0 4px 4px 0; font-size: 13px; min-height: 0; }
   .chip.on { background: var(--fg); color: var(--bg); }
   .chip.cut { text-decoration: line-through; color: var(--muted); border-style: dashed; }
