@@ -4,10 +4,10 @@
   const $ = (id) => document.getElementById(id);
 
   // ---- 行(表の上から順)と、パート ----
-  const ROWS = ['CRASH', 'HAT', 'OPEN', 'RIM', 'SNARE', 'T-HI', 'T-MID', 'T-LO', 'KICK'];
-  const PART_OF = { CRASH: 'crash', HAT: 'hat', OPEN: 'hat', RIM: 'snare', SNARE: 'snare', 'T-HI': 'tom', 'T-MID': 'tom', 'T-LO': 'tom', KICK: 'kick' };
-  const PARTS = [['hat', 'ハイハット'], ['kick', 'キック'], ['snare', 'スネア・リム'], ['tom', 'タム'], ['crash', 'クラッシュ']];
-  const BASE_VEL = { CRASH: 0.85, OPEN: 0.7, RIM: 0.8, SNARE: 0.8, 'T-HI': 0.78, 'T-MID': 0.78, 'T-LO': 0.78, KICK: 0.85 };
+  const ROWS = ['CRASH', 'HAT', 'OPEN', 'RIM', 'SNARE', 'TIMB', 'T-HI', 'T-MID', 'T-LO', 'KICK'];
+  const PART_OF = { CRASH: 'crash', HAT: 'hat', OPEN: 'hat', RIM: 'snare', SNARE: 'snare', TIMB: 'timb', 'T-HI': 'tom', 'T-MID': 'tom', 'T-LO': 'tom', KICK: 'kick' };
+  const PARTS = [['hat', 'ハイハット'], ['kick', 'キック'], ['snare', 'スネア・リム'], ['tom', 'タム'], ['timb', 'ティンバレス'], ['crash', 'クラッシュ']];
+  const BASE_VEL = { CRASH: 0.85, OPEN: 0.7, RIM: 0.8, SNARE: 0.8, TIMB: 0.75, 'T-HI': 0.78, 'T-MID': 0.78, 'T-LO': 0.78, KICK: 0.85 };
   const BUF = { KICK: ['kickS', 'kickH'], RIM: ['ssS', 'ssH'], SNARE: ['snS', 'snH'], HAT: ['htS', 'htH'], OPEN: ['hoS', 'hoS'], 'T-HI': ['t1', 't1'], 'T-MID': ['t2', 't2'], 'T-LO': ['t3', 't3'], CRASH: ['cr', 'cr'] };
 
   // 1小節 = 96コマ(1拍 = 24コマ)。16分(6コマごと)・8分3連(8コマ)・16分3連=6連(4コマ)・32分(3コマ)が、どれも置ける
@@ -51,8 +51,8 @@
   }
 
   // ---- 曲のリズムと、ブロック(変え方)----
-  const OFFS = [['HAT', 'ハット'], ['OPEN', 'オープン'], ['RIM', 'リム'], ['SNARE', 'スネア'], ['TOM', 'タム'], ['KICK', 'キック']];
-  const OFF_ROWS = { HAT: ['HAT'], OPEN: ['OPEN'], RIM: ['RIM'], SNARE: ['SNARE'], TOM: ['T-HI', 'T-MID', 'T-LO'], KICK: ['KICK'] };
+  const OFFS = [['HAT', 'ハット'], ['OPEN', 'オープン'], ['RIM', 'リム'], ['SNARE', 'スネア'], ['TIMB', 'ティンバレス'], ['TOM', 'タム'], ['KICK', 'キック']];
+  const OFF_ROWS = { HAT: ['HAT'], OPEN: ['OPEN'], RIM: ['RIM'], SNARE: ['SNARE'], TIMB: ['TIMB'], TOM: ['T-HI', 'T-MID', 'T-LO'], KICK: ['KICK'] };
   const ACCENTS = [['keep', 'そのまま'], ['none', 'なし'], ['omote', '表(1拍目)'], ['ura', '裏(3拍目)'], ['rand', 'ランダム']];
   const ADDS = [['open', 'オープンハット'], ['ghost', 'リムのゴースト']];
   const LEVELS = [[0, 'なし'], [1, '少し'], [2, '多め']];
@@ -70,15 +70,15 @@
 
   const S = { song: { pat: 'ワンドロップ', rows: PATTERNS['ワンドロップ'](), bpm: 76 }, blocks: initial(), draft: newBlock(8), cur: null, mute: {}, solo: {}, p: { shuffle: 58, accvar: 35, sway: 30 }, kit: 'real' };
   const KEY = 'kimpilla_reggae_v2';
-  const okRows = (r) => r && ROWS.every((n) => Array.isArray(r[n]) && (r[n].length === 16 || r[n].length === NS));
-  const fix96 = (r) => (r && r.CRASH && r.CRASH.length === 16 ? up16(r) : r);
+  const okRows = (r) => r && ROWS.filter((n) => n !== 'TIMB').every((n) => Array.isArray(r[n]) && (r[n].length === 16 || r[n].length === NS));
+  const fix96 = (r) => { if (r && r.CRASH && r.CRASH.length === 16) return up16(r); if (r && r.CRASH && !r.TIMB) r.TIMB = new Array(r.CRASH.length).fill(0); return r; };
   function save() { try { localStorage.setItem(KEY, JSON.stringify({ song: S.song, blocks: S.blocks, draft: S.draft, p: S.p, kit: S.kit })); } catch (e) { /* 保存できなくても動く */ } }
   function load() {
     try {
       const o = JSON.parse(localStorage.getItem(KEY) || 'null');
       if (o && o.song && okRows(o.song.rows) && Array.isArray(o.blocks)) {
         o.blocks.forEach((b) => { if (!okRows(b.fillRows)) b.fillRows = zero(); else { if (b.fillRows.CRASH.length === 16 && b.fillFrom) b.fillFrom = b.fillFrom * U16; b.fillRows = fix96(b.fillRows); } if (b.ov) Object.keys(b.ov).forEach((k) => { const q = b.ov[k]; if (q.rows) q.rows = fix96(q.rows); if (q.fill && q.fill.rows) { if (q.fill.rows.CRASH.length === 16) q.fill.from *= U16; q.fill.rows = fix96(q.fill.rows); } }); b.ov = b.ov || {}; b.off = b.off || {}; b.add = Object.assign({ open: 0, ghost: 0 }, b.add); b.alt = b.alt || 0; b.fillBar = b.fillBar || 0; b.crashAt = b.crashAt || 0; b.accent = b.accent || 'keep'; });
-        S.song = { pat: o.song.pat, rows: fix96(o.song.rows), bpm: o.song.bpm || 76, hat: o.song.hat || 12 }; S.blocks = o.blocks; if (o.draft && okRows(o.draft.fillRows)) { S.draft = Object.assign(newBlock(8), o.draft); S.draft.add = Object.assign({ open: 0, ghost: 0 }, S.draft.add); S.draft.off = S.draft.off || {}; } if (o.p) Object.assign(S.p, o.p); if (o.kit && o.kit in KITS) S.kit = o.kit;
+        S.song = { pat: o.song.pat, rows: fix96(o.song.rows), bpm: o.song.bpm || 76, hat: o.song.hat || 12 }; S.blocks = o.blocks; if (o.draft && okRows(o.draft.fillRows)) { o.draft.fillRows = fix96(o.draft.fillRows); S.draft = Object.assign(newBlock(8), o.draft); S.draft.add = Object.assign({ open: 0, ghost: 0 }, S.draft.add); S.draft.off = S.draft.off || {}; } if (o.p) Object.assign(S.p, o.p); if (o.kit && o.kit in KITS) S.kit = o.kit;
       }
     } catch (e) { /* 読めなければ、最初の状態 */ }
   }
@@ -233,6 +233,7 @@
     'T-HI': (c, o, t, v) => { ptone(c, o, t, 'sine', 780, 230, 0.13, 0.34, 0.85 * v); pnoise(c, o, t, 0.02, 'highpass', 3000, 0.7, 0.2 * v, 0.015); },
     'T-MID': (c, o, t, v) => { ptone(c, o, t, 'sine', 600, 165, 0.15, 0.42, 0.9 * v); pnoise(c, o, t, 0.02, 'highpass', 3000, 0.7, 0.18 * v, 0.015); },
     'T-LO': (c, o, t, v) => { ptone(c, o, t, 'sine', 440, 112, 0.17, 0.52, 0.95 * v); pnoise(c, o, t, 0.02, 'highpass', 3000, 0.7, 0.16 * v, 0.015); },
+    TIMB: (c, o, t, v) => { ptone(c, o, t, 'sine', 640, 600, 0.02, 0.3, 0.5 * v); ptone(c, o, t, 'sine', 1010, 960, 0.02, 0.22, 0.32 * v); ptone(c, o, t, 'sine', 1640, 1600, 0.02, 0.14, 0.2 * v); pnoise(c, o, t, 0.03, 'bandpass', 4200, 1.4, 0.55 * v, 0.03); },
     CRASH: (c, o, t, v) => { pnoise(c, o, t, 1.5, 'highpass', 4800, 0.7, 0.55 * v, 1.4); [3300, 4130, 5210, 6370].forEach((f) => ptone(c, o, t, 'square', f, f, 0, 0.9, 0.025 * v)); },
   };
   const KITS = { 'proto': 'レゲエ合成音(最初の試作)', 'real': '実録音(Big Rusty Drums)', 'machine': 'マシン(合成音)', 'band': 'バンド寄り(合成音)' };
@@ -259,6 +260,7 @@
     else { const P = row === 'T-LO' ? K.T : K.M, m = row === 'T-HI' ? 1.25 : 1; toneHit(c, out, t, P.f0 * m, P.f1 * m, P.dec, vv, P.td); toneHit(c, out, t, P.f0 * m * 1.5, P.f1 * m * 1.5, P.dec * 0.5, vv * 0.3, P.td); noiseHit(c, out, t, 'bandpass', 1200, 0.8, 0.03, vv * P.click); }
   }
   function hit(c, dest, t, row, vel) {
+    if (row === 'TIMB') { PROTO.TIMB(c, dest(row), t, Math.min(1.2, Math.max(0.15, vel))); return; }      // ティンバレスは録音素材がないので、どの音でも合成音
     if (S.kit !== 'real') { synthHit(c, dest(row), t, row, vel); return; }
     const pair = BUF[row], name = vel >= 0.75 ? pair[1] : pair[0], src = c.createBufferSource(); src.buffer = buffers[name];
     const g = c.createGain(); g.gain.value = Math.min(1.3, Math.max(0.15, vel)); src.connect(g); g.connect(dest(row)); src.start(t);
