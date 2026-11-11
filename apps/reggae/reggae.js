@@ -257,8 +257,8 @@
         const ac = el('span'); ACCENTS.forEach(([k, n]) => { ac.appendChild(chip(n, b.accent === k ? 'on' : '', () => { b.accent = k; changed(true); drawBlocks(); })); });
         d.appendChild(line('アクセント', ac));
         const fs = el('select'); FILL_TYPES.forEach(([k, n]) => { const o = el('option', { value: k, textContent: n }); if (k === b.fillType) o.selected = true; fs.appendChild(o); });
-        fs.onchange = () => { b.fillType = fs.value; b.alt = 0; applyFill(b); S.sel = i; changed(true); drawBlocks(); };
-        const idea = el('button', { type: 'button', className: 'chip', textContent: '案を出す' }); idea.onclick = () => { if (b.fillType === 'none') b.fillType = 'tom'; b.alt++; applyFill(b); S.sel = i; changed(true); drawBlocks(); };
+        fs.onchange = () => { b.fillType = fs.value; b.alt = 0; applyFill(b); S.sel = i; focusFill(b); changed(true); drawBlocks(); };
+        const idea = el('button', { type: 'button', className: 'chip', textContent: '案を出す' }); idea.onclick = () => { if (b.fillType === 'none') b.fillType = 'tom'; b.alt++; applyFill(b); S.sel = i; focusFill(b); changed(true); drawBlocks(); };
         d.appendChild(line('フィル', fs, idea));
         if (b.fillType !== 'none') {
           const ps = el('select'); ps.appendChild(el('option', { value: 0, textContent: '最後の小節(' + b.bars + '小節目)' }));
@@ -270,7 +270,7 @@
       const bt = el('div', { className: 'btns' });
       const mk = (txt, fn) => { const x = el('button', { type: 'button', textContent: txt }); x.onclick = fn; bt.appendChild(x); return x; };
       mk('書き出し', () => exportWav(null, 'block' + (i + 1), i));
-      if (b.fillType !== 'none') mk('フィルを直す', () => { S.sel = i; drawBlocks(); drawGrid(); $('gridTitle').scrollIntoView({ behavior: 'smooth' }); });
+      if (b.fillType !== 'none') mk('フィルを直す', () => { S.sel = i; focusFill(b); drawBlocks(); drawGrid(); $('gridTitle').scrollIntoView({ behavior: 'smooth' }); });
       mk('↑', () => { if (i > 0) { [S.blocks[i - 1], S.blocks[i]] = [S.blocks[i], S.blocks[i - 1]]; if (S.sel === i) S.sel = i - 1; changed(true); drawBlocks(); } });
       mk('↓', () => { if (i < S.blocks.length - 1) { [S.blocks[i + 1], S.blocks[i]] = [S.blocks[i], S.blocks[i + 1]]; if (S.sel === i) S.sel = i + 1; changed(true); drawBlocks(); } });
       mk('複製', () => { S.blocks.splice(i + 1, 0, JSON.parse(JSON.stringify(b))); changed(true); drawBlocks(); });
@@ -285,10 +285,17 @@
   document.addEventListener('pointerup', () => { if (lpHeld) { lpHeld = false; lpSwallow = true; setTimeout(() => { lpSwallow = false; }, 250); } }, true);
   document.addEventListener('pointercancel', () => { lpHeld = false; }, true);
   document.addEventListener('click', (e) => { if (lpSwallow) { lpSwallow = false; e.stopPropagation(); e.preventDefault(); } }, true);
-  function gridInto(g, getSrc, opts) {
+  S.pg = { song: 0, fill: 1 };
+  const focusFill = (b) => { S.pg.fill = b.fillFrom >= 8 ? 1 : 0; };
+  function gridInto(g, getSrc, opts, key) {
     g.innerHTML = '';
     const src = getSrc();
-    for (let h = 0; h < 2; h++) {      // 1小節を、前半(1〜2拍)と後半(3〜4拍)の2段に分けて、マスを大きくする
+    // 1小節を、前半(1〜2拍)と後半(3〜4拍)に分けて、大きな矢印で動く(縦にスクロールしなくてよい)
+    const nav = el('div', { className: 'gnav' });
+    const arrow = (txt, to) => { const x = el('button', { type: 'button', className: 'garrow', textContent: txt }); x.disabled = S.pg[key] === to; x.onclick = () => { S.pg[key] = to; drawGrid(); }; return x; };
+    nav.appendChild(arrow('◀', 0)); nav.appendChild(el('span', { className: 'gpage', textContent: S.pg[key] ? '3〜4拍目' : '1〜2拍目' })); nav.appendChild(arrow('▶', 1));
+    g.appendChild(nav);
+    for (let h = S.pg[key]; h <= S.pg[key]; h++) {
       const hd = el('div', { className: 'ln hd' }); hd.appendChild(el('span', { className: 'nm' }));
       for (let i = h * 8; i < h * 8 + 8; i++) hd.appendChild(el('b', { textContent: i % 4 === 0 ? String(i / 4 + 1) : '' })); g.appendChild(hd);
       ROWS.forEach((n) => {
@@ -316,11 +323,10 @@
         }
         g.appendChild(ln);
       });
-      if (h === 0) g.appendChild(el('div', { className: 'gap' }));
     }
   }
   function drawGrid() {
-    gridInto($('grid'), () => S.song.rows, { fill: false });
+    gridInto($('grid'), () => S.song.rows, { fill: false }, 'song');
     $('gridNote0').textContent = 'マスをタップで、鳴る(黒)/休みの切り替え。休みのマスを長押しでゴースト(薄く小さく)、鳴っているマスを長押しでアクセント(赤)。アクセントを長押しすると、ふつうの音に戻る(ハードコアのビートと同じ)。ここを直すと、全ブロックに効く。ハイハットの濃さは、鳴る強さ(アクセントのブレで変わる)。';
     const b = S.blocks[S.sel], has = b && b.fillType !== 'none';
     $('fillBox').hidden = !has;
@@ -328,7 +334,7 @@
     $('fillNone').hidden = true;
     $('gridTitle').textContent = 'フィルを直す(ブロック ' + (S.sel + 1) + ')';
     const bi = S.sel;
-    gridInto($('fgrid'), () => b.fillRows, { fill: true, from: b.fillFrom, pre: blockMain(b, bi, b.fillBar > 0 ? Math.min(b.fillBar, b.bars) - 1 : b.bars - 1) });
+    gridInto($('fgrid'), () => b.fillRows, { fill: true, from: b.fillFrom, pre: blockMain(b, bi, b.fillBar > 0 ? Math.min(b.fillBar, b.bars) - 1 : b.bars - 1) }, 'fill');
     $('gridNote').textContent = 'フィルの小節(' + fillBarLabel(b) + ')が、実際に鳴るとおりの形。左の灰色の部分は、そのブロックのメインの小節(抜く音・アクセント反映済み)がそのまま鳴る(ここでは直せない)。赤い部分(' + beatName(b.fillFrom) + 'から)が、フィル。タップで直せる。';
   }
 
