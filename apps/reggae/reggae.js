@@ -475,10 +475,19 @@
   // 譜面は、ゴーストの小さい音符=ゴースト(3)、アクセント記号=アクセント(2)、バズロール=2連打、ペダルのハイハット(下のx)=ゴーストのハット。タンバレやシンドラムは、近いタムに置く
   const T = 1 / 3, S6 = 1 / 6;
   const FILL_BLOCKS = [
-    { name: 'Javanaise Remake の出だし(3拍)', at: 1, len: 3, note: '2拍目から。16分3連のスネア → 8分 → タム', bars: [{ from: 1, hits: [['SNARE', 1.5, 1], ['SNARE', 1.5 + S6, 1], ['SNARE', 1.5 + 2 * S6, 1], ['SNARE', 2, 1], ['T-HI', 2.5, 1], ['T-HI', 2.75, 1], ['T-HI', 3, 1]] }] },
-    { name: 'Ecce Homo の出だし(2拍)', at: 2, len: 2, note: '3拍目から。ゴーストのスネア3つ → スネア → スネア → タム', bars: [{ from: 2, hits: [['SNARE', 2, 3], ['SNARE', 2.25, 3], ['SNARE', 2.5, 3], ['SNARE', 2.75, 1], ['SNARE', 3, 1], ['T-HI', 3.5, 1]] }] },
-    { name: 'Overseas Telegram の出だし(1小節)', at: 0, len: 4, note: '1小節。バズのスネアとキック、最後にオープンハット', bars: [{ from: 0, hits: [['SNARE', 0, 1], ['SNARE', 0.125, 3], ['KICK', 0.5, 1], ['SNARE', 1.5, 1], ['SNARE', 1.625, 3], ['KICK', 2, 1], ['KICK', 2.5, 1], ['SNARE', 3, 2], ['OPEN', 3, 2], ['HAT', 3.5, 3]] }] },
+    { grp: 'intro', name: 'Javanaise Remake の出だし(3拍)', at: 1, len: 3, note: '2拍目から。16分3連のスネア → 8分 → タム', bars: [{ from: 1, hits: [['SNARE', 1.5, 1], ['SNARE', 1.5 + S6, 1], ['SNARE', 1.5 + 2 * S6, 1], ['SNARE', 2, 1], ['T-HI', 2.5, 1], ['T-HI', 2.75, 1], ['T-HI', 3, 1]] }] },
+    { grp: 'intro', name: 'Ecce Homo の出だし(2拍)', at: 2, len: 2, note: '3拍目から。ゴーストのスネア3つ → スネア → スネア → タム', bars: [{ from: 2, hits: [['SNARE', 2, 3], ['SNARE', 2.25, 3], ['SNARE', 2.5, 3], ['SNARE', 2.75, 1], ['SNARE', 3, 1], ['T-HI', 3.5, 1]] }] },
+    { grp: 'intro', name: 'Overseas Telegram の出だし(1小節)', at: 0, len: 4, note: '1小節。バズのスネアとキック、最後にオープンハット', bars: [{ from: 0, hits: [['SNARE', 0, 1], ['SNARE', 0.125, 3], ['KICK', 0.5, 1], ['SNARE', 1.5, 1], ['SNARE', 1.625, 3], ['KICK', 2, 1], ['KICK', 2.5, 1], ['SNARE', 3, 2], ['OPEN', 3, 2], ['HAT', 3.5, 3]] }] },
+
+    // 手本2: Stephen Taylor「5 Reggae Drum Fills」(無料PDF、stephensdrumshed.com)。PDFの音符の位置を数値で読み出して起こした。ゴースト=括弧つきの音、アクセント=>、x=クラッシュ
+    // 譜面の高さ: 下のスペース=キック、2番目のスペース=フロアタム、3番目=スネア、上の線=ミドル、一番上のスペース=ハイタム
+    { grp: 'song', name: 'Sinsemilla(Black Uhuru、Sly Dunbar)', at: 0, len: 4, note: '1小節。32分のタム → キック → フロア → 最後にスネア+クラッシュ', bars: [{ hits: [['T-HI', 0, 1], ['T-HI', 0.125, 1], ['KICK', 0.25, 1], ['KICK', 0.5, 1], ['T-MID', 0.75, 1], ['T-MID', 0.875, 1], ['KICK', 1, 1], ['KICK', 1.25, 1], ['T-LO', 1.5, 1], ['T-LO', 1.625, 1], ['KICK', 1.75, 1], ['KICK', 2, 1], ['T-LO', 2.25, 1], ['T-LO', 2.375, 1], ['KICK', 2.5, 1], ['KICK', 2.75, 1], ['KICK', 3, 1], ['SNARE', 3.5, 2], ['CRASH', 3.5, 1]] }] },
+    { grp: 'song', name: 'Stranger in Town(Gregory Isaacs、Style Scott)', at: 1.5, len: 2.5, note: '2拍目の裏から。ゴーストのスネア3連 → スネア(アクセント) → フロア → ハイタム', bars: [{ hits: [['SNARE', 1.5, 3], ['SNARE', 1.5 + S6 * 1, 3], ['SNARE', 1.5 + S6 * 2, 3], ['SNARE', 2, 2], ['T-LO', 2.5, 1], ['T-HI', 3, 1]] }] },
+    { grp: 'song', name: 'I Need a Roof(The Mighty Diamonds、Benbow Creary)', at: 3.5, len: 4.5, note: '4拍目の裏から次の小節の終わりまで(小節をまたぐ)。ゴースト3連 → スネア → フロア → ハイタム → フロア', bars: [{ hits: [['SNARE', 3.5, 3], ['SNARE', 3.5 + S6, 3], ['SNARE', 3.5 + 2 * S6, 1], ['SNARE', 4, 2], ['T-LO', 4.5, 1], ['T-HI', 5.5, 1], ['T-LO', 6.5, 1], ['T-LO', 7, 1]] }] },
+    { grp: 'song', name: 'Soul Rebel(Bunny Wailer)', at: 2.75, len: 1.25, note: '4拍目の頭だけ。直前に、ゴーストのキック → スネア+クラッシュ', bars: [{ hits: [['KICK', 2.75, 3], ['SNARE', 3, 2], ['CRASH', 3, 1]] }] },
+    { grp: 'song', name: 'Buffalo Soldier(Bob Marley、Carlton Barrett)', at: 0, len: 4, note: '1小節。4分3連のキック・スネア・スネア → スネア+キック → スネア → 8分3連のフロア2つ', bars: [{ hits: [['KICK', 0, 1], ['SNARE', 2 * T, 1], ['SNARE', 4 * T, 1], ['SNARE', 2, 1], ['KICK', 2, 1], ['SNARE', 2 + 2 * T, 1], ['T-LO', 2 + 4 * T, 1], ['T-LO', 2 + 5 * T, 1]] }] },
   ];
+  FILL_BLOCKS.sort((a, b) => (a.grp === 'song' ? 0 : 1) - (b.grp === 'song' ? 0 : 1));
   function mkWork(b, bi, bar) {
     const key = 'list-' + bi + '-' + bar;
     if (S.works[key]) return S.works[key];
@@ -559,7 +568,9 @@
       for (let h = 0; h < 8; h++) { const v = h / 2; const o = el('option', { value: String(v), textContent: (Math.floor(v) + 1) + '拍目' + (h % 2 ? 'の裏' : '') }); if (S.fillAt === v) o.selected = true; atSel.appendChild(o); }
       atSel.onchange = () => { S.fillAt = atSel.value === '' ? null : Number(atSel.value); drawSheet(); };
       body.appendChild(line('置く場所(この小節の)', atSel));
+      let lastGrp = '';
       FILL_BLOCKS.forEach((fb) => {
+        if (fb.grp !== lastGrp) { lastGrp = fb.grp; body.appendChild(el('p', { className: 'small', textContent: fb.grp === 'song' ? '【曲の途中・つなぎのフィル】手本: Stephen Taylor「5 Reggae Drum Fills」(Black Uhuru、Gregory Isaacs など、実際の曲)' : '【曲頭の導入】手本: Sly Dunbar の曲頭ロール。曲の頭に入るもの(途中のフィルの手本ではない)' })); }
         const r = el('div', { className: 'row' });
         const start = S.fillAt == null ? fb.at : S.fillAt, endB = start + fb.len, need = Math.ceil(endB / 4), ok = bar + need <= b.bars;
         const x = el('button', { type: 'button', className: 'sbtn', textContent: 'あてはめる' }); x.disabled = !ok;
