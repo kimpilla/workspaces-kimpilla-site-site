@@ -468,16 +468,16 @@
 
   // ---- 選んだ小節の編集(下に固定): 直して → 聞いて → 保存 ----
   S.pg = { song: 0, bar: 0 };
-  S.sheetOpen = true; S.sheetTab = 'grid'; S.fillHalf = 1; S.fillSel = ''; S.scope = 'this';
+  S.sheetOpen = true; S.sheetTab = 'grid'; S.fillHalf = 1; S.fillSel = ''; S.fillAt = null; S.scope = 'this';
   const MUTE_OF = (b) => (n) => OFFS.some(([k]) => b.off && b.off[k] && OFF_ROWS[k].includes(n));
   // フィルのブロック。手本: スライ・ダンバーの曲頭ロール譜面(Todd Bishop 採譜、Serge Gainsbourg『Aux Armes et caetera』)を、譜面の位置のまま起こしたもの。
   // bars[i] = { from: この小節の何拍目から置き換えるか(0=1拍目), hits: [[行, 小節の頭からの拍(1拍=1), 1=鳴る/2=アクセント/3=ゴースト], …] }。3連・6連・32分も、そのまま(1/3拍=8コマ)
   // 譜面は、ゴーストの小さい音符=ゴースト(3)、アクセント記号=アクセント(2)、バズロール=2連打、ペダルのハイハット(下のx)=ゴーストのハット。タンバレやシンドラムは、近いタムに置く
   const T = 1 / 3, S6 = 1 / 6;
   const FILL_BLOCKS = [
-    { name: 'Javanaise Remake の出だし(3拍)', note: '2拍目から。16分3連のスネア → 8分 → タム', bars: [{ from: 1, hits: [['SNARE', 1.5, 1], ['SNARE', 1.5 + S6, 1], ['SNARE', 1.5 + 2 * S6, 1], ['SNARE', 2, 1], ['T-HI', 2.5, 1], ['T-HI', 2.75, 1], ['T-HI', 3, 1]] }] },
-    { name: 'Ecce Homo の出だし(2拍)', note: '3拍目から。ゴーストのスネア3つ → スネア → スネア → タム', bars: [{ from: 2, hits: [['SNARE', 2, 3], ['SNARE', 2.25, 3], ['SNARE', 2.5, 3], ['SNARE', 2.75, 1], ['SNARE', 3, 1], ['T-HI', 3.5, 1]] }] },
-    { name: 'Overseas Telegram の出だし(1小節)', note: '1小節。バズのスネアとキック、最後にオープンハット', bars: [{ from: 0, hits: [['SNARE', 0, 1], ['SNARE', 0.125, 3], ['KICK', 0.5, 1], ['SNARE', 1.5, 1], ['SNARE', 1.625, 3], ['KICK', 2, 1], ['KICK', 2.5, 1], ['SNARE', 3, 2], ['OPEN', 3, 2], ['HAT', 3.5, 3]] }] },
+    { name: 'Javanaise Remake の出だし(3拍)', at: 1, len: 3, note: '2拍目から。16分3連のスネア → 8分 → タム', bars: [{ from: 1, hits: [['SNARE', 1.5, 1], ['SNARE', 1.5 + S6, 1], ['SNARE', 1.5 + 2 * S6, 1], ['SNARE', 2, 1], ['T-HI', 2.5, 1], ['T-HI', 2.75, 1], ['T-HI', 3, 1]] }] },
+    { name: 'Ecce Homo の出だし(2拍)', at: 2, len: 2, note: '3拍目から。ゴーストのスネア3つ → スネア → スネア → タム', bars: [{ from: 2, hits: [['SNARE', 2, 3], ['SNARE', 2.25, 3], ['SNARE', 2.5, 3], ['SNARE', 2.75, 1], ['SNARE', 3, 1], ['T-HI', 3.5, 1]] }] },
+    { name: 'Overseas Telegram の出だし(1小節)', at: 0, len: 4, note: '1小節。バズのスネアとキック、最後にオープンハット', bars: [{ from: 0, hits: [['SNARE', 0, 1], ['SNARE', 0.125, 3], ['KICK', 0.5, 1], ['SNARE', 1.5, 1], ['SNARE', 1.625, 3], ['KICK', 2, 1], ['KICK', 2.5, 1], ['SNARE', 3, 2], ['OPEN', 3, 2], ['HAT', 3.5, 3]] }] },
   ];
   function mkWork(b, bi, bar) {
     const key = 'list-' + bi + '-' + bar;
@@ -553,23 +553,27 @@
       const ac = el('span'); ACCENTS.forEach(([k, n]) => { ac.appendChild(chip(n, w.opts.accent === k ? 'on' : '', () => { w.opts.accent = k; recompute(); })); }); body.appendChild(line('アクセント', ac));
       body.appendChild(el('p', { className: 'small', textContent: '押すと、この小節のグリッドが作り直される(グリッドで手直しした分は消える)。「少し」は1〜2拍目に1か所、「多め」は小節の中に複数入る。グリッドのタブで確認して、聞いて、良ければ「保存」。' }));
     } else {
-      body.appendChild(el('p', { className: 'small', textContent: 'フィルのブロックを選んで「あてはめる」と、いま選んでいる小節のグリッドが、その形に替わる。聞いて、良ければ「保存」。手本の譜面から、譜面の位置のまま起こしたもの(3連・6連は、グリッドの「細かさ」を切り替えると見える)。' }));
+      body.appendChild(el('p', { className: 'small', textContent: '「置く場所」を決めて、フィルのブロックを「あてはめる」と、いま選んでいる小節(から後ろ)のグリッドが、その形に替わる。小節の終わりを越える分は、次の小節に続く(点線の小節ができる)。聞いて、良ければ「保存」。手本の譜面から、譜面の位置のまま起こしたもの(3連・6連は、グリッドの「細かさ」を切り替えると見える)。' }));
+      // 置く場所: ブロックを、選んでいる小節の何拍目から置くか(小節の終わりを越える分は、次の小節に続く)
+      const atSel = el('select'); atSel.appendChild(el('option', { value: '', textContent: '元の位置' }));
+      for (let h = 0; h < 8; h++) { const v = h / 2; const o = el('option', { value: String(v), textContent: (Math.floor(v) + 1) + '拍目' + (h % 2 ? 'の裏' : '') }); if (S.fillAt === v) o.selected = true; atSel.appendChild(o); }
+      atSel.onchange = () => { S.fillAt = atSel.value === '' ? null : Number(atSel.value); drawSheet(); };
+      body.appendChild(line('置く場所(この小節の)', atSel));
       FILL_BLOCKS.forEach((fb) => {
         const r = el('div', { className: 'row' });
-        const need = fb.bars.length, ok = bar + need <= b.bars;
+        const start = S.fillAt == null ? fb.at : S.fillAt, endB = start + fb.len, need = Math.ceil(endB / 4), ok = bar + need <= b.bars;
         const x = el('button', { type: 'button', className: 'sbtn', textContent: 'あてはめる' }); x.disabled = !ok;
         x.onclick = () => {
           let fine = 0;
-          fb.bars.forEach((pb, i) => {
-            const wk = mkWork(b, bi, bar + i), f0 = Math.round(pb.from * SL);
-            ROWS.forEach((n) => { if (n !== 'CRASH') for (let s = f0; s < NS; s++) wk.rows[n][s] = 0; });
-            pb.hits.forEach(([n, pos, v]) => { const s = Math.round(pos * SL); wk.rows[n][s] = v; if (s % U16 && s % 4 === 0) fine = 6; else if (s % U16 && s % 3 === 0 && !fine) fine = 8; });
-            wk.dirty = true; wk.fl = true;
-          });
+          const g0 = Math.round(start * SL), g1 = Math.round(endB * SL), wks = {};
+          const W = (k) => wks[k] || (wks[k] = mkWork(b, bi, bar + k));
+          for (let g = g0; g < g1; g++) { const wk = W(Math.floor(g / NS)); ROWS.forEach((n) => { if (n !== 'CRASH') wk.rows[n][g % NS] = 0; }); }
+          fb.bars[0].hits.forEach(([n, pos, v]) => { const g = Math.round((start + pos - fb.at) * SL), wk = W(Math.floor(g / NS)), s = g % NS; wk.rows[n][s] = v; if (s % U16 && s % 4 === 0) fine = 6; else if (s % U16 && s % 3 === 0 && !fine) fine = 8; });
+          Object.values(wks).forEach((wk) => { wk.dirty = true; wk.fl = true; });
           if (fine) S.res = fine;
-          S.sheetTab = 'grid'; if (need > 1) S.scope = 'pend'; S.pg.bar = Math.floor(Math.round(fb.bars[0].from * SL) / (SL * (S.res <= 6 ? 2 : 1))); drawSeq(); drawSheet(); refreshPlay();
+          S.sheetTab = 'grid'; if (need > 1) S.scope = 'pend'; S.pg.bar = Math.floor((g0 % NS) / (SL * (S.res <= 6 ? 2 : 1))); drawSeq(); drawSheet(); refreshPlay();
         };
-        r.appendChild(x); r.appendChild(el('span', { textContent: fb.name + (ok ? '' : '(この小節からは入らない)') })); r.appendChild(el('span', { className: 'small', textContent: ' ' + fb.note }));
+        r.appendChild(x); r.appendChild(el('span', { textContent: fb.name + (ok ? '' : '(この小節からは入らない)') })); r.appendChild(el('span', { className: 'small', textContent: ' ' + (need > 1 ? '【次の小節に続く】' : '') + fb.note }));
         body.appendChild(r);
       });
       body.appendChild(el('p', { className: 'small', textContent: 'フィルのあとの小節の1拍目には、クラッシュが鳴る(「曲のリズム」の設定)。' }));
