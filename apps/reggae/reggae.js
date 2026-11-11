@@ -436,8 +436,8 @@
     const g = el('div', { className: 'ovg' });
     if (b.intro) { const x = el('div', { className: 'bar fl intro' }); x.dataset.kind = kind; x.dataset.bi = bi; x.dataset.bar = 0; x.appendChild(el('span', { className: 'bn', textContent: '曲頭フィル' })); g.appendChild(x); }
     else for (let k = 0; k < b.bars; k++) g.appendChild(barCell(b, bi, k, kind));
-    d.appendChild(g);
     if (kind === 'list') d.appendChild(pickRow(b, bi));
+    d.appendChild(g);
     if (openB.has(b)) {
       const m = el('div', { className: 'bmore' });
       controls(m, b, drawSeq);
@@ -525,32 +525,32 @@
     S.sheetTab = 'grid'; if (need > 1) S.scope = 'pend'; S.pg.bar = Math.floor((g0 % NS) / (SL * (S.res <= 6 ? 2 : 1))); drawSeq(); drawSheet(); refreshPlay();
   }
   // 並びのブロックから直接、曲頭・4小節目・8小節目のフィルを選ぶ。4小節目・8小節目は、そのフィルの終わりが、その小節の終わりに着くように置く
-  const pickOpen = new Map();
-  function pickRow(b, bi) {
-    const wrap = el('div', { className: 'pick' });
-    const kinds = [['intro', '曲頭フィルを選ぶ', 0]];
-    if (b.bars >= 4) kinds.push(['song', '4小節目のフィルを選ぶ', 4]);
-    if (b.bars >= 8) kinds.push(['song', '8小節目のフィルを選ぶ', 8]);
-    const btns = el('div', { className: 'row' });
-    kinds.forEach(([grp, txt, endBar]) => {
-      const key = txt, on = pickOpen.get(b) === key;
-      btns.appendChild(chip(txt, on ? 'on' : '', () => { if (on) pickOpen.delete(b); else pickOpen.set(b, key); drawSeq(); }));
-      if (!on) return;
-      const list = el('div', { className: 'pl' });
-      allFills().filter((f) => f.grp === grp).forEach((fb) => {
-        const r = el('div', { className: 'row' });
-        const x = el('button', { type: 'button', className: 'sbtn', textContent: 'あてはめる' });
-        x.onclick = () => {
-          const startAbs = grp === 'intro' ? fb.at : endBar * 4 - fb.len, bar0 = Math.floor(startAbs / 4), st = startAbs - bar0 * 4;
-          if (startAbs < 0) return;
-          placeFill(b, bi, fb, bar0, st); pickOpen.delete(b); drawSeq();
-        };
-        r.appendChild(x); r.appendChild(el('span', { textContent: fb.name + (fb.mine ? '(自分)' : '') })); list.appendChild(r);
-      });
-      wrap.dataset.list = '1'; wrap.appendChild(el('div', { className: 'small', textContent: txt.replace('を選ぶ', '') + ': 一覧から選ぶと、グリッドに入る(「グリッド」で確認して直せる)' })); wrap.appendChild(list);
+  function closePick() { const o = document.getElementById('pickPanel'); if (o) o.remove(); }
+  function showPick(b, bi, grp, txt, endBar) {
+    closePick();
+    const pn = el('div', { id: 'pickPanel' });
+    pn.style.cssText = 'position:fixed;left:8px;right:8px;top:8px;max-height:80vh;overflow:auto;background:#fff;color:#111;border:2px solid #111;padding:10px;z-index:50;box-shadow:0 4px 24px rgba(0,0,0,.35)';
+    const hd = el('div', { className: 'row' }); hd.appendChild(el('strong', { textContent: txt + 'を選ぶ' }));
+    const cl = el('button', { type: 'button', className: 'sbtn', textContent: '閉じる' }); cl.onclick = closePick; hd.appendChild(cl); pn.appendChild(hd);
+    pn.appendChild(el('p', { className: 'small', textContent: grp === 'intro' ? '選ぶと、このブロックの1小節目に入る。' : '選ぶと、フィルの終わりが' + endBar + '小節目の終わりに着くように入る。' }));
+    allFills().filter((f) => f.grp === grp).forEach((fb) => {
+      const x = el('button', { type: 'button', className: 'sbtn', textContent: fb.name + (fb.mine ? '(自分)' : '') }); x.style.cssText = 'display:block;width:100%;text-align:left;margin:0 0 6px;padding:10px';
+      x.onclick = () => {
+        const startAbs = grp === 'intro' ? fb.at : endBar * 4 - fb.len, bar0 = Math.floor(startAbs / 4), st = startAbs - bar0 * 4;
+        if (startAbs < 0) return;
+        closePick(); placeFill(b, bi, fb, bar0, st);
+      };
+      pn.appendChild(x);
     });
-    wrap.insertBefore(btns, wrap.firstChild);
-    return wrap;
+    document.body.appendChild(pn);
+  }
+  // 並びのブロックから直接、曲頭・4小節目・8小節目のフィルを選ぶ
+  function pickRow(b, bi) {
+    const btns = el('div', { className: 'row' });
+    btns.appendChild(chip('曲頭フィル', '', () => showPick(b, bi, 'intro', '曲頭フィル', 0)));
+    if (b.bars >= 4) btns.appendChild(chip('4小節目のフィル', '', () => showPick(b, bi, 'song', '4小節目のフィル', 4)));
+    if (b.bars >= 8) btns.appendChild(chip('8小節目のフィル', '', () => showPick(b, bi, 'song', '8小節目のフィル', 8)));
+    return btns;
   }
   function drawSheet() {
     const box = $('sheet'); box.innerHTML = '';
