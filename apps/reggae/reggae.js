@@ -196,7 +196,7 @@
   }
 
   // ---- 再生 ----
-  let playing = false, timer = 0, session = 0, nodesUntil = 0;
+  let playing = false, timer = 0, session = 0, nodesUntil = 0, startAt = 0;
   // 鳴らしている小節を、小節ビューで点滅させる
   let segs = [], raf = 0;
   function showPlaying() {
@@ -225,10 +225,12 @@
     const my = ++session; segs = []; cancelAnimationFrame(raf); raf = requestAnimationFrame(trackLoop);
     const run = () => {
       if (!playing || my !== session) return;
-      const { ev, dur } = timeline(previewBlocks, previewInfo.bi), t0 = Math.max(ctx.currentTime + 0.08, nodesUntil);
+      const tl = timeline(previewBlocks, previewInfo.bi); let ev = tl.ev; const dur = tl.dur, skip = startAt > 0 && startAt < dur ? startAt : 0; startAt = 0;
+      if (skip) ev = ev.filter((e) => e.t >= skip).map((e) => Object.assign({}, e, { t: e.t - skip }));
+      const t0 = Math.max(ctx.currentTime + 0.08, nodesUntil);
       ev.forEach((e) => hit(ctx, (row) => partGain[PART_OF[row]], t0 + e.t, e.row, e.vel));
-      segs.push({ audition: !!S.audition, t0, dur, preview: !!previewBlocks, pk: previewInfo.kind, pbi: previewInfo.bi, blocks: (previewBlocks || S.blocks).map((x) => ({ bars: x.bars, reps: x.reps })) }); if (segs.length > 3) segs.shift();
-      nodesUntil = t0 + dur;
+      segs.push({ audition: !!S.audition, t0: t0 - skip, dur, preview: !!previewBlocks, pk: previewInfo.kind, pbi: previewInfo.bi, blocks: (previewBlocks || S.blocks).map((x) => ({ bars: x.bars, reps: x.reps })) }); if (segs.length > 3) segs.shift();
+      nodesUntil = t0 + dur - skip;
       if ($('loop').checked || S.audition) timer = setTimeout(run, Math.max(50, (nodesUntil - ctx.currentTime - 1) * 1000));
       else timer = setTimeout(() => { if (my === session) stopAll(); }, (nodesUntil - ctx.currentTime + 1.5) * 1000);
     };
@@ -288,7 +290,12 @@
   let rfT = 0;
   function refreshPlay() {       // 鳴らしている間に直したら、すぐ鳴らし直す(音は、ループの頭でまとめて予約しているため)
     if (!playing) return; clearTimeout(rfT);
-    rfT = setTimeout(() => { if (!playing) return; const aud = S.audition, pb = previewBlocks, pi = previewInfo; stopAll(); if (aud) auditionBar(); else { previewBlocks = pb; previewInfo = pi; play(); } }, 120);
+    rfT = setTimeout(() => {
+      if (!playing) return; const aud = S.audition, pb = previewBlocks, pi = previewInfo; let pos = 0;
+      if (ctx) { const now = ctx.currentTime; segs.forEach((sg) => { if (sg.t0 <= now && now < sg.t0 + sg.dur) pos = now - sg.t0; }); }
+      stopAll(); startAt = pos;     // いまの位置から続ける(頭に戻らない)
+      if (aud) auditionBar(); else { previewBlocks = pb; previewInfo = pi; play(); }
+    }, 120);
   }
   function changed(full) {
     save(); updateTotal(); refreshPlay();
@@ -394,11 +401,24 @@
   S.pg = { song: 0, bar: 0 };
   S.sheetOpen = true; S.sheetTab = 'grid'; S.fillHalf = 1; S.fillSel = ''; S.scope = 'this';
   const MUTE_OF = (b) => (n) => OFFS.some(([k]) => b.off && b.off[k] && OFF_ROWS[k].includes(n));
+  // フィルの型。半小節(8コマ)の中の位置で書く。8分音符を中心に、最後だけ細かくする(レゲエのゆったりしたテンポでは、16分の連打は忙しすぎる)
   const FILLS = {
-    short: { 'タム下り': [['T-HI', 0], ['T-HI', 1], ['T-MID', 2], ['T-MID', 3], ['T-LO', 4], ['T-LO', 5]], 'スネア連打': [0, 1, 2, 3, 4, 5].map((i) => ['SNARE', i]), 'スネア+タム': [['SNARE', 0], ['SNARE', 2], ['T-MID', 3], ['T-MID', 4], ['T-LO', 5]], 'ハット細かく': [0, 1, 2, 3, 4, 5].map((i) => ['HAT', i]), 'ハット→オープン': [['HAT', 0], ['HAT', 1], ['HAT', 2], ['HAT', 3], ['HAT', 4], ['OPEN', 5]] },
-    long: { 'タム回し(長)': [['SNARE', 0], ['SNARE', 2], ['SNARE', 4], ['T-HI', 5], ['T-HI', 6], ['T-HI', 7], ['T-MID', 8], ['T-MID', 9], ['T-MID', 10], ['T-MID', 11], ['T-LO', 12], ['T-LO', 13], ['T-LO', 14], ['T-LO', 15]], 'スネアロール(長)': [0, 2, 4, 6, 8, 9, 10, 11, 12, 13, 14, 15].map((i) => ['SNARE', i]), 'ハット→タム(長)': [0, 1, 2, 3, 4, 5, 6, 7].map((i) => ['HAT', i]).concat([['T-HI', 8], ['T-HI', 9], ['T-MID', 10], ['T-MID', 11], ['T-LO', 12], ['T-LO', 13], ['T-LO', 14], ['T-LO', 15]]) },
+    short: {
+      'タム下り': [['T-HI', 0], ['T-HI', 2], ['T-MID', 4], ['T-LO', 6]],
+      'スネア→タム': [['SNARE', 0], ['SNARE', 2], ['T-MID', 4], ['T-LO', 6]],
+      'スネア4つ': [['SNARE', 0], ['SNARE', 2], ['SNARE', 4], ['SNARE', 6]],
+      '最後に詰める': [['SNARE', 0], ['SNARE', 4], ['SNARE', 6], ['SNARE', 7]],
+      'リムで止める': [['RIM', 4], ['RIM', 6]],
+      'ハット→オープン': [['HAT', 0], ['HAT', 2], ['HAT', 4], ['OPEN', 6]],
+      'ハット細かく': [['HAT', 0], ['HAT', 2], ['HAT', 4], ['HAT', 5], ['HAT', 6], ['HAT', 7]],
+    },
+    long: {
+      'タム回し(長)': [['SNARE', 0], ['SNARE', 4], ['T-HI', 8], ['T-HI', 10], ['T-MID', 12], ['T-LO', 14]],
+      'スネアロール(長)': [['SNARE', 0], ['SNARE', 4], ['SNARE', 8], ['SNARE', 10], ['SNARE', 12], ['SNARE', 13], ['SNARE', 14], ['SNARE', 15]],
+      'ハット→タム(長)': [['HAT', 0], ['HAT', 2], ['HAT', 4], ['HAT', 6], ['T-HI', 8], ['T-HI', 10], ['T-MID', 12], ['T-LO', 14]],
+    },
   };
-  const FILL_KEEP = ['ハット細かく', 'ハット→オープン'];
+  const FILL_KEEP = ['ハット細かく', 'ハット→オープン'];     // これらは、ほかの音を残す
   function getWork(b, bi, bar) {
     const key = S.cur.k + '-' + bi + '-' + bar;
     if (!S.work || S.work.key !== key) {
@@ -472,7 +492,7 @@
       const ac = el('span'); ACCENTS.forEach(([k, n]) => { ac.appendChild(chip(n, w.opts.accent === k ? 'on' : '', () => { w.opts.accent = k; recompute(); })); }); body.appendChild(line('アクセント', ac));
       body.appendChild(el('p', { className: 'small', textContent: '押すと、この小節のグリッドが作り直される(グリッドで手直しした分は消える)。聞いて、良ければ「保存」。' }));
     } else {
-      const half = S.fillHalf, whole = half === 2, e0 = whole ? 16 : half * 8 + 8, s0 = whole ? 0 : e0 - 6;
+      const half = S.fillHalf, whole = half === 2, s0 = whole ? 0 : half * 8, e0 = whole ? 16 : s0 + 8;
       const rg = el('div', { className: 'row' }); rg.appendChild(el('span', { className: 'small', textContent: '入れる場所' }));
       [[0, '1〜2拍目'], [1, '3〜4拍目'], [2, '1〜4拍目(長め)']].forEach(([h, t]) => { const x = el('button', { type: 'button', className: 'sbtn' + (half === h ? ' on' : ''), textContent: t }); x.onclick = () => { S.fillHalf = h; S.fillSel = ''; S.pg.bar = h === 2 ? 0 : h; drawSheet(); }; rg.appendChild(x); });
       body.appendChild(rg);
