@@ -490,7 +490,8 @@
   FILL_BLOCKS.sort((a, b) => (a.grp === 'song' ? 0 : 1) - (b.grp === 'song' ? 0 : 1));
   function mkWork(b, bi, bar) {
     const key = 'list-' + bi + '-' + bar;
-    if (S.works[key]) return S.works[key];
+    if (S.works[key] && S.works[key].dirty) return S.works[key];      // 直している途中のものは、そのまま
+    if (S.works[key]) { S.works[key].rows = baseRows(b, bi, bar); return S.works[key]; }      // 直していないものは、曲のリズムの変更などを、毎回取り込む
     const rows = baseRows(b, bi, bar), E = barEff(b, bar);
     return (S.works[key] = { key, rows, dirty: false, fl: !!(b.ov[bar] && b.ov[bar].fl) || !!E.fill, opts: { add: Object.assign({}, E.add), accent: E.accent, crashAt: rows.CRASH[0] ? 1 : rows.CRASH[48] ? 3 : 0 } });
   }
