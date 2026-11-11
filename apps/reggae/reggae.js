@@ -426,7 +426,7 @@
   function blockCard(b, kind, bi) {
     const d = el('div', { className: 'bcard' + (kind === 'draft' ? ' draft' : '') });
     const head = el('div', { className: 'bt' });
-    const mu = OFFS.filter(([k]) => b.off && b.off[k]).map(([, n]) => n).join('・'), title = 'ブロック ' + (bi + 1) + (b.intro ? '・曲頭ロール' : '・' + b.bars + '小節・' + b.reps + '回') + (mu ? '・ミュート: ' + mu : '');
+    const mu = OFFS.filter(([k]) => b.off && b.off[k]).map(([, n]) => n).join('・'), title = 'ブロック ' + (bi + 1) + (b.intro ? '・曲頭フィルイン' : '・' + b.bars + '小節・' + b.reps + '回') + (mu ? '・ミュート: ' + mu : '');
     head.appendChild(el('span', { className: 'btt', textContent: title }));
     const btns = el('span', { className: 'bbtns' });
     const pl = el('button', { type: 'button', className: 'sbtn bplay', textContent: '▶' }); pl.onclick = () => playOnly(b, kind, bi, pl); pl.title = 'このブロックだけ鳴らす'; btns.appendChild(pl);
@@ -434,7 +434,7 @@
     const more = el('button', { type: 'button', className: 'sbtn', textContent: '⋯' }); more.title = '長さ・回数・標準の設定・並べ替え・複製・削除'; more.onclick = () => { if (openB.has(b)) openB.delete(b); else openB.add(b); drawSeq(); }; btns.appendChild(more);
     head.appendChild(btns); d.appendChild(head);
     const g = el('div', { className: 'ovg' });
-    if (b.intro) { const x = el('div', { className: 'bar fl intro' }); x.dataset.kind = kind; x.dataset.bi = bi; x.dataset.bar = 0; x.appendChild(el('span', { className: 'bn', textContent: 'ロール' })); g.appendChild(x); }
+    if (b.intro) { const x = el('div', { className: 'bar fl intro' }); x.dataset.kind = kind; x.dataset.bi = bi; x.dataset.bar = 0; x.appendChild(el('span', { className: 'bn', textContent: '曲頭フィル' })); g.appendChild(x); }
     else for (let k = 0; k < b.bars; k++) g.appendChild(barCell(b, bi, k, kind));
     d.appendChild(g);
     if (openB.has(b)) {
@@ -690,7 +690,7 @@
   function drawBlockExports() {
     const box = $('blkExp'); box.innerHTML = '';
     if (!S.blocks.length) { box.appendChild(el('p', { className: 'small', textContent: '並びにブロックを入れると、ここに、ブロックごとの書き出しが出る。' })); return; }
-    S.blocks.forEach((b, i) => { const x = el('button', { type: 'button', textContent: 'ブロック ' + (i + 1) + (b.intro ? '(ロール)' : '(' + b.bars + '小節)') }); x.onclick = () => exportWav(null, 'block' + (i + 1), i); box.appendChild(x); });
+    S.blocks.forEach((b, i) => { const x = el('button', { type: 'button', textContent: 'ブロック ' + (i + 1) + (b.intro ? '(曲頭フィルイン)' : '(' + b.bars + '小節)') }); x.onclick = () => exportWav(null, 'block' + (i + 1), i); box.appendChild(x); });
   }
   const origChanged = changed;
 
