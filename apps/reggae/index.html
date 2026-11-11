@@ -54,13 +54,49 @@
   .c.fz.ac:hover:not(:disabled) { background: var(--accent); }
   .chip:hover:not(:disabled), .parts button:hover:not(:disabled) { background: var(--bg); color: var(--fg); }
   .chip.on:hover:not(:disabled), .parts button.on:hover:not(:disabled) { background: var(--fg); color: var(--bg); }
-  .bars, .ovg { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 4px 0; padding: 4px; }
-  .bar { min-width: 0; margin: 0; padding: 3px 4px; min-height: 64px; font-size: 11px; line-height: 1.3; display: flex; flex-direction: column; align-items: stretch; gap: 1px; overflow: hidden; background: var(--bg); color: var(--fg); border: 1px solid var(--muted); text-align: left; }
+  .bars, .ovg { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 4px 0; padding: 4px; }
+  .bar { min-width: 0; margin: 0; padding: 0; min-height: 44px; font: 700 16px/1 ui-monospace, monospace; display: flex; align-items: center; justify-content: center; background: var(--bg); color: var(--fg); border: 1px solid var(--muted); }
+  header { padding-top: 8px !important; padding-bottom: 6px !important; }
+  h1 { font-size: 16px !important; margin: 6px 0 4px !important; }
+  .bar { scroll-margin-top: 90px; scroll-margin-bottom: 64vh; }
+  .top { position: sticky; top: 0; z-index: 5; background: var(--bg); display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--line); }
+  .top button { margin: 0; padding: 6px 12px; }
+  .tabs { display: flex; margin: 8px 0; }
+  .tabs button { flex: 1; margin: 0; }
+  .tabs button.on { background: var(--fg); color: var(--bg); }
+  .tabs button.on:hover:not(:disabled) { background: var(--fg); color: var(--bg); }
+  .sheet { position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; max-height: 64vh; overflow-y: auto; background: var(--bg); border-top: 2px solid var(--fg); padding: 8px max(16px, env(safe-area-inset-left, 0px)) max(10px, env(safe-area-inset-bottom, 0px)); }
+  .sheet[hidden] { display: none; }
+  body.onS header, body.onS h1 { display: none; }
+  body.onS main { padding-bottom: 64vh; }
+  .sheet .row { margin: 4px 0; }
+  .sheet .garrow { min-height: 40px; }
+  .sheet .c { height: 30px; }
+  .foldbtn { margin-left: auto !important; }
+  body.onS.shut main { padding-bottom: 130px; }
+  .minirow { display: grid; gap: 4px; margin: 4px 0; }
+  .bar.mini { min-height: 34px; font-size: 14px; }
+  .sh { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+  .pendtxt { color: var(--accent); font-size: 13px; font-weight: 700; }
+  .sbtn { padding: 5px 10px; margin: 0 6px 4px 0; font-size: 13px; }
+  .sbtn.on { background: var(--fg); color: var(--bg); }
+  .sbtn.on:hover:not(:disabled) { background: var(--fg); color: var(--bg); }
+  .stabs { display: flex; gap: 4px; margin: 6px 0; flex-wrap: wrap; }
+  .stab { margin: 0; padding: 4px 8px; font-size: 13px; }
+  .stab.on { background: var(--fg); color: var(--bg); }
+  .stab.on:hover:not(:disabled) { background: var(--fg); color: var(--bg); }
+  .bcard { margin: 6px 0 12px; }
+  .bt { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+  .btt { font-weight: 700; font-size: 14px; }
+  .bbtns { white-space: nowrap; }
+  .bbtns .sbtn { margin: 0 0 0 4px; }
+  .bmore { border: 1px solid var(--line); padding: 6px 10px; margin: 4px 0; }
+  .bar.pend { border-style: dashed; border-width: 2px; }
+
   .bar.fl { background: var(--accent); border-color: var(--accent); color: #fff; }
   .bar.ex { background: var(--fg); border-color: var(--fg); color: var(--bg); }
   .bar.sel { box-shadow: 0 0 0 2px var(--bg), 0 0 0 5px var(--fg); }
   .bar.play { filter: invert(1); }
-  .bar .bn { font-weight: 700; }
   .bar i { font-style: normal; overflow: hidden; white-space: nowrap; }
   .bar.intro { cursor: default; }
   .bar:hover:not(:disabled) { background: var(--bg); color: var(--fg); }
@@ -86,66 +122,51 @@
 </header>
 <main>
 <h1>レゲエ・ビート</h1>
-<p class="muted">曲のリズムを1つ決めて、ブロックごとに「抜く音・フィル・クラッシュ・アクセント」を変えて並べる。パートごと・ブロックごとのループとしてWAVに書き出す。ドラムの音は実録音(Karoryfer Samples の Big Rusty Drums、CC0 で、表示は要らない)。</p>
-
-<div class="row">
+<div class="top">
   <button id="play" type="button">▶ 再生</button>
   <button id="stop" type="button">■ 止める</button>
   <label><input id="loop" type="checkbox" checked> くり返す</label>
+  <label>音 <select id="kit"></select></label>
+  <span class="small" id="total"></span>
 </div>
-<div class="row"><label><input id="land" type="checkbox" checked> フィルのあと、次の1拍目にクラッシュを鳴らす</label></div>
-<p class="small" id="total"></p>
+<div class="tabs"><button id="tabR" type="button">曲のリズム</button><button id="tabS" type="button">並び</button><button id="tabO" type="button">書き出し</button></div>
 
-<h2>曲のリズム</h2>
-<div class="row">
-  <label>パターン <select id="pat"></select></label>
-  <label>テンポ <input id="bpm" type="number" min="50" max="140" inputmode="numeric" style="width:62px"></label>
-</div>
-<div class="knobs" id="songBox"></div>
-<p class="small">シャッフル=8分音符の裏拍の位置(50%でまっすぐ、66%で3連)。全体にかかる。</p>
-<div class="g" id="grid"></div>
-<p class="small" id="gridNote0"></p>
-<details class="fold" id="hatFold">
-  <summary>ハイハット(クセ)</summary>
-  <div><div class="knobs" id="hatBox"></div>
-  <p class="small">アクセントのブレ=ハイハットの強さのばらつき(上の表の濃さで見える)。ゆれ=打つタイミングの前後のずれ。</p></div>
-</details>
+<section id="paneR">
+  <div class="row">
+    <label>パターン <select id="pat"></select></label>
+    <label>テンポ <input id="bpm" type="number" min="50" max="140" inputmode="numeric" style="width:62px"></label>
+  </div>
+  <div class="knobs" id="songBox"></div>
+  <p class="small">シャッフル=8分音符の裏拍の位置(50%でまっすぐ、66%で3連)。全体にかかる。</p>
+  <div class="g" id="grid"></div>
+  <details class="fold" id="hatFold">
+    <summary>ハイハット(クセ)</summary>
+    <div><div class="knobs" id="hatBox"></div>
+    <p class="small">アクセントのブレ=ハイハットの強さのばらつき。ゆれ=打つタイミングの前後のずれ。</p></div>
+  </details>
+  <div class="row"><label><input id="land" type="checkbox" checked> フィルのあと、次の1拍目にクラッシュを鳴らす</label></div>
+</section>
 
-<h2>ブロックを作る</h2>
-<p class="small">曲のリズムを鳴らしながら、変え方をいじって、気に入ったら「ブロックに入れる」で、下の並びの最後に足す。入れたあとも、ここはそのまま残るので、少し変えて続けて入れられる。</p>
-<div class="row"><button id="prev" type="button">▶ これだけ鳴らす</button><button id="addDraft" type="button">＋ ブロックに入れる</button></div>
-<p class="small" id="draftNote"></p>
-<div id="draft"></div>
+<section id="paneS" hidden>
+  <div id="seq"></div>
+</section>
 
-<h2>並び(ブロックごとの変え方)</h2>
-<div id="overview"></div>
-<div id="barBox"></div>
-<div id="rows"></div>
-<div class="row">
-  <button id="add" type="button">＋ ブロックを足す</button>
-  <button id="addIntro" type="button">＋ 曲頭ロール</button>
-  <button id="reset" type="button">最初に戻す</button>
-</div>
-
-<h2>パート</h2>
-<table class="parts" id="parts"></table>
-<p class="small">M=ミュート、S=ソロ。鳴らしながら出し入れできる。「書き出し」は、そのパートだけを、全体と同じ長さのWAVにする。</p>
-
-<h2 id="gridTitle">フィルを直す</h2>
-<p class="small" id="fillNone">フィルを入れたブロックを選ぶと、ここで直せる。</p>
-<div id="fillBox">
-  <div class="g" id="fgrid"></div>
-  <p class="small" id="gridNote"></p>
-</div>
-
-<h2>保存</h2>
-<div class="row"><button id="saveMix" type="button">いまの鳴らし方(M・S反映)を1つのWAVで書き出す</button></div>
-<div class="row"><label><input id="wrap" type="checkbox" checked> 余韻を頭に重ねて、そのままループできる長さにする</label></div>
-<div class="row"><label><input id="unify" type="checkbox"> ブロックごとの書き出しで、長さをそろえる(足りない分は、くり返す)</label> <label>小節数 <input id="unifyBars" type="number" min="1" max="64" inputmode="numeric" placeholder="自動" style="width:70px"></label></div>
-<p class="small">小節数が空なら、いちばん長いブロックに合わせる。数を入れると、その小節数に合わせる(短いブロックはくり返し、長いブロックは途中で切る)。</p>
-<p class="small status" id="status"></p>
-<p class="small">ブロックごとの書き出しは、並びの各ブロックの「書き出し」から。M・Sも反映される。Loopy ProやKoalaに入れて、そのまま切り替えられる。ドラムの音は、Karoryfer Samples の Big Rusty Drums(CC0)。</p>
+<section id="paneO" hidden>
+  <h2>パート</h2>
+  <table class="parts" id="parts"></table>
+  <p class="small">M=ミュート、S=ソロ。鳴らしながら出し入れできる。「書き出し」は、そのパートだけを、全体と同じ長さのWAVにする。</p>
+  <h2>ブロックごとの書き出し</h2>
+  <div class="row" id="blkExp"></div>
+  <div class="row"><label><input id="unify" type="checkbox"> 長さをそろえる(足りない分は、くり返す)</label> <label>小節数 <input id="unifyBars" type="number" min="1" max="64" inputmode="numeric" placeholder="自動" style="width:70px"></label></div>
+  <p class="small">小節数が空なら、いちばん長いブロックに合わせる。Loopy ProやKoalaに入れて、そのまま切り替えられる。</p>
+  <h2>全部</h2>
+  <div class="row"><button id="saveMix" type="button">いまの鳴らし方(M・S反映)を1つのWAVで書き出す</button></div>
+  <div class="row"><label><input id="wrap" type="checkbox" checked> 余韻を頭に重ねて、そのままループできる長さにする</label></div>
+  <p class="small status" id="status"></p>
+  <p class="small">ドラムの音は実録音(Karoryfer Samples の Big Rusty Drums、CC0)。</p>
+</section>
 </main>
+<div class="sheet" id="sheet"></div>
 <script src="../../audio-unlock.js?v=4"></script>
 <script src="../common/wav.js"></script>
 <script src="samples.js"></script>
