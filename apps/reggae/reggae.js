@@ -713,10 +713,9 @@
     const t = $('parts'); t.innerHTML = '';
     PARTS.forEach(([k, n]) => {
       const tr = el('tr'); tr.appendChild(el('td', { textContent: n }));
-      const m = el('td', { className: 'm' }), mb = el('button', { type: 'button', textContent: 'ミュート' }), sb = el('button', { type: 'button', textContent: 'ソロ' });
-      const sync = () => { mb.classList.toggle('on', !!S.mute[k]); sb.classList.toggle('on', !!S.solo[k]); };
-      mb.onclick = () => { S.mute[k] = !S.mute[k]; sync(); updateGains(); }; sb.onclick = () => { S.solo[k] = !S.solo[k]; sync(); updateGains(); };
-      m.appendChild(mb); m.appendChild(sb); tr.appendChild(m); sync();
+      const m = el('td', { className: 'm' }), lb = el('label'), cb = el('input', { type: 'checkbox' });
+      cb.checked = !S.mute[k]; cb.onchange = () => { S.mute[k] = !cb.checked; updateGains(); };
+      lb.appendChild(cb); lb.appendChild(document.createTextNode(' 入れる')); m.appendChild(lb); tr.appendChild(m);
       const e = el('td'), eb = el('button', { type: 'button', textContent: '書き出し' }); eb.onclick = () => { const q = expRange(); exportWav(k, k + q.sfx, q.blk); }; e.appendChild(eb); tr.appendChild(e); t.appendChild(tr);
     });
   }
