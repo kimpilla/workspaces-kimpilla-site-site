@@ -10,14 +10,17 @@
   const BASE_VEL = { CRASH: 0.85, OPEN: 0.7, RIM: 0.8, SNARE: 0.8, 'T-HI': 0.78, 'T-MID': 0.78, 'T-LO': 0.78, KICK: 0.85 };
   const BUF = { KICK: ['kickS', 'kickH'], RIM: ['ssS', 'ssH'], SNARE: ['snS', 'snH'], HAT: ['htS', 'htH'], OPEN: ['hoS', 'hoS'], 'T-HI': ['t1', 't1'], 'T-MID': ['t2', 't2'], 'T-LO': ['t3', 't3'], CRASH: ['cr', 'cr'] };
 
-  const zero = () => { const r = {}; ROWS.forEach((n) => { r[n] = new Array(16).fill(0); }); return r; };
+  // 1小節 = 96コマ(1拍 = 24コマ)。16分(6コマごと)・8分3連(8コマ)・16分3連=6連(4コマ)・32分(3コマ)が、どれも置ける
+  const SL = 24, NS = 96, U16 = 6;
+  const zero = () => { const r = {}; ROWS.forEach((n) => { r[n] = new Array(NS).fill(0); }); return r; };
+  const up16 = (r16) => { const r = {}; ROWS.forEach((n) => { r[n] = new Array(NS).fill(0); (r16[n] || []).forEach((v, i) => { if (v) r[n][i * U16] = v; }); }); return r; };
   const copyRows = (r) => { const o = {}; ROWS.forEach((n) => { o[n] = r[n].slice(); }); return o; };
-  const hats8 = (r) => { for (let i = 0; i < 16; i += 2) r.HAT[i] = 1; };
+  const hats8 = (r) => { for (let i = 0; i < NS; i += 12) r.HAT[i] = 1; };
 
   const PATTERNS = {
-    'ワンドロップ': () => { const r = zero(); hats8(r); r.RIM[8] = 1; r.KICK[8] = 1; return r; },
-    'ロッカーズ': () => { const r = zero(); hats8(r); r.RIM[8] = 1; r.KICK[0] = 1; r.KICK[8] = 1; return r; },
-    'ステッパーズ': () => { const r = zero(); hats8(r); r.RIM[8] = 1; [0, 4, 8, 12].forEach((i) => { r.KICK[i] = 1; }); return r; },
+    'ワンドロップ': () => { const r = zero(); hats8(r); r.RIM[48] = 1; r.KICK[48] = 1; return r; },
+    'ロッカーズ': () => { const r = zero(); hats8(r); r.RIM[48] = 1; r.KICK[0] = 1; r.KICK[48] = 1; return r; },
+    'ステッパーズ': () => { const r = zero(); hats8(r); r.RIM[48] = 1; [0, 24, 48, 72].forEach((i) => { r.KICK[i] = 1; }); return r; },
     '空(自分で作る)': () => zero(),
   };
 
@@ -25,7 +28,7 @@
   const FILL_TYPES = [['none', 'なし'], ['tom', 'タムの下降'], ['light', '軽い飾り'], ['short', '半小節の短い頭'], ['roll', 'スネアロール']];
   const pick = (a) => a[Math.floor(Math.random() * a.length)];
   function genFill(type, alt, intro) {
-    const r = zero(); let from = 0;
+    const r = {}; ROWS.forEach((n) => { r[n] = new Array(16).fill(0); }); let from = 0;
     if (type === 'tom') {
       from = 10;
       const seq = alt % 2 ? ['T-HI', 'T-MID', 'T-HI', 'T-MID', 'T-LO', 'T-LO'] : ['T-HI', 'T-HI', 'T-MID', 'T-MID', 'T-LO', 'T-LO'];
@@ -44,7 +47,7 @@
         r[row][i] = i === 15 ? 2 : 1;
       }
     }
-    return { from, rows: r };
+    return { from: from * U16, rows: up16(r) };
   }
 
   // ---- 曲のリズムと、ブロック(変え方)----
@@ -67,14 +70,15 @@
 
   const S = { song: { pat: 'ワンドロップ', rows: PATTERNS['ワンドロップ'](), bpm: 76 }, blocks: initial(), draft: newBlock(8), cur: null, mute: {}, solo: {}, p: { shuffle: 58, accvar: 35, sway: 30 } };
   const KEY = 'kimpilla_reggae_v2';
-  const okRows = (r) => r && ROWS.every((n) => Array.isArray(r[n]) && r[n].length === 16);
+  const okRows = (r) => r && ROWS.every((n) => Array.isArray(r[n]) && (r[n].length === 16 || r[n].length === NS));
+  const fix96 = (r) => (r && r.CRASH && r.CRASH.length === 16 ? up16(r) : r);
   function save() { try { localStorage.setItem(KEY, JSON.stringify({ song: S.song, blocks: S.blocks, draft: S.draft, p: S.p })); } catch (e) { /* 保存できなくても動く */ } }
   function load() {
     try {
       const o = JSON.parse(localStorage.getItem(KEY) || 'null');
       if (o && o.song && okRows(o.song.rows) && Array.isArray(o.blocks)) {
-        o.blocks.forEach((b) => { if (!okRows(b.fillRows)) b.fillRows = zero(); b.ov = b.ov || {}; b.off = b.off || {}; b.add = Object.assign({ open: 0, ghost: 0 }, b.add); b.alt = b.alt || 0; b.fillBar = b.fillBar || 0; b.crashAt = b.crashAt || 0; b.accent = b.accent || 'keep'; });
-        S.song = { pat: o.song.pat, rows: o.song.rows, bpm: o.song.bpm || 76 }; S.blocks = o.blocks; if (o.draft && okRows(o.draft.fillRows)) { S.draft = Object.assign(newBlock(8), o.draft); S.draft.add = Object.assign({ open: 0, ghost: 0 }, S.draft.add); S.draft.off = S.draft.off || {}; } if (o.p) Object.assign(S.p, o.p);
+        o.blocks.forEach((b) => { if (!okRows(b.fillRows)) b.fillRows = zero(); else { if (b.fillRows.CRASH.length === 16 && b.fillFrom) b.fillFrom = b.fillFrom * U16; b.fillRows = fix96(b.fillRows); } if (b.ov) Object.keys(b.ov).forEach((k) => { const q = b.ov[k]; if (q.rows) q.rows = fix96(q.rows); if (q.fill && q.fill.rows) { if (q.fill.rows.CRASH.length === 16) q.fill.from *= U16; q.fill.rows = fix96(q.fill.rows); } }); b.ov = b.ov || {}; b.off = b.off || {}; b.add = Object.assign({ open: 0, ghost: 0 }, b.add); b.alt = b.alt || 0; b.fillBar = b.fillBar || 0; b.crashAt = b.crashAt || 0; b.accent = b.accent || 'keep'; });
+        S.song = { pat: o.song.pat, rows: fix96(o.song.rows), bpm: o.song.bpm || 76 }; S.blocks = o.blocks; if (o.draft && okRows(o.draft.fillRows)) { S.draft = Object.assign(newBlock(8), o.draft); S.draft.add = Object.assign({ open: 0, ghost: 0 }, S.draft.add); S.draft.off = S.draft.off || {}; } if (o.p) Object.assign(S.p, o.p);
       }
     } catch (e) { /* 読めなければ、最初の状態 */ }
   }
@@ -98,15 +102,15 @@
     const o = copyRows(S.song.rows), sd = bi * 7919 + (bar || 0) * 104729;
     OFFS.forEach(([k]) => { if (E.off[k]) OFF_ROWS[k].forEach((n) => { o[n].fill(0); }); });
     if (E.accent !== 'keep') ['KICK', 'RIM', 'SNARE'].forEach((n, ni) => {
-      for (let i = 0; i < 16; i++) {
+      for (let i = 0; i < NS; i++) {
         if (!o[n][i] || o[n][i] === 3) continue;
-        o[n][i] = E.accent === 'none' ? 1 : E.accent === 'omote' ? (i === 0 ? 2 : 1) : E.accent === 'ura' ? (i === 8 ? 2 : 1) : (rnd(bi * 977 + ni * 131 + i * 7 + 5) < 0.4 ? 2 : 1);
+        o[n][i] = E.accent === 'none' ? 1 : E.accent === 'omote' ? (i === 0 ? 2 : 1) : E.accent === 'ura' ? (i === 48 ? 2 : 1) : (rnd(bi * 977 + ni * 131 + i * 7 + 5) < 0.4 ? 2 : 1);
       }
     });
     // 足す音: 小節ごとに、ほんの少しだけ入る(同じ小節は、いつも同じ)
     const ph = [0, 0.22, 0.5][E.add.open], pg = [0, 0.1, 0.28][E.add.ghost];
-    if (ph && !E.off.OPEN) [6, 14].forEach((i, k) => { if (o.HAT[i] && !o.OPEN[i] && rnd(sd + 31 + k * 17) < ph * (k ? 1 : 0.6)) { o.HAT[i] = 0; o.OPEN[i] = 1; } });
-    if (pg && !E.off.RIM) [3, 7, 11, 14, 15].forEach((i, k) => { if (!o.RIM[i] && !o.SNARE[i] && rnd(sd + 97 + k * 13) < pg) o.RIM[i] = 3; });
+    if (ph && !E.off.OPEN) [36, 84].forEach((i, k) => { if (o.HAT[i] && !o.OPEN[i] && rnd(sd + 31 + k * 17) < ph * (k ? 1 : 0.6)) { o.HAT[i] = 0; o.OPEN[i] = 1; } });
+    if (pg && !E.off.RIM) [18, 42, 66, 84, 90].forEach((i, k) => { if (!o.RIM[i] && !o.SNARE[i] && rnd(sd + 97 + k * 13) < pg) o.RIM[i] = 3; });
     return o;
   }
   S.works = {};      // 小節ごとの「まだ保存していない直し」(別の小節を選んでも残る)
@@ -116,7 +120,7 @@
     const pw = pendingHere(bi, bar); if (pw) E = Object.assign({}, E, { rows: pw.rows });     // まだ保存していない直しも、鳴らすと聞こえる
     let m;
     if (E.rows) m = copyRows(E.rows);
-    else { m = blockMain(E, bi, bar); if (E.fill) ROWS.forEach((n) => { for (let i = E.fill.from; i < 16; i++) m[n][i] = E.fill.rows[n][i]; }); }
+    else { m = blockMain(E, bi, bar); if (E.fill) ROWS.forEach((n) => { for (let i = E.fill.from; i < NS; i++) m[n][i] = E.fill.rows[n][i]; }); }
     OFFS.forEach(([k]) => { if (b.off && b.off[k]) OFF_ROWS[k].forEach((n) => { m[n].fill(0); }); });     // ミュートは、グリッドを直した小節にも効く
     return m;
   };
@@ -125,8 +129,8 @@
     const E = barEff(b, bar), E2 = Object.assign({}, E, { off: {} });
     let m;
     if (E.rows) m = copyRows(E.rows);
-    else { m = blockMain(E2, bi, bar); if (E.fill) ROWS.forEach((n) => { for (let i = E.fill.from; i < 16; i++) m[n][i] = E.fill.rows[n][i]; }); }
-    if (E.crashAt && !E.rows) m.CRASH[E.crashAt === 3 ? 8 : 0] = 1;
+    else { m = blockMain(E2, bi, bar); if (E.fill) ROWS.forEach((n) => { for (let i = E.fill.from; i < NS; i++) m[n][i] = E.fill.rows[n][i]; }); }
+    if (E.crashAt && !E.rows) m.CRASH[E.crashAt === 3 ? 48 : 0] = 1;
     return m;
   }
 
@@ -144,16 +148,16 @@
           const withFill = !!E.fill || !!(b.ov && b.ov[bar] && b.ov[bar].fl) || (pendingHere(bi, bar) ? pendingHere(bi, bar).fl : false);
           const landing = landNext && $('land').checked;
           if (landing && !rows.CRASH[0]) ev.push({ t: t0, row: 'CRASH', vel: 0.9, bi });
-          if (E.crashAt) { const st = E.crashAt === 3 ? 8 : 0; if (!rows.CRASH[st] && !(st === 0 && landing)) ev.push({ t: t0 + (st / 4) * spb, row: 'CRASH', vel: 0.9, bi }); }
+          if (E.crashAt) { const st = E.crashAt === 3 ? 48 : 0; if (!rows.CRASH[st] && !(st === 0 && landing)) ev.push({ t: t0 + (st / SL) * spb, row: 'CRASH', vel: 0.9, bi }); }
           landNext = withFill;
 
           ROWS.forEach((n) => {
-            for (let i = 0; i < 16; i++) {
+            for (let i = 0; i < NS; i++) {
               const v = rows[n][i]; if (!v) continue;
-              const beat = i / 4, frac = beat - Math.floor(beat);
-              let tt = t0 + (Math.floor(beat) + warp(frac, s)) * spb, vel;
+              const beat = i / SL, frac = beat - Math.floor(beat);
+              let tt = t0 + (Math.floor(beat) + (i % U16 === 0 ? warp(frac, s) : frac)) * spb, vel;     // シャッフルは16分の格子にだけかかる(3連・6連・32分は、そのまま)
               if (n === 'HAT') {
-                vel = (i % 4 === 0 ? 0.62 : i % 2 === 0 ? 0.42 : 0.34) * (v === 2 ? 1.45 : v === 3 ? 0.45 : 1) * hatFactor(bi, i);
+                vel = (i % 24 === 0 ? 0.62 : i % 12 === 0 ? 0.42 : 0.34) * (v === 2 ? 1.45 : v === 3 ? 0.45 : 1) * hatFactor(bi, i);
                 tt += (rnd(seedBar * 17 + i * 5 + 11) - 0.5) * 2 * (S.p.sway / 100) * 0.02;
               } else vel = BASE_VEL[n] * (v === 2 ? 1.25 : v === 3 ? 0.4 : 1);
               ev.push({ t: Math.max(0, tt), row: n, vel, bi });
@@ -401,22 +405,20 @@
   S.pg = { song: 0, bar: 0 };
   S.sheetOpen = true; S.sheetTab = 'grid'; S.fillHalf = 1; S.fillSel = ''; S.scope = 'this';
   const MUTE_OF = (b) => (n) => OFFS.some(([k]) => b.off && b.off[k] && OFF_ROWS[k].includes(n));
-  // フィルのブロック(1〜2小節)。選んだ小節に「あてはめる」と、その小節のグリッドが、この形に替わる。
-  // 手本: スライ・ダンバーの曲頭ロール譜面(Todd Bishop 採譜、Serge Gainsbourg『Aux Armes et caetera』)の特徴(16分のロール、アクセント、タムを下りる、最後にキックで着地)を取り入れた案。一音ずつの写しではない
-  // bars[i] = { from: この小節の、どのコマから置き換えるか, hits: [[行, コマ, 1=鳴る/2=アクセント], …] }
-  const rl = (row, from, to, acc) => { const o = []; for (let i = from; i <= to; i++) o.push([row, i, acc && (i - from) % acc === 0 ? 2 : 1]); return o; };
+  // フィルのブロック。手本: スライ・ダンバーの曲頭ロール譜面(Todd Bishop 採譜、Serge Gainsbourg『Aux Armes et caetera』)を、譜面の位置のまま起こしたもの。
+  // bars[i] = { from: この小節の何拍目から置き換えるか(0=1拍目), hits: [[行, 小節の頭からの拍(1拍=1), 1=鳴る/2=アクセント/3=ゴースト], …] }。3連・6連・32分も、そのまま(1/3拍=8コマ)
+  // 譜面は、ゴーストの小さい音符=ゴースト(3)、アクセント記号=アクセント(2)、バズロール=2連打、ペダルのハイハット(下のx)=ゴーストのハット。タンバレやシンドラムは、近いタムに置く
+  const T = 1 / 3, S6 = 1 / 6;
   const FILL_BLOCKS = [
-    { name: '短い(最後の1拍のスネア)', bars: [{ from: 12, hits: [['SNARE', 12, 2], ['SNARE', 13, 1], ['SNARE', 14, 1], ['SNARE', 15, 2]] }] },
-    { name: '1小節: タムを下りる', bars: [{ from: 8, hits: [['KICK', 8, 1]].concat(rl('T-HI', 8, 11, 4), rl('T-MID', 12, 13, 2), [['T-LO', 14, 1], ['T-LO', 15, 2]]) }] },
-    { name: '1小節: スネアから詰める', bars: [{ from: 0, hits: [['KICK', 0, 1], ['SNARE', 0, 2], ['SNARE', 2, 1], ['SNARE', 4, 2], ['SNARE', 6, 1], ['SNARE', 8, 2]].concat(rl('SNARE', 9, 11, 0), [['SNARE', 12, 2], ['SNARE', 13, 1], ['SNARE', 14, 1], ['SNARE', 15, 2]]) }] },
-    { name: '2小節: ゆっくり → 詰める', bars: [{ from: 8, hits: [['SNARE', 8, 2], ['SNARE', 10, 1], ['SNARE', 12, 2], ['SNARE', 14, 1]] }, { from: 0, hits: [['KICK', 0, 1], ['SNARE', 0, 2], ['SNARE', 2, 1], ['SNARE', 4, 2], ['SNARE', 6, 1], ['SNARE', 8, 1], ['SNARE', 9, 1], ['SNARE', 10, 1], ['SNARE', 11, 1], ['T-MID', 12, 2], ['T-MID', 13, 1], ['T-LO', 14, 1], ['T-LO', 15, 2]] }] },
-    { name: '2小節: タムのロール → 止める', bars: [{ from: 0, hits: [['KICK', 0, 1]].concat(rl('T-HI', 0, 3, 4), rl('T-MID', 4, 7, 4), rl('T-LO', 8, 11, 4), rl('SNARE', 12, 15, 4)) }, { from: 0, hits: [['KICK', 0, 1], ['RIM', 8, 2]] }] },
+    { name: 'Javanaise Remake の出だし(3拍)', note: '2拍目から。16分3連のスネア → 8分 → タム', bars: [{ from: 1, hits: [['SNARE', 1.5, 1], ['SNARE', 1.5 + S6, 1], ['SNARE', 1.5 + 2 * S6, 1], ['SNARE', 2, 1], ['T-HI', 2.5, 1], ['T-HI', 2.75, 1], ['T-HI', 3, 1]] }] },
+    { name: 'Ecce Homo の出だし(2拍)', note: '3拍目から。ゴーストのスネア3つ → スネア → スネア → タム', bars: [{ from: 2, hits: [['SNARE', 2, 3], ['SNARE', 2.25, 3], ['SNARE', 2.5, 3], ['SNARE', 2.75, 1], ['SNARE', 3, 1], ['T-HI', 3.5, 1]] }] },
+    { name: 'Overseas Telegram の出だし(1小節)', note: '1小節。バズのスネアとキック、最後にオープンハット', bars: [{ from: 0, hits: [['SNARE', 0, 1], ['SNARE', 0.125, 3], ['KICK', 0.5, 1], ['SNARE', 1.5, 1], ['SNARE', 1.625, 3], ['KICK', 2, 1], ['KICK', 2.5, 1], ['SNARE', 3, 2], ['OPEN', 3, 2], ['HAT', 3.5, 3]] }] },
   ];
   function mkWork(b, bi, bar) {
     const key = 'list-' + bi + '-' + bar;
     if (S.works[key]) return S.works[key];
     const rows = baseRows(b, bi, bar), E = barEff(b, bar);
-    return (S.works[key] = { key, rows, dirty: false, fl: !!(b.ov[bar] && b.ov[bar].fl) || !!E.fill, opts: { add: Object.assign({}, E.add), accent: E.accent, crashAt: rows.CRASH[0] ? 1 : rows.CRASH[8] ? 3 : 0 } });
+    return (S.works[key] = { key, rows, dirty: false, fl: !!(b.ov[bar] && b.ov[bar].fl) || !!E.fill, opts: { add: Object.assign({}, E.add), accent: E.accent, crashAt: rows.CRASH[0] ? 1 : rows.CRASH[48] ? 3 : 0 } });
   }
   function getWork(b, bi, bar) { S.work = mkWork(b, bi, bar); return S.work; }
   function auditionBar() {
@@ -478,7 +480,7 @@
     } else if (S.sheetTab === 'how') {
       const recompute = () => {
         const E = barEff(b, bar), o = w.opts, m = blockMain({ off: {}, add: o.add, accent: o.accent }, bi, bar);
-        if (o.crashAt) m.CRASH[o.crashAt === 3 ? 8 : 0] = 1;
+        if (o.crashAt) m.CRASH[o.crashAt === 3 ? 48 : 0] = 1;
         w.rows = m; w.dirty = true; w.fl = false; changed(true);
       };
       ADDS.forEach(([k, n]) => { const wv = el('span'); LEVELS.forEach(([v, t]) => { wv.appendChild(chip(t, w.opts.add[k] === v ? 'on' : '', () => { w.opts.add[k] = v; recompute(); })); }); body.appendChild(line(n, wv)); });
@@ -486,24 +488,26 @@
       const ac = el('span'); ACCENTS.forEach(([k, n]) => { ac.appendChild(chip(n, w.opts.accent === k ? 'on' : '', () => { w.opts.accent = k; recompute(); })); }); body.appendChild(line('アクセント', ac));
       body.appendChild(el('p', { className: 'small', textContent: '押すと、この小節のグリッドが作り直される(グリッドで手直しした分は消える)。聞いて、良ければ「保存」。' }));
     } else {
-      body.appendChild(el('p', { className: 'small', textContent: 'フィルのブロックを選んで「あてはめる」と、いま選んでいる小節のグリッドが、その形に替わる(2小節のものは、次の小節も)。聞いて、良ければ「保存」。' }));
+      body.appendChild(el('p', { className: 'small', textContent: 'フィルのブロックを選んで「あてはめる」と、いま選んでいる小節のグリッドが、その形に替わる。聞いて、良ければ「保存」。手本の譜面から、譜面の位置のまま起こしたもの(3連・6連は、グリッドの「細かさ」を切り替えると見える)。' }));
       FILL_BLOCKS.forEach((fb) => {
         const r = el('div', { className: 'row' });
         const need = fb.bars.length, ok = bar + need <= b.bars;
         const x = el('button', { type: 'button', className: 'sbtn', textContent: 'あてはめる' }); x.disabled = !ok;
         x.onclick = () => {
+          let fine = 0;
           fb.bars.forEach((pb, i) => {
-            const wk = mkWork(b, bi, bar + i);
-            ROWS.forEach((n) => { if (n !== 'CRASH') for (let s = pb.from; s < 16; s++) wk.rows[n][s] = 0; });
-            pb.hits.forEach(([n, s, v]) => { wk.rows[n][s] = v; });
+            const wk = mkWork(b, bi, bar + i), f0 = Math.round(pb.from * SL);
+            ROWS.forEach((n) => { if (n !== 'CRASH') for (let s = f0; s < NS; s++) wk.rows[n][s] = 0; });
+            pb.hits.forEach(([n, pos, v]) => { const s = Math.round(pos * SL); wk.rows[n][s] = v; if (s % U16 && s % 4 === 0) fine = 6; else if (s % U16 && s % 3 === 0 && !fine) fine = 8; });
             wk.dirty = true; wk.fl = true;
           });
-          S.sheetTab = 'grid'; if (need > 1) S.scope = 'pend'; S.pg.bar = fb.bars[0].from >= 8 ? 1 : 0; drawSeq(); drawSheet(); refreshPlay();
+          if (fine) S.res = fine;
+          S.sheetTab = 'grid'; if (need > 1) S.scope = 'pend'; S.pg.bar = Math.floor(Math.round(fb.bars[0].from * SL) / (SL * (S.res <= 6 ? 2 : 1))); drawSeq(); drawSheet(); refreshPlay();
         };
-        r.appendChild(x); r.appendChild(el('span', { textContent: fb.name + (ok ? '' : '(この小節からは入らない)') }));
+        r.appendChild(x); r.appendChild(el('span', { textContent: fb.name + (ok ? '' : '(この小節からは入らない)') })); r.appendChild(el('span', { className: 'small', textContent: ' ' + fb.note }));
         body.appendChild(r);
       });
-      body.appendChild(el('p', { className: 'small', textContent: 'フィルのあとの小節の1拍目には、クラッシュが鳴る(「曲のリズム」の設定)。形は、手本の譜面の特徴を取り入れた案で、一音ずつの写しではない。' }));
+      body.appendChild(el('p', { className: 'small', textContent: 'フィルのあとの小節の1拍目には、クラッシュが鳴る(「曲のリズム」の設定)。' }));
     }
     box.appendChild(body);
     box.appendChild(act2);
@@ -515,19 +519,27 @@
   document.addEventListener('pointerup', () => { if (lpHeld) { lpHeld = false; lpSwallow = true; setTimeout(() => { lpSwallow = false; }, 250); } }, true);
   document.addEventListener('pointercancel', () => { lpHeld = false; }, true);
   document.addEventListener('click', (e) => { if (lpSwallow) { lpSwallow = false; e.stopPropagation(); e.preventDefault(); } }, true);
-  function gridInto(g, o, key, pageOverride) {
+  const RES = [[2, '8分'], [4, '16分'], [3, '8分3連'], [6, '16分3連'], [8, '32分']];
+  S.res = 4;       // 1拍を何個に割るか(3連・6連・32分は、譜面のフィルを置くため)
+  function gridInto(g, o, key) {
     g.innerHTML = '';
-    const pg = pageOverride !== undefined ? pageOverride : (S.pg[key] || 0);
+    const res = S.res, step = SL / res, bpp = res <= 6 ? 2 : 1, pages = 4 / bpp, pg = Math.min(S.pg[key] || 0, pages - 1), cols = bpp * res, redraw = () => (key === 'song' ? drawSongGrid : drawSheet)();
+    const rr = el('div', { className: 'row' }); rr.appendChild(el('span', { className: 'small', textContent: '細かさ' }));
+    RES.forEach(([v, t]) => { const x = el('button', { type: 'button', className: 'chip' + (v === res ? ' on' : ''), textContent: t }); x.onclick = () => { S.res = v; S.pg[key] = 0; redraw(); }; rr.appendChild(x); });
+    g.appendChild(rr);
     const nav = el('div', { className: 'gnav' });
-    const arrow = (txt, to) => { const x = el('button', { type: 'button', className: 'garrow', textContent: txt }); x.disabled = pg === to; x.onclick = () => { S.pg[key] = to; if (pageOverride !== undefined && key === 'bar') S.fillHalf = to; (key === 'song' ? drawSongGrid : drawSheet)(); }; return x; };
-    nav.appendChild(arrow('←', 0)); nav.appendChild(el('span', { className: 'gpage', textContent: pg ? '3〜4拍目' : '1〜2拍目' })); nav.appendChild(arrow('→', 1));
+    const arrow = (txt, to) => { const x = el('button', { type: 'button', className: 'garrow', textContent: txt }); x.disabled = to < 0 || to >= pages; x.onclick = () => { S.pg[key] = to; redraw(); }; return x; };
+    nav.appendChild(arrow('←', pg - 1)); nav.appendChild(el('span', { className: 'gpage', textContent: bpp === 1 ? (pg + 1) + '拍目' : (pg * bpp + 1) + '〜' + (pg * bpp + bpp) + '拍目' })); nav.appendChild(arrow('→', pg + 1));
     g.appendChild(nav);
     const hd = el('div', { className: 'ln hd' }); hd.appendChild(el('span', { className: 'nm' }));
-    for (let i = pg * 8; i < pg * 8 + 8; i++) hd.appendChild(el('b', { textContent: i % 4 === 0 ? String(i / 4 + 1) : '' })); g.appendChild(hd);
+    for (let k = 0; k < cols; k++) hd.appendChild(el('b', { textContent: k % res === 0 ? String(pg * bpp + k / res + 1) : '' })); g.appendChild(hd);
+    let hidden = 0;
     ROWS.forEach((n) => {
       const ln = el('div', { className: 'ln' }); ln.appendChild(el('span', { className: 'nm', textContent: n })); if (o.muted && o.muted(n)) ln.style.opacity = '.35';
-      for (let i = pg * 8; i < pg * 8 + 8; i++) {
-        const v = o.get(n, i), c = el('button', { type: 'button', className: 'c' + (i % 4 === 0 ? ' q' : '') + (v ? ' on' : '') + (v === 2 ? ' ac' : '') + (v === 3 ? ' gh' : '') + (n === 'HAT' && v === 1 ? ' hat' : '') });
+      for (let i = 0; i < NS; i++) if (o.get(n, i) && i % step) hidden++;
+      for (let k = 0; k < cols; k++) {
+        const i = pg * bpp * SL + k * step;
+        const v = o.get(n, i), c = el('button', { type: 'button', className: 'c' + (k % res === 0 ? ' q' : '') + (v ? ' on' : '') + (v === 2 ? ' ac' : '') + (v === 3 ? ' gh' : '') + (n === 'HAT' && v === 1 ? ' hat' : '') });
         if (n === 'HAT' && v === 1) c.style.opacity = String(Math.min(1, Math.max(0.3, 0.25 + 0.75 * (hatFactor(curBi(), i) * 0.9) / 1.3)));
         if (o.tintFrom !== null && o.tintFrom !== undefined && i >= o.tintFrom) c.classList.add('fz');
         // タップ: 鳴る/休み。長押し: 休み→ゴースト、鳴る→アクセント、アクセント→鳴る、ゴースト→アクセント(ハードコアのビートと同じ)
@@ -546,6 +558,7 @@
       }
       g.appendChild(ln);
     });
+    if (hidden) g.appendChild(el('p', { className: 'small', textContent: 'この細かさでは見えない音が ' + hidden + ' 個ある(細かさを変えると見える)。' }));
   }
   function drawSongGrid() {
     gridInto($('grid'), { get: (n, i) => S.song.rows[n][i], set: (n, i, v) => { S.song.rows[n][i] = v; }, tintFrom: null }, 'song');
