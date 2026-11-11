@@ -282,25 +282,29 @@
   // ---- 画面: グリッド(曲のリズム / 選んだブロックのフィル)----
   function gridInto(g, getSrc, opts) {
     g.innerHTML = '';
-    const hd = el('div', { className: 'ln hd' }); hd.appendChild(el('span', { className: 'nm' })); for (let i = 0; i < 16; i++) hd.appendChild(el('b', { textContent: i % 4 === 0 ? String(i / 4 + 1) : '' })); g.appendChild(hd);
     const src = getSrc();
-    ROWS.forEach((n) => {
-      const ln = el('div', { className: 'ln' }); ln.appendChild(el('span', { className: 'nm', textContent: n }));
-      for (let i = 0; i < 16; i++) {
-        const before = opts.fill && i < opts.from;      // フィルの前の部分は、メインの小節がそのまま鳴る(見るだけ)
-        const v = before ? opts.pre[n][i] : src[n][i], c = el('button', { type: 'button', className: 'c' + (i % 4 === 0 ? ' q' : '') + (v ? ' on' : '') + (v === 2 ? ' x' : '') + (n === 'HAT' && v ? ' hat' : '') });
-        if (n === 'HAT' && v) c.style.opacity = String(Math.min(1, Math.max(0.3, 0.25 + 0.75 * (hatFactor(S.sel, i) * (v === 2 ? 1 : 0.9)) / 1.3)));
-        if (v === 3) { c.classList.add('on'); c.style.opacity = '.45'; }
-        if (opts.fill) { c.classList.add(before ? 'pre' : 'fz'); if (before) c.disabled = true; }
-        c.onclick = () => { if (before) return; src[n][i] = (src[n][i] + 1) % 3; changed(true); };
-        ln.appendChild(c);
-      }
-      g.appendChild(ln);
-    });
+    for (let h = 0; h < 2; h++) {      // 1小節を、前半(1〜2拍)と後半(3〜4拍)の2段に分けて、マスを大きくする
+      const hd = el('div', { className: 'ln hd' }); hd.appendChild(el('span', { className: 'nm' }));
+      for (let i = h * 8; i < h * 8 + 8; i++) hd.appendChild(el('b', { textContent: i % 4 === 0 ? String(i / 4 + 1) : '' })); g.appendChild(hd);
+      ROWS.forEach((n) => {
+        const ln = el('div', { className: 'ln' }); ln.appendChild(el('span', { className: 'nm', textContent: n }));
+        for (let i = h * 8; i < h * 8 + 8; i++) {
+          const before = opts.fill && i < opts.from;      // フィルの前の部分は、メインの小節がそのまま鳴る(見るだけ)
+          const v = before ? opts.pre[n][i] : src[n][i], c = el('button', { type: 'button', className: 'c' + (i % 4 === 0 ? ' q' : '') + (v ? ' on' : '') + (v === 2 ? ' x' : '') + (n === 'HAT' && v ? ' hat' : '') });
+          if (n === 'HAT' && v) c.style.opacity = String(Math.min(1, Math.max(0.3, 0.25 + 0.75 * (hatFactor(S.sel, i) * (v === 2 ? 1 : 0.9)) / 1.3)));
+          if (v === 3) { c.classList.add('on'); c.style.opacity = '.45'; }
+          if (opts.fill) { c.classList.add(before ? 'pre' : 'fz'); if (before) c.disabled = true; }
+          c.onclick = () => { if (before) return; src[n][i] = (src[n][i] + 1) % 3; changed(true); };
+          ln.appendChild(c);
+        }
+        g.appendChild(ln);
+      });
+      if (h === 0) g.appendChild(el('div', { className: 'gap' }));
+    }
   }
   function drawGrid() {
     gridInto($('grid'), () => S.song.rows, { fill: false });
-    $('gridNote0').textContent = 'マスをタップするたびに、なし → 鳴る → アクセント(X)→ なし。ここを直すと、全ブロックに効く。ハイハットの濃さは、鳴る強さ(アクセントのブレで変わる)。';
+    $('gridNote0').textContent = 'マスを1回タップ=鳴る(黒)、2回=アクセント(黒に白のX。強く鳴る)、3回=消える。ここを直すと、全ブロックに効く。ハイハットの濃さは、鳴る強さ(アクセントのブレで変わる)。';
     const b = S.blocks[S.sel], has = b && b.fillType !== 'none';
     $('fillBox').hidden = !has;
     if (!has) { $('fillNone').hidden = false; return; }
