@@ -682,10 +682,10 @@
     ['sway', 'ゆれ', 0, 100, (v) => String(Math.round(v))],
   ], S.p, () => { changed(true); });
   // ハイハットの細かさ: 曲のリズムのハイハットの段だけを、選んだ間隔で並べ直す(オープンハットの位置は残す)
-  const HATRES = [[24, '4分'], [12, '8分'], [8, '8分3連'], [6, '16分'], [4, '16分3連']];
-  const applyHat = () => { const st = S.song.hat || 12, r = S.song.rows; for (let i = 0; i < NS; i++) r.HAT[i] = (i % st === 0 && !r.OPEN[i]) ? 1 : 0; };
-  const hs = $('hatres'); HATRES.forEach(([v, t]) => { const o = el('option', { value: String(v), textContent: t }); if (v === (S.song.hat || 12)) o.selected = true; hs.appendChild(o); });
-  hs.onchange = () => { S.song.hat = Number(hs.value); applyHat(); changed(true); drawSongGrid(); };
+  const HATRES = [[24, '4分'], [12, '8分'], [8, '8分3連'], [6, '16分'], [4, '16分3連'], ['gu', '8分+16分2つ(Get Up Stand Up)']];   // 最後は、1拍ごとに8分1つ+16分2つ(譜面: Get Up Stand Up のハイハット)
+  const applyHat = () => { const st = S.song.hat || 12, r = S.song.rows; for (let i = 0; i < NS; i++) r.HAT[i] = ((st === 'gu' ? [0, 12, 18].includes(i % 24) : i % st === 0) && !r.OPEN[i]) ? 1 : 0; };
+  const hs = $('hatres'); HATRES.forEach(([v, t]) => { const o = el('option', { value: String(v), textContent: t }); if (String(v) === String(S.song.hat || 12)) o.selected = true; hs.appendChild(o); });
+  hs.onchange = () => { S.song.hat = hs.value === 'gu' ? 'gu' : Number(hs.value); applyHat(); changed(true); drawSongGrid(); };
   const ps = $('pat'); Object.keys(PATTERNS).forEach((k) => { const o = el('option', { textContent: k }); if (k === S.song.pat) o.selected = true; ps.appendChild(o); });
   ps.onchange = () => { S.song.pat = ps.value; S.song.rows = PATTERNS[ps.value](); if ((S.song.hat || 12) !== 12) applyHat(); changed(true); };
   $('bpm').value = S.song.bpm; $('bpm').onchange = () => { const v = Math.max(50, Math.min(140, Math.round(+$('bpm').value || 76))); $('bpm').value = v; S.song.bpm = v; changed(false); };
