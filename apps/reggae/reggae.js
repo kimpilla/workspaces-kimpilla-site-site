@@ -49,7 +49,7 @@
 
   // ---- ブロック ----
   const newBlock = (pat, bars, fill) => {
-    const b = { pat, bars, bpm: 76, reps: 1, rows: PATTERNS[pat](), fillType: fill || 'none', fillFrom: 0, fillBar: 0, headCrash: false, fillRows: zero(), alt: 0, intro: false };
+    const b = { pat, bars, bpm: 76, reps: 1, rows: PATTERNS[pat](), fillType: fill || 'none', fillFrom: 0, fillBar: 0, crashAt: 0, fillRows: zero(), alt: 0, intro: false };
     if (b.fillType !== 'none') applyFill(b);
     return b;
   };
@@ -67,7 +67,7 @@
     try {
       const o = JSON.parse(localStorage.getItem(KEY) || 'null');
       if (o && Array.isArray(o.blocks) && o.blocks.length && o.blocks.every((b) => b && b.rows && ROWS.every((n) => Array.isArray(b.rows[n]) && b.rows[n].length === 16))) {
-        o.blocks.forEach((b) => { if (!b.fillRows || !ROWS.every((n) => Array.isArray(b.fillRows[n]))) b.fillRows = zero(); b.alt = b.alt || 0; b.fillBar = b.fillBar || 0; b.headCrash = !!b.headCrash; });
+        o.blocks.forEach((b) => { if (!b.fillRows || !ROWS.every((n) => Array.isArray(b.fillRows[n]))) b.fillRows = zero(); b.alt = b.alt || 0; b.fillBar = b.fillBar || 0; b.crashAt = b.crashAt || (b.headCrash ? 1 : 0); });
         S.blocks = o.blocks; if (o.p) Object.assign(S.p, o.p);
       }
     } catch (e) { /* 読めなければ、最初の状態 */ }
@@ -95,7 +95,8 @@
           const last = bar === fb, rows = effRows(b, bar, last), t0 = t, seedBar = bi * 1000 + rep * 100 + bar;
           const withFill = last && b.fillType !== 'none';
           const landing = landNext && $('land').checked;
-          if ((landing || (b.headCrash && bar === 0)) && !rows.CRASH[0]) ev.push({ t: t0, row: 'CRASH', vel: 0.9 });
+          if (landing && !rows.CRASH[0]) ev.push({ t: t0, row: 'CRASH', vel: 0.9 });
+          if (b.crashAt && bar === 0) { const st = b.crashAt === 3 ? 8 : 0; if (!rows.CRASH[st] && !(st === 0 && landing)) ev.push({ t: t0 + (st / 4) * spb, row: 'CRASH', vel: 0.9 }); }
           landNext = withFill;
           ROWS.forEach((n) => {
             for (let i = 0; i < 16; i++) {
@@ -236,8 +237,10 @@
         for (let k = 1; k < b.bars; k++) { const o = el('option', { value: k, textContent: k + '小節目' }); if (k === b.fillBar) o.selected = true; ps.appendChild(o); }
         ps.onchange = () => { b.fillBar = +ps.value; changed(true); drawBlocks(); };
         fr2.appendChild(el('label', {}, 'フィルを入れる小節 ')); fr2.lastChild.appendChild(ps);
-        const hc = el('input', { type: 'checkbox' }); hc.checked = b.headCrash; hc.onchange = () => { b.headCrash = hc.checked; changed(false); };
-        const hl = el('label', {}); hl.appendChild(hc); hl.appendChild(document.createTextNode(' 頭にクラッシュ(最初の小節だけ)')); fr2.appendChild(hl);
+        const cs = el('select');
+        [[0, 'なし'], [1, '1拍目'], [3, '3拍目']].forEach(([v, n]) => { const o = el('option', { value: v, textContent: n }); if (v === b.crashAt) o.selected = true; cs.appendChild(o); });
+        cs.onchange = () => { b.crashAt = +cs.value; changed(false); };
+        const cl = el('label', {}, 'クラッシュ(最初の小節だけ) '); cl.appendChild(cs); fr2.appendChild(cl);
         d.appendChild(fr2);
       }
       const bt = el('div', { className: 'btns' });
