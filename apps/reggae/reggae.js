@@ -379,7 +379,7 @@
 
   // ---- 選んだ小節の編集(下に固定): 直して → 聞いて → 保存 ----
   S.pg = { song: 0, bar: 0 };
-  S.sheetTab = 'grid'; S.fillHalf = 1; S.fillSel = ''; S.scope = 'this';
+  S.sheetOpen = true; S.sheetTab = 'grid'; S.fillHalf = 1; S.fillSel = ''; S.scope = 'this';
   const MUTE_OF = (b) => (n) => OFFS.some(([k]) => b.off && b.off[k] && OFF_ROWS[k].includes(n));
   const FILLS = {
     short: { 'タム下り': [['T-HI', 0], ['T-HI', 1], ['T-MID', 2], ['T-MID', 3], ['T-LO', 4], ['T-LO', 5]], 'スネア連打': [0, 1, 2, 3, 4, 5].map((i) => ['SNARE', i]), 'スネア+タム': [['SNARE', 0], ['SNARE', 2], ['T-MID', 3], ['T-MID', 4], ['T-LO', 5]], 'ハット細かく': [0, 1, 2, 3, 4, 5].map((i) => ['HAT', i]), 'ハット→オープン': [['HAT', 0], ['HAT', 1], ['HAT', 2], ['HAT', 3], ['HAT', 4], ['OPEN', 5]] },
@@ -404,11 +404,15 @@
   function drawSheet() {
     const box = $('sheet'); box.innerHTML = '';
     const b = curBlock();
-    if (!b || b.intro || S.cur.bar >= b.bars) { box.appendChild(el('p', { className: 'small', textContent: '小節の四角をタップすると、ここで、その小節を直せる。' })); return; }
+    if (!b || b.intro || S.cur.bar >= b.bars) { document.body.classList.add('shut'); box.appendChild(el('p', { className: 'small', textContent: '小節の四角をタップすると、ここで、その小節を直せる。' })); return; }
     const bar = S.cur.bar, bi = curBi(), ovs = b.ov || (b.ov = {}), w = getWork(b, bi, bar);
     const sh = el('div', { className: 'sh' });
     sh.appendChild(el('b', { textContent: 'ブロック ' + (bi + 1) + '・' + (bar + 1) + '小節目' }));
     sh.appendChild(el('span', { className: w.dirty ? 'pendtxt' : 'small', textContent: w.dirty ? 'まだ保存していない' : (ovs[bar] ? '変えた小節' : '標準') }));
+    const fold = el('button', { type: 'button', className: 'sbtn foldbtn', textContent: S.sheetOpen ? '▼ グリッドを閉じる' : '▲ グリッドを開く' });
+    fold.onclick = () => { S.sheetOpen = !S.sheetOpen; drawSheet(); };
+    sh.appendChild(fold);
+    document.body.classList.toggle('shut', !S.sheetOpen);
     box.appendChild(sh);
     const act = el('div', { className: 'row' });
     const pl = el('button', { type: 'button', className: 'sbtn' + (playing && S.audition ? ' on' : ''), textContent: playing && S.audition ? '■ 止める' : '▶ この小節を鳴らす' }); pl.onclick = auditionBar; act.appendChild(pl);
@@ -427,7 +431,8 @@
     sc.onchange = () => { S.scope = sc.value; }; act2.appendChild(sc);
     const std = el('button', { type: 'button', className: 'sbtn', textContent: '標準にする' }); std.disabled = !ovs[bar]; std.onclick = () => { delete ovs[bar]; S.work = null; changed(true); }; act2.appendChild(std);
     const cp = el('button', { type: 'button', className: 'sbtn', textContent: '前の小節をコピー' }); cp.disabled = !(bar > 0 && ovs[bar - 1]); cp.onclick = () => { ovs[bar] = JSON.parse(JSON.stringify(ovs[bar - 1])); S.work = null; changed(true); }; act2.appendChild(cp);
-    box.appendChild(act2);
+    if (S.sheetOpen) box.appendChild(act2);
+    if (!S.sheetOpen) return;
     const tabs = el('div', { className: 'stabs' });
     [['grid', 'グリッド'], ['fill', 'フィル'], ['how', '足す音・クラッシュ'], ['mute', 'ミュート(ブロック全体)']].forEach(([k, n]) => { const x = el('button', { type: 'button', className: 'stab' + (S.sheetTab === k ? ' on' : ''), textContent: n }); x.onclick = () => { S.sheetTab = k; drawSheet(); }; tabs.appendChild(x); });
     box.appendChild(tabs);
