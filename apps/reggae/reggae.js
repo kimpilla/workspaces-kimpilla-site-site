@@ -437,6 +437,7 @@
     if (b.intro) { const x = el('div', { className: 'bar fl intro' }); x.dataset.kind = kind; x.dataset.bi = bi; x.dataset.bar = 0; x.appendChild(el('span', { className: 'bn', textContent: '曲頭フィル' })); g.appendChild(x); }
     else for (let k = 0; k < b.bars; k++) g.appendChild(barCell(b, bi, k, kind));
     d.appendChild(g);
+    if (kind === 'list') d.appendChild(pickRow(b, bi));
     if (openB.has(b)) {
       const m = el('div', { className: 'bmore' });
       controls(m, b, drawSeq);
@@ -510,6 +511,47 @@
     const tmp = { bars: 1, reps: 1, ov: { 0: { rows: w.rows, fl: w.fl } }, off: b.off, add: { open: 0, ghost: 0 }, crashAt: 0, accent: 'keep', fillType: 'none', fillFrom: 0, fillBar: 0, fillRows: zero(), alt: 0, intro: false };
     previewBlocks = [tmp]; previewInfo = { kind: S.cur.k, bi: curBi() }; S.audition = true; play().then(drawSheet);
   }
+  // フィルのブロックを、barから後ろに、start拍目から置く(小節の終わりを越える分は次の小節に続く)
+  function placeFill(b, bi, fb, bar, start) {
+    let fine = 0;
+    const endB = start + fb.len, need = Math.ceil(endB / 4);
+    S.cur = { k: 'list', bi, bar }; S.work = null;
+    const g0 = Math.round(start * SL), g1 = Math.round(endB * SL), wks = {};
+    const W = (k) => wks[k] || (wks[k] = mkWork(b, bi, bar + k));
+    for (let g = g0; g < g1; g++) { const wk = W(Math.floor(g / NS)); ROWS.forEach((n) => { if (n !== 'CRASH') wk.rows[n][g % NS] = 0; }); }
+    fb.bars[0].hits.forEach(([n, pos, v]) => { const g = Math.round((start + pos - fb.at) * SL), wk = W(Math.floor(g / NS)), s = g % NS; wk.rows[n][s] = v; if (s % U16 && s % 4 === 0) fine = 6; else if (s % U16 && s % 3 === 0 && !fine) fine = 8; });
+    Object.values(wks).forEach((wk) => { wk.dirty = true; wk.fl = true; });
+    if (fine) S.res = fine;
+    S.sheetTab = 'grid'; if (need > 1) S.scope = 'pend'; S.pg.bar = Math.floor((g0 % NS) / (SL * (S.res <= 6 ? 2 : 1))); drawSeq(); drawSheet(); refreshPlay();
+  }
+  // 並びのブロックから直接、曲頭・4小節目・8小節目のフィルを選ぶ。4小節目・8小節目は、そのフィルの終わりが、その小節の終わりに着くように置く
+  const pickOpen = new Map();
+  function pickRow(b, bi) {
+    const wrap = el('div', { className: 'pick' });
+    const kinds = [['intro', '曲頭フィルを選ぶ', 0]];
+    if (b.bars >= 4) kinds.push(['song', '4小節目のフィルを選ぶ', 4]);
+    if (b.bars >= 8) kinds.push(['song', '8小節目のフィルを選ぶ', 8]);
+    const btns = el('div', { className: 'row' });
+    kinds.forEach(([grp, txt, endBar]) => {
+      const key = txt, on = pickOpen.get(b) === key;
+      btns.appendChild(chip(txt, on ? 'on' : '', () => { if (on) pickOpen.delete(b); else pickOpen.set(b, key); drawSeq(); }));
+      if (!on) return;
+      const list = el('div', { className: 'pl' });
+      allFills().filter((f) => f.grp === grp).forEach((fb) => {
+        const r = el('div', { className: 'row' });
+        const x = el('button', { type: 'button', className: 'sbtn', textContent: 'あてはめる' });
+        x.onclick = () => {
+          const startAbs = grp === 'intro' ? fb.at : endBar * 4 - fb.len, bar0 = Math.floor(startAbs / 4), st = startAbs - bar0 * 4;
+          if (startAbs < 0) return;
+          placeFill(b, bi, fb, bar0, st); pickOpen.delete(b); drawSeq();
+        };
+        r.appendChild(x); r.appendChild(el('span', { textContent: fb.name + (fb.mine ? '(自分)' : '') })); list.appendChild(r);
+      });
+      wrap.dataset.list = '1'; wrap.appendChild(el('div', { className: 'small', textContent: txt.replace('を選ぶ', '') + ': 一覧から選ぶと、グリッドに入る(「グリッド」で確認して直せる)' })); wrap.appendChild(list);
+    });
+    wrap.insertBefore(btns, wrap.firstChild);
+    return wrap;
+  }
   function drawSheet() {
     const box = $('sheet'); box.innerHTML = '';
     const b = curBlock();
@@ -582,16 +624,7 @@
         const r = el('div', { className: 'row' });
         const start = S.fillAt == null ? fb.at : S.fillAt, endB = start + fb.len, need = Math.ceil(endB / 4), ok = bar + need <= b.bars;
         const x = el('button', { type: 'button', className: 'sbtn', textContent: 'あてはめる' }); x.disabled = !ok;
-        x.onclick = () => {
-          let fine = 0;
-          const g0 = Math.round(start * SL), g1 = Math.round(endB * SL), wks = {};
-          const W = (k) => wks[k] || (wks[k] = mkWork(b, bi, bar + k));
-          for (let g = g0; g < g1; g++) { const wk = W(Math.floor(g / NS)); ROWS.forEach((n) => { if (n !== 'CRASH') wk.rows[n][g % NS] = 0; }); }
-          fb.bars[0].hits.forEach(([n, pos, v]) => { const g = Math.round((start + pos - fb.at) * SL), wk = W(Math.floor(g / NS)), s = g % NS; wk.rows[n][s] = v; if (s % U16 && s % 4 === 0) fine = 6; else if (s % U16 && s % 3 === 0 && !fine) fine = 8; });
-          Object.values(wks).forEach((wk) => { wk.dirty = true; wk.fl = true; });
-          if (fine) S.res = fine;
-          S.sheetTab = 'grid'; if (need > 1) S.scope = 'pend'; S.pg.bar = Math.floor((g0 % NS) / (SL * (S.res <= 6 ? 2 : 1))); drawSeq(); drawSheet(); refreshPlay();
-        };
+        x.onclick = () => placeFill(b, bi, fb, bar, start);
         r.appendChild(x); r.appendChild(el('span', { textContent: fb.name + (fb.mine ? '(自分)' : '') + (ok ? '' : '(この小節からは入らない)') }));
         if (fb.mine) { const dl = el('button', { type: 'button', className: 'sbtn', textContent: '消す' }); dl.onclick = () => { S.myFills = S.myFills.filter((f) => f !== fb); save(); drawSheet(); }; r.appendChild(dl); } r.appendChild(el('span', { className: 'small', textContent: ' ' + (need > 1 ? '【次の小節に続く】' : '') + (Math.abs(endB / 4 - Math.round(endB / 4)) > 1e-6 ? '【終わりが小節の頭に着かない】' : '') + fb.note }));
         body.appendChild(r);
