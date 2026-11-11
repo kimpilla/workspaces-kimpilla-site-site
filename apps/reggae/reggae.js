@@ -293,7 +293,7 @@
     // 1小節を、前半(1〜2拍)と後半(3〜4拍)に分けて、大きな矢印で動く(縦にスクロールしなくてよい)
     const nav = el('div', { className: 'gnav' });
     const arrow = (txt, to) => { const x = el('button', { type: 'button', className: 'garrow', textContent: txt }); x.disabled = S.pg[key] === to; x.onclick = () => { S.pg[key] = to; drawGrid(); }; return x; };
-    nav.appendChild(arrow('◀', 0)); nav.appendChild(el('span', { className: 'gpage', textContent: S.pg[key] ? '3〜4拍目' : '1〜2拍目' })); nav.appendChild(arrow('▶', 1));
+    nav.appendChild(arrow('←', 0)); nav.appendChild(el('span', { className: 'gpage', textContent: S.pg[key] ? '3〜4拍目' : '1〜2拍目' })); nav.appendChild(arrow('→', 1));
     g.appendChild(nav);
     for (let h = S.pg[key]; h <= S.pg[key]; h++) {
       const hd = el('div', { className: 'ln hd' }); hd.appendChild(el('span', { className: 'nm' }));
