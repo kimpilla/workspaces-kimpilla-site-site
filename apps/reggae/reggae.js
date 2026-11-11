@@ -365,7 +365,12 @@
   }
   function drawSeq() {
     const box = $('seq'); box.innerHTML = '';
-    if (!S.blocks.length) box.appendChild(el('p', { className: 'small', textContent: 'まだブロックがない。「＋ ブロック」で足す。' }));
+    if (!S.blocks.length) {
+      box.appendChild(el('p', { textContent: 'ブロックを作ると、小節の四角が出る。四角をタップして、小節を直す。' }));
+      const r0 = el('div', { className: 'row' });
+      [8, 4].forEach((n) => { const x = el('button', { type: 'button', textContent: '＋ ' + n + '小節のブロックを作る' }); x.onclick = () => { S.blocks.push(newBlock(n)); S.cur = { k: 'list', bi: 0, bar: 0 }; S.work = null; changed(true); }; r0.appendChild(x); });
+      box.appendChild(r0);
+    }
     S.blocks.forEach((b, i) => box.appendChild(blockCard(b, 'list', i)));
     const bt = el('div', { className: 'row' });
     const addB = (n) => { S.blocks.push(newBlock(n)); S.cur = { k: 'list', bi: S.blocks.length - 1, bar: 0 }; S.work = null; changed(true); };
@@ -404,7 +409,7 @@
   function drawSheet() {
     const box = $('sheet'); box.innerHTML = '';
     const b = curBlock();
-    if (!b || b.intro || S.cur.bar >= b.bars) { document.body.classList.add('shut'); box.appendChild(el('p', { className: 'small', textContent: '小節の四角をタップすると、ここで、その小節を直せる。' })); return; }
+    if (!b || b.intro || S.cur.bar >= b.bars) { document.body.classList.add('shut'); box.appendChild(el('p', { className: 'small', textContent: S.blocks.length ? '上の小節の四角をタップすると、ここで、その小節を直せる。' : 'まず、上の「＋ 8小節のブロックを作る」を押す。' })); return; }
     const bar = S.cur.bar, bi = curBi(), ovs = b.ov || (b.ov = {}), w = getWork(b, bi, bar);
     const sh = el('div', { className: 'sh' });
     sh.appendChild(el('b', { textContent: 'ブロック ' + (bi + 1) + '・' + (bar + 1) + '小節目' }));
