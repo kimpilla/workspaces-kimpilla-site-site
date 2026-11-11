@@ -90,7 +90,7 @@
     OFFS.forEach(([k]) => { if (b.off[k]) OFF_ROWS[k].forEach((n) => { o[n].fill(0); }); });
     if (b.accent !== 'keep') ['KICK', 'RIM', 'SNARE'].forEach((n, ni) => {
       for (let i = 0; i < 16; i++) {
-        if (!o[n][i]) continue;
+        if (!o[n][i] || o[n][i] === 3) continue;
         o[n][i] = b.accent === 'none' ? 1 : b.accent === 'omote' ? (i === 0 ? 2 : 1) : b.accent === 'ura' ? (i === 8 ? 2 : 1) : (rnd(bi * 977 + ni * 131 + i * 7 + 5) < 0.4 ? 2 : 1);
       }
     });
@@ -129,7 +129,7 @@
               const beat = i / 4, frac = beat - Math.floor(beat);
               let tt = t0 + (Math.floor(beat) + warp(frac, s)) * spb, vel;
               if (n === 'HAT') {
-                vel = (i % 4 === 0 ? 0.62 : i % 2 === 0 ? 0.42 : 0.34) * (v === 2 ? 1.45 : 1) * hatFactor(bi, i);
+                vel = (i % 4 === 0 ? 0.62 : i % 2 === 0 ? 0.42 : 0.34) * (v === 2 ? 1.45 : v === 3 ? 0.45 : 1) * hatFactor(bi, i);
                 tt += (rnd(seedBar * 17 + i * 5 + 11) - 0.5) * 2 * (S.p.sway / 100) * 0.02;
               } else vel = BASE_VEL[n] * (v === 2 ? 1.25 : v === 3 ? 0.4 : 1);
               ev.push({ t: Math.max(0, tt), row: n, vel, bi });
@@ -280,6 +280,11 @@
   }
 
   // ---- 画面: グリッド(曲のリズム / 選んだブロックのフィル)----
+  // 長押しが効いたあと、指を離したときのタップを1回だけ無視する(長押しでグリッドが作り直されるので、ページ全体で見る)
+  let lpHeld = false, lpSwallow = false;
+  document.addEventListener('pointerup', () => { if (lpHeld) { lpHeld = false; lpSwallow = true; setTimeout(() => { lpSwallow = false; }, 250); } }, true);
+  document.addEventListener('pointercancel', () => { lpHeld = false; }, true);
+  document.addEventListener('click', (e) => { if (lpSwallow) { lpSwallow = false; e.stopPropagation(); e.preventDefault(); } }, true);
   function gridInto(g, getSrc, opts) {
     g.innerHTML = '';
     const src = getSrc();
@@ -290,11 +295,23 @@
         const ln = el('div', { className: 'ln' }); ln.appendChild(el('span', { className: 'nm', textContent: n }));
         for (let i = h * 8; i < h * 8 + 8; i++) {
           const before = opts.fill && i < opts.from;      // フィルの前の部分は、メインの小節がそのまま鳴る(見るだけ)
-          const v = before ? opts.pre[n][i] : src[n][i], c = el('button', { type: 'button', className: 'c' + (i % 4 === 0 ? ' q' : '') + (v ? ' on' : '') + (v === 2 ? ' x' : '') + (n === 'HAT' && v ? ' hat' : '') });
-          if (n === 'HAT' && v) c.style.opacity = String(Math.min(1, Math.max(0.3, 0.25 + 0.75 * (hatFactor(S.sel, i) * (v === 2 ? 1 : 0.9)) / 1.3)));
-          if (v === 3) { c.classList.add('on'); c.style.opacity = '.45'; }
+          const v = before ? opts.pre[n][i] : src[n][i], c = el('button', { type: 'button', className: 'c' + (i % 4 === 0 ? ' q' : '') + (v ? ' on' : '') + (v === 2 ? ' ac' : '') + (v === 3 ? ' gh' : '') + (n === 'HAT' && v === 1 ? ' hat' : '') });
+          if (n === 'HAT' && v === 1) c.style.opacity = String(Math.min(1, Math.max(0.3, 0.25 + 0.75 * (hatFactor(S.sel, i) * 0.9) / 1.3)));
           if (opts.fill) { c.classList.add(before ? 'pre' : 'fz'); if (before) c.disabled = true; }
-          c.onclick = () => { if (before) return; src[n][i] = (src[n][i] + 1) % 3; changed(true); };
+          // タップ: 鳴る/休み。長押し: 休み→ゴースト、鳴る→アクセント、アクセント→鳴る、ゴースト→アクセント(ハードコアのビートと同じ)
+          const setV = (f) => { src[n][i] = f(src[n][i]); changed(true); };
+          let lpT = null, lpDone = false, sx = 0, sy = 0;
+          const lpClear = () => { if (lpT) { clearTimeout(lpT); lpT = null; } };
+          if (!before) {
+            c.addEventListener('pointerdown', (e) => {
+              lpDone = false; sx = e.clientX; sy = e.clientY; lpClear();
+              lpT = setTimeout(() => { lpT = null; lpDone = true; lpHeld = true; if (navigator.vibrate) navigator.vibrate(15); setV((v0) => ({ 0: 3, 1: 2, 2: 1, 3: 2 }[v0] || 2)); }, 450);
+            });
+            c.addEventListener('pointermove', (e) => { if (Math.abs(e.clientX - sx) > 10 || Math.abs(e.clientY - sy) > 10) lpClear(); });
+            ['pointerup', 'pointercancel', 'pointerleave'].forEach((t) => c.addEventListener(t, lpClear));
+            c.addEventListener('contextmenu', (e) => e.preventDefault());
+            c.onclick = () => { if (lpDone) { lpDone = false; return; } setV((v0) => (v0 ? 0 : 1)); };
+          }
           ln.appendChild(c);
         }
         g.appendChild(ln);
@@ -304,7 +321,7 @@
   }
   function drawGrid() {
     gridInto($('grid'), () => S.song.rows, { fill: false });
-    $('gridNote0').textContent = 'マスを1回タップ=鳴る(黒)、2回=アクセント(黒に白のX。強く鳴る)、3回=消える。ここを直すと、全ブロックに効く。ハイハットの濃さは、鳴る強さ(アクセントのブレで変わる)。';
+    $('gridNote0').textContent = 'マスをタップで、鳴る(黒)/休みの切り替え。休みのマスを長押しでゴースト(薄く小さく)、鳴っているマスを長押しでアクセント(赤)。アクセントを長押しすると、ふつうの音に戻る(ハードコアのビートと同じ)。ここを直すと、全ブロックに効く。ハイハットの濃さは、鳴る強さ(アクセントのブレで変わる)。';
     const b = S.blocks[S.sel], has = b && b.fillType !== 'none';
     $('fillBox').hidden = !has;
     if (!has) { $('fillNone').hidden = false; return; }

@@ -32,12 +32,16 @@
   .c { flex: 1; min-width: 0; height: 34px; border: 1px solid var(--line); padding: 0; margin: 0; background: var(--bg); color: var(--bg); font: 700 14px/32px ui-monospace, monospace; text-align: center; cursor: pointer; touch-action: manipulation; }
   .c.q { border-left: 2px solid var(--fg); }
   .c.on { background: var(--fg); }
-  .c.x::after { content: "X"; }
+  .c.ac { background: var(--accent); border-color: var(--accent); }
+  .c.gh { opacity: .4; }
+  .g, .g * { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
   .c.pre { opacity: .55; cursor: default; background: color-mix(in srgb, var(--fg) 8%, var(--bg)); }
   .c.pre.on { background: var(--muted); }
+  .c.pre.ac { background: var(--accent); }
   .c.dim { opacity: .3; pointer-events: none; }
   .c.fz { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--bg)); }
-  .c.fz.on { background: var(--accent); }
+  .c.fz.on { background: var(--fg); }
+  .c.fz.ac { background: var(--accent); }
   .c.on.hat { background: var(--fg); }
   .chip { padding: 3px 9px; margin: 0 4px 4px 0; font-size: 13px; min-height: 0; }
   .chip.on { background: var(--fg); color: var(--bg); }
