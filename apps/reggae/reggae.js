@@ -51,8 +51,10 @@
   const OFFS = [['HAT', 'ハット'], ['OPEN', 'オープン'], ['RIM', 'リム'], ['SNARE', 'スネア'], ['TOM', 'タム'], ['KICK', 'キック']];
   const OFF_ROWS = { HAT: ['HAT'], OPEN: ['OPEN'], RIM: ['RIM'], SNARE: ['SNARE'], TOM: ['T-HI', 'T-MID', 'T-LO'], KICK: ['KICK'] };
   const ACCENTS = [['keep', 'そのまま'], ['none', 'なし'], ['omote', '表(1拍目)'], ['ura', '裏(3拍目)'], ['rand', 'ランダム']];
+  const ADDS = [['open', 'オープンハット'], ['ghost', 'リムのゴースト']];
+  const LEVELS = [[0, 'なし'], [1, '少し'], [2, '多め']];
   const newBlock = (bars, fill) => {
-    const b = { bars, reps: 1, off: {}, crashAt: 0, accent: 'keep', fillType: fill || 'none', fillFrom: 0, fillBar: 0, fillRows: zero(), alt: 0, intro: false };
+    const b = { bars, reps: 1, off: {}, add: { open: 0, ghost: 0 }, crashAt: 0, accent: 'keep', fillType: fill || 'none', fillFrom: 0, fillBar: 0, fillRows: zero(), alt: 0, intro: false };
     if (b.fillType !== 'none') applyFill(b);
     return b;
   };
@@ -71,7 +73,7 @@
     try {
       const o = JSON.parse(localStorage.getItem(KEY) || 'null');
       if (o && o.song && okRows(o.song.rows) && Array.isArray(o.blocks) && o.blocks.length) {
-        o.blocks.forEach((b) => { if (!okRows(b.fillRows)) b.fillRows = zero(); b.off = b.off || {}; b.alt = b.alt || 0; b.fillBar = b.fillBar || 0; b.crashAt = b.crashAt || 0; b.accent = b.accent || 'keep'; });
+        o.blocks.forEach((b) => { if (!okRows(b.fillRows)) b.fillRows = zero(); b.off = b.off || {}; b.add = Object.assign({ open: 0, ghost: 0 }, b.add); b.alt = b.alt || 0; b.fillBar = b.fillBar || 0; b.crashAt = b.crashAt || 0; b.accent = b.accent || 'keep'; });
         S.song = { pat: o.song.pat, rows: o.song.rows, bpm: o.song.bpm || 76 }; S.blocks = o.blocks; if (o.p) Object.assign(S.p, o.p);
       }
     } catch (e) { /* 読めなければ、最初の状態 */ }
@@ -83,8 +85,8 @@
 
   // ---- 並びを、音の予定(イベント)にする ----
   // ブロックのメインの小節 = 曲のリズムから、抜く音を除き、アクセントを置き直したもの
-  function blockMain(b, bi) {
-    const o = copyRows(S.song.rows);
+  function blockMain(b, bi, bar) {
+    const o = copyRows(S.song.rows), sd = bi * 7919 + (bar || 0) * 104729;
     OFFS.forEach(([k]) => { if (b.off[k]) OFF_ROWS[k].forEach((n) => { o[n].fill(0); }); });
     if (b.accent !== 'keep') ['KICK', 'RIM', 'SNARE'].forEach((n, ni) => {
       for (let i = 0; i < 16; i++) {
@@ -92,11 +94,15 @@
         o[n][i] = b.accent === 'none' ? 1 : b.accent === 'omote' ? (i === 0 ? 2 : 1) : b.accent === 'ura' ? (i === 8 ? 2 : 1) : (rnd(bi * 977 + ni * 131 + i * 7 + 5) < 0.4 ? 2 : 1);
       }
     });
+    // 足す音: 小節ごとに、ほんの少しだけ入る(同じ小節は、いつも同じ)
+    const ph = [0, 0.22, 0.5][b.add.open], pg = [0, 0.1, 0.28][b.add.ghost];
+    if (ph && !b.off.OPEN) [6, 14].forEach((i, k) => { if (o.HAT[i] && !o.OPEN[i] && rnd(sd + 31 + k * 17) < ph * (k ? 1 : 0.6)) { o.HAT[i] = 0; o.OPEN[i] = 1; } });
+    if (pg && !b.off.RIM) [3, 7, 11, 14, 15].forEach((i, k) => { if (!o.RIM[i] && !o.SNARE[i] && rnd(sd + 97 + k * 13) < pg) o.RIM[i] = 3; });
     return o;
   }
-  const effRows = (b, bi, isFill) => {
+  const effRows = (b, bi, isFill, bar) => {
     if (b.intro) return copyRows(b.fillRows);
-    const m = blockMain(b, bi);
+    const m = blockMain(b, bi, bar);
     if (!isFill || b.fillType === 'none') return m;
     ROWS.forEach((n) => { for (let i = b.fillFrom; i < 16; i++) m[n][i] = b.fillRows[n][i]; });
     return m;
@@ -110,7 +116,7 @@
       for (let rep = 0; rep < b.reps; rep++) {
         for (let bar = 0; bar < b.bars; bar++) {
           const fb = b.fillBar > 0 ? Math.min(b.fillBar, b.bars) - 1 : b.bars - 1;
-          const last = bar === fb, rows = effRows(b, bi, last), t0 = t, seedBar = bi * 1000 + rep * 100 + bar;
+          const last = bar === fb, rows = effRows(b, bi, last, bar), t0 = t, seedBar = bi * 1000 + rep * 100 + bar;
           const withFill = last && b.fillType !== 'none';
           const landing = landNext && $('land').checked;
           if (landing && !rows.CRASH[0]) ev.push({ t: t0, row: 'CRASH', vel: 0.9, bi });
@@ -125,7 +131,7 @@
               if (n === 'HAT') {
                 vel = (i % 4 === 0 ? 0.62 : i % 2 === 0 ? 0.42 : 0.34) * (v === 2 ? 1.45 : 1) * hatFactor(bi, i);
                 tt += (rnd(seedBar * 17 + i * 5 + 11) - 0.5) * 2 * (S.p.sway / 100) * 0.02;
-              } else vel = BASE_VEL[n] * (v === 2 ? 1.25 : 1);
+              } else vel = BASE_VEL[n] * (v === 2 ? 1.25 : v === 3 ? 0.4 : 1);
               ev.push({ t: Math.max(0, tt), row: n, vel, bi });
             }
           });
@@ -236,11 +242,16 @@
       d.innerHTML = '<div class="ttl">ブロック ' + (i + 1) + '　' + (b.intro ? '' : b.bars + '小節 × ') + b.reps + '回' + (b.intro ? '<span class="tag">曲頭ロール</span>' : '') + (b.fillType !== 'none' && !b.intro ? '<span class="tag fl">フィル ' + fillBarLabel(b) + ' ' + beatName(b.fillFrom) + 'から</span>' : '') + '</div>';
       const num = (label, key, min, max) => { const l = el('label', {}, label + ' '), inp = el('input', { type: 'number', min, max, value: b[key], inputMode: 'numeric' }); inp.onchange = () => { const v = Math.max(min, Math.min(max, Math.round(+inp.value || min))); inp.value = v; b[key] = v; changed(false); drawBlocks(); }; l.appendChild(inp); return l; };
       const r2 = el('div', { className: 'row' });
-      if (!b.intro) r2.appendChild(num('長さ(小節)', 'bars', 1, 64));
+      if (!b.intro) {
+        const bs = el('select'); [...new Set([4, 8, b.bars])].sort((x, y) => x - y).forEach((v) => { const o = el('option', { value: v, textContent: v + '小節' }); if (v === b.bars) o.selected = true; bs.appendChild(o); });
+        bs.onchange = () => { b.bars = +bs.value; changed(true); drawBlocks(); };
+        const bl = el('label', {}, '長さ '); bl.appendChild(bs); r2.appendChild(bl);
+      }
       r2.appendChild(num('回数', 'reps', 1, 16)); d.appendChild(r2);
       if (!b.intro) {
         const offs = el('span'); OFFS.forEach(([k, n]) => { offs.appendChild(chip(n, b.off[k] ? 'cut' : '', () => { b.off[k] = !b.off[k]; changed(true); drawBlocks(); })); });
         d.appendChild(line('抜く音', offs));
+        ADDS.forEach(([k, n]) => { const w = el('span'); LEVELS.forEach(([v, t]) => { w.appendChild(chip(t, b.add[k] === v ? 'on' : '', () => { b.add[k] = v; changed(true); drawBlocks(); })); }); d.appendChild(line(n, w)); });
         const cr = el('span'); [[0, 'なし'], [1, '1拍目'], [3, '3拍目']].forEach(([v, n]) => { cr.appendChild(chip(n, b.crashAt === v ? 'on' : '', () => { b.crashAt = v; changed(false); drawBlocks(); })); });
         cr.appendChild(el('small', { className: 'small', textContent: ' 最初の小節だけ' })); d.appendChild(line('クラッシュ', cr));
         const ac = el('span'); ACCENTS.forEach(([k, n]) => { ac.appendChild(chip(n, b.accent === k ? 'on' : '', () => { b.accent = k; changed(true); drawBlocks(); })); });
@@ -279,6 +290,7 @@
         const before = opts.fill && i < opts.from;      // フィルの前の部分は、メインの小節がそのまま鳴る(見るだけ)
         const v = before ? opts.pre[n][i] : src[n][i], c = el('button', { type: 'button', className: 'c' + (i % 4 === 0 ? ' q' : '') + (v ? ' on' : '') + (v === 2 ? ' x' : '') + (n === 'HAT' && v ? ' hat' : '') });
         if (n === 'HAT' && v) c.style.opacity = String(Math.min(1, Math.max(0.3, 0.25 + 0.75 * (hatFactor(S.sel, i) * (v === 2 ? 1 : 0.9)) / 1.3)));
+        if (v === 3) { c.classList.add('on'); c.style.opacity = '.45'; }
         if (opts.fill) { c.classList.add(before ? 'pre' : 'fz'); if (before) c.disabled = true; }
         c.onclick = () => { if (before) return; src[n][i] = (src[n][i] + 1) % 3; changed(true); };
         ln.appendChild(c);
@@ -295,7 +307,7 @@
     $('fillNone').hidden = true;
     $('gridTitle').textContent = 'フィルを直す(ブロック ' + (S.sel + 1) + ')';
     const bi = S.sel;
-    gridInto($('fgrid'), () => b.fillRows, { fill: true, from: b.fillFrom, pre: blockMain(b, bi) });
+    gridInto($('fgrid'), () => b.fillRows, { fill: true, from: b.fillFrom, pre: blockMain(b, bi, b.fillBar > 0 ? Math.min(b.fillBar, b.bars) - 1 : b.bars - 1) });
     $('gridNote').textContent = 'フィルの小節(' + fillBarLabel(b) + ')が、実際に鳴るとおりの形。左の灰色の部分は、そのブロックのメインの小節(抜く音・アクセント反映済み)がそのまま鳴る(ここでは直せない)。赤い部分(' + beatName(b.fillFrom) + 'から)が、フィル。タップで直せる。';
   }
 
