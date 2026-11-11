@@ -153,22 +153,21 @@
 </section>
 
 <section id="paneO" hidden>
-  <h2>1. 書き出す範囲</h2>
-  <div class="row"><select id="expBlk"></select></div>
-  <p class="small">「全体」は、並べたブロックを順に全部。ブロックを選ぶと、そのブロックだけ。下のパートごとも、全パートまとめても、ここで選んだ範囲を書き出す。</p>
-  <h2>2. 入れるパート</h2>
-  <table class="parts" id="parts"></table>
-  <p class="small">チェックを外したパートは、再生でも、書き出しでも、鳴らさない(鳴らしながら切り替えられる)。</p>
-  <h2>3. 書き出す</h2>
-  <div class="row"><button id="saveMix" type="button">チェックしたパートを、1つのWAVにまとめて書き出す</button></div>
-  <div class="row"><button id="saveParts" type="button">チェックしたパートを、パートごとに別々のWAVで書き出す</button></div>
-  <p class="small">どちらも、1で選んだ範囲を書き出す。パートごとは、チェックしたパートの数だけファイルができる。</p>
   <h2>書き出しの設定</h2>
+  <div class="row"><label>範囲 <select id="expBlk"></select></label></div>
+  <p class="small">「全体」は、並べたブロックを順に全部。ブロックを選ぶと、そのブロックだけ。</p>
   <div class="row"><label><input id="headIn" type="checkbox" checked> 冒頭フィルを入れる</label></div>
   <p class="small">「曲頭フィル」で選んだフィルを、WAVに入れるかどうか。外すと、その小節はフィルを置く前の形で書き出す。</p>
   <div class="row"><label><input id="wrap" type="checkbox" checked> 余韻を頭に重ねて、そのままループできる長さにする</label></div>
   <div class="row"><label><input id="unify" type="checkbox"> ブロックの長さをそろえる(足りない分は、くり返す)</label> <label>小節数 <input id="unifyBars" type="number" min="1" max="64" inputmode="numeric" placeholder="自動" style="width:70px"></label></div>
   <p class="small">長さをそろえるのは、ブロックを選んだときだけ効く。小節数が空なら、いちばん長いブロックに合わせる。Loopy ProやKoalaに入れて、そのまま切り替えられる。</p>
+  <h2>入れるパート</h2>
+  <table class="parts" id="parts"></table>
+  <p class="small">チェックを外したパートは、再生でも、書き出しでも、鳴らさない(鳴らしながら切り替えられる)。</p>
+  <h2>書き出す</h2>
+  <div class="row"><button id="saveMix" type="button">チェックしたパートを、1つのWAVにまとめて書き出す</button></div>
+  <div class="row"><button id="saveParts" type="button">チェックしたパートを、パートごとに別々のWAVで書き出す</button></div>
+  <p class="small">どちらも、設定の範囲を書き出す。パートごとは、チェックしたパートの数だけファイルができる。</p>
   <p class="small status" id="status"></p>
   <h2>曲データをテキストで残す</h2>
   <div class="row"><button id="dataOut" type="button">いまのデータをテキストにする</button> <button id="dataCopy" type="button">コピー</button></div>
@@ -183,6 +182,6 @@
 <script src="../../audio-unlock.js?v=4"></script>
 <script src="../common/wav.js"></script>
 <script src="samples.js?v=20261112"></script>
-<script src="reggae.js?v=20261112v"></script>
+<script src="reggae.js?v=20261112w"></script>
 </body>
 </html>
