@@ -290,11 +290,6 @@
   }
 
   // ---- 画面: グリッド(曲のリズム / 選んだブロックのフィル)----
-  // 長押しが効いたあと、指を離したときのタップを1回だけ無視する(長押しでグリッドが作り直されるので、ページ全体で見る)
-  let lpHeld = false, lpSwallow = false;
-  document.addEventListener('pointerup', () => { if (lpHeld) { lpHeld = false; lpSwallow = true; setTimeout(() => { lpSwallow = false; }, 250); } }, true);
-  document.addEventListener('pointercancel', () => { lpHeld = false; }, true);
-  document.addEventListener('click', (e) => { if (lpSwallow) { lpSwallow = false; e.stopPropagation(); e.preventDefault(); } }, true);
   S.pg = { song: 0, fill: 1 };
   const focusFill = (b) => { S.pg.fill = b.fillFrom >= 8 ? 1 : 0; };
   function gridInto(g, getSrc, opts, key) {
@@ -317,17 +312,20 @@
           if (opts.fill) { c.classList.add(before ? 'pre' : 'fz'); if (before) c.disabled = true; }
           // タップ: 鳴る/休み。長押し: 休み→ゴースト、鳴る→アクセント、アクセント→鳴る、ゴースト→アクセント(ハードコアのビートと同じ)
           const setV = (f) => { src[n][i] = f(src[n][i]); changed(true); };
-          let lpT = null, lpDone = false, sx = 0, sy = 0;
+          // クリックには頼らず、指を離した瞬間(pointerup)で、タップと長押しを分ける(長押しでグリッドが作り直されても、あとのタップに影響しない)
+          let lpT = null, pressed = false, lpDone = false, moved = false, sx = 0, sy = 0;
           const lpClear = () => { if (lpT) { clearTimeout(lpT); lpT = null; } };
           if (!before) {
             c.addEventListener('pointerdown', (e) => {
-              lpDone = false; sx = e.clientX; sy = e.clientY; lpClear();
-              lpT = setTimeout(() => { lpT = null; lpDone = true; lpHeld = true; if (navigator.vibrate) navigator.vibrate(15); setV((v0) => ({ 0: 3, 1: 2, 2: 1, 3: 2 }[v0] || 2)); }, 450);
+              if (e.button > 0) return;
+              pressed = true; lpDone = false; moved = false; sx = e.clientX; sy = e.clientY; lpClear();
+              lpT = setTimeout(() => { lpT = null; lpDone = true; if (navigator.vibrate) navigator.vibrate(15); setV((v0) => ({ 0: 3, 1: 2, 2: 1, 3: 2 }[v0] || 2)); }, 450);
             });
-            c.addEventListener('pointermove', (e) => { if (Math.abs(e.clientX - sx) > 10 || Math.abs(e.clientY - sy) > 10) lpClear(); });
-            ['pointerup', 'pointercancel', 'pointerleave'].forEach((t) => c.addEventListener(t, lpClear));
+            c.addEventListener('pointermove', (e) => { if (Math.abs(e.clientX - sx) > 10 || Math.abs(e.clientY - sy) > 10) { moved = true; lpClear(); } });
+            c.addEventListener('pointerup', () => { lpClear(); const tap = pressed && !lpDone && !moved; pressed = false; if (tap) setV((v0) => (v0 ? 0 : 1)); });
+            ['pointercancel', 'pointerleave'].forEach((t) => c.addEventListener(t, () => { lpClear(); pressed = false; }));
             c.addEventListener('contextmenu', (e) => e.preventDefault());
-            c.onclick = () => { if (lpDone) { lpDone = false; return; } setV((v0) => (v0 ? 0 : 1)); };
+            c.onclick = (e) => { if (e.detail === 0) setV((v0) => (v0 ? 0 : 1)); };      // キーボード操作用
           }
           ln.appendChild(c);
         }
