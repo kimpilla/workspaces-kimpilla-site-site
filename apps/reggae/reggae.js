@@ -188,6 +188,7 @@
 
   // ---- 画面: ブロック ----
   const el = (tag, attrs, html) => { const e = document.createElement(tag); Object.assign(e, attrs || {}); if (html !== undefined) e.innerHTML = html; return e; };
+  const beatName = (st) => (st / 4 + 1).toFixed(2).replace(/0$/, '').replace(/\.0$/, '') + '拍目';
   function fmtTime(sec) { const m = Math.floor(sec / 60); return m + '分' + Math.round(sec - m * 60) + '秒'; }
   function updateTotal() { const { dur } = timeline(), bars = S.blocks.reduce((a, b) => a + b.bars * b.reps, 0); $('total').textContent = '全体で ' + bars + '小節、' + fmtTime(dur); }
   function changed(redrawGrid) { save(); updateTotal(); if (redrawGrid) drawGrid(); }
@@ -206,7 +207,7 @@
     const box = $('rows'); box.innerHTML = '';
     S.blocks.forEach((b, i) => {
       const d = el('div', { className: 'blk' + (i === S.sel ? ' sel' : '') });
-      d.innerHTML = '<div class="ttl">ブロック ' + (i + 1) + (b.intro ? '<span class="tag">曲頭</span>' : '') + (b.fillType !== 'none' && !b.intro ? '<span class="tag fl">フィル入り</span>' : '') + '</div>';
+      d.innerHTML = '<div class="ttl">ブロック ' + (i + 1) + (b.intro ? '<span class="tag">曲頭</span>' : '') + (b.fillType !== 'none' && !b.intro ? '<span class="tag fl">フィル ' + beatName(b.fillFrom) + 'から</span>' : '') + '</div>';
       const row1 = el('div', { className: 'row' });
       if (!b.intro) {
         const sel = el('select'); Object.keys(PATTERNS).forEach((k) => { const o = el('option', { textContent: k }); if (k === b.pat) o.selected = true; sel.appendChild(o); });
@@ -224,8 +225,8 @@
         d.appendChild(ac);
         const fr = el('div', { className: 'row' }), fs = el('select');
         FILL_TYPES.forEach(([k, n]) => { const o = el('option', { value: k, textContent: n }); if (k === b.fillType) o.selected = true; fs.appendChild(o); });
-        fs.onchange = () => { b.fillType = fs.value; b.alt = 0; applyFill(b); if (b.fillType === 'none' && S.mode === 'fill' && i === S.sel) S.mode = 'main'; changed(true); drawBlocks(); };
-        const idea = el('button', { type: 'button', textContent: '案を出す' }); idea.onclick = () => { if (b.fillType === 'none') { b.fillType = 'tom'; } b.alt++; applyFill(b); changed(true); drawBlocks(); };
+        fs.onchange = () => { b.fillType = fs.value; b.alt = 0; applyFill(b); S.sel = i; S.mode = b.fillType === 'none' ? 'main' : 'fill'; changed(true); drawBlocks(); };
+        const idea = el('button', { type: 'button', textContent: '案を出す' }); idea.onclick = () => { if (b.fillType === 'none') { b.fillType = 'tom'; } b.alt++; applyFill(b); S.sel = i; S.mode = 'fill'; changed(true); drawBlocks(); };
         fr.appendChild(el('label', {}, 'フィル ')); fr.lastChild.appendChild(fs); fr.appendChild(idea);
         d.appendChild(fr);
       }
@@ -252,17 +253,18 @@
     ROWS.forEach((n) => {
       const ln = el('div', { className: 'ln' }); ln.appendChild(el('span', { className: 'nm', textContent: n }));
       for (let i = 0; i < 16; i++) {
-        const v = src[n][i], c = el('button', { type: 'button', className: 'c' + (i % 4 === 0 ? ' q' : '') + (v ? ' on' : '') + (v === 2 ? ' x' : '') + (n === 'HAT' && v ? ' hat' : '') });
+        const before = S.mode === 'fill' && i < b.fillFrom;      // フィルの前の部分は、メインの小節がそのまま鳴る(見るだけ)
+        const v = before ? b.rows[n][i] : src[n][i], c = el('button', { type: 'button', className: 'c' + (i % 4 === 0 ? ' q' : '') + (v ? ' on' : '') + (v === 2 ? ' x' : '') + (n === 'HAT' && v ? ' hat' : '') });
         if (n === 'HAT' && v) c.style.opacity = String(Math.min(1, Math.max(0.3, 0.25 + 0.75 * (hatFactor(S.sel, i) * (v === 2 ? 1 : 0.9)) / 1.3)));
-        if (S.mode === 'fill') { if (i < b.fillFrom) c.classList.add('dim'); }
+        if (S.mode === 'fill') { c.classList.add(before ? 'pre' : 'fz'); if (before) c.disabled = true; }
         else if (b.fillType !== 'none' && i >= b.fillFrom) c.classList.add('fz');
-        c.onclick = () => { src[n][i] = (src[n][i] + 1) % 3; changed(true); };
+        c.onclick = () => { if (before) return; src[n][i] = (src[n][i] + 1) % 3; changed(true); };
         ln.appendChild(c);
       }
       g.appendChild(ln);
     });
     $('gridNote').textContent = S.mode === 'fill'
-      ? '薄い部分は、メインの小節がそのまま鳴る。濃い部分(' + (b.fillFrom / 4 + 1).toFixed(1).replace('.0', '') + '拍目から)を、フィルとして、タップで直せる。'
+      ? '最後の小節が、実際に鳴るとおりの形。左の灰色の部分は、メインの小節がそのまま鳴る(ここでは直せない)。赤い部分(' + beatName(b.fillFrom) + 'から)が、フィル。タップで直せる。'
       : 'マスをタップするたびに、なし → 鳴る → アクセント(X)→ なし。ハイハットの濃さは、鳴る強さ(アクセントのブレで変わる)。' + (b.fillType !== 'none' ? '赤い部分は、最後の小節だけ、フィルに置き換わる。' : '');
   }
 
