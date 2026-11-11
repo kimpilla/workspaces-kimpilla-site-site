@@ -65,7 +65,10 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   table.steps th.lab { padding: 0; text-align: center; font-size: 11px; color: var(--muted); }
   table.steps th.lab.beat { padding-left: 8px; color: var(--fg); }
   table.steps td { padding: 0; border: 0; }
-  .st { width: 26px; height: 26px; min-width: 0; margin: 1px; padding: 0; border: 1px solid var(--line); background: var(--bg); color: var(--fg); line-height: 1; }
+  .gnav { display: flex; gap: 8px; align-items: stretch; margin-bottom: 8px; }
+  .garrow { flex: 1; margin: 0; padding: 0; min-height: 52px; font-size: 24px; }
+  .gpage { flex: 2; display: flex; align-items: center; justify-content: center; font-weight: 700; text-align: center; }
+  .st { width: 36px; height: 36px; min-width: 0; margin: 1px; padding: 0; border: 1px solid var(--line); background: var(--bg); color: var(--fg); line-height: 1; }
   .st.beat { margin-left: 8px; }
   .st.on { background: var(--fg); border-color: var(--fg); }
   .st.acc { background: var(--accent); border-color: var(--accent); }
@@ -105,7 +108,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
     table.steps th { padding-right: 4px; font-size: 11px; }
     table.steps th .long { display: none; }
     table.steps th .short { display: inline; }
-    .st { width: calc((100vw - 150px) / 16 - 1px); min-width: 12px; height: 30px; margin: .5px; }
+    .st { width: calc((100vw - 150px) / 8 - 3px); min-width: 12px; max-width: 44px; height: 36px; margin: 1px; }
     .st.beat { margin-left: 4px; }
     table.steps th.lab { font-size: 9px; }
     table.steps th.lab.beat { padding-left: 4px; }
@@ -639,6 +642,8 @@ function saveBlob(blob, filename, statusEl) {
   const rowStr = (p, d, n) => fillRow(p[d] || '', n || 16);
   const clonePat = (p) => JSON.parse(JSON.stringify(p || {}));
   const copyBlock = (b) => JSON.parse(JSON.stringify(b));
+  const stepPage = new WeakMap();                   // ブロックごとの、編集の表のページ(8マスずつ。矢印で動く)
+  const PAGE = 8;
   const stepScroll = new WeakMap();                 // ブロックごとの、編集の表の横スクロール位置
   function stepsEditor(b) {
     const box = document.createElement('div');
@@ -650,6 +655,8 @@ function saveBlob(blob, filename, statusEl) {
     let wrapScrollAt = 0;
     wrap.addEventListener('scroll', () => { stepScroll.set(b, wrap.scrollLeft); wrapScrollAt = Date.now(); }, { passive: true });
     if (stepScroll.has(b)) requestAnimationFrame(() => { wrap.scrollLeft = stepScroll.get(b); });
+    const pages = Math.max(1, Math.ceil(steps / PAGE)); let pg = Math.min(stepPage.get(b) || 0, pages - 1); stepPage.set(b, pg);
+    const p0 = pg * PAGE, p1 = Math.min(steps, p0 + PAGE);
     const tb = document.createElement('table'); tb.className = 'steps';
     const head = tb.insertRow(); head.insertCell();
     // 表の横の長さ = このブロックの長さ(5/4なら20マス、7/8なら14マス)。/4は 1 e & a、/8は 8分ごとに番号
@@ -663,14 +670,14 @@ function saveBlob(blob, filename, statusEl) {
     };
     const where = (i) => b.unit === 4 ? (Math.floor(i / 4) + 1) + '拍目' + (i % 4 === 0 ? 'の頭' : 'の' + BEATLAB[i % 4])
       : (Math.floor(i / per) + 1) + 'つ目の' + UN + (i % per === 0 ? 'の頭' : '');
-    for (let i = 0; i < steps; i++) {
+    for (let i = p0; i < p1; i++) {
       const th = document.createElement('th'); th.className = 'lab' + (isHead(i) ? ' beat' : '');
       th.textContent = lab(i); head.appendChild(th);
     }
     for (const d of PARTS) {
       const tr = tb.insertRow(), th = document.createElement('th'); th.innerHTML = '<span class="long"></span><span class="short"></span>'; th.firstChild.textContent = PN[d]; th.lastChild.textContent = PS[d]; th.title = PN[d]; tr.appendChild(th);
       const str = rowStr(p, d, steps);
-      for (let i = 0; i < steps; i++) {
+      for (let i = p0; i < p1; i++) {
         const bt = document.createElement('button'), ch = str[i];
         bt.className = 'st' + (isHead(i) ? ' beat' : '') + (CLS[ch] || '');
         bt.title = PN[d] + '・' + where(i);
@@ -703,9 +710,17 @@ function saveBlob(blob, filename, statusEl) {
       };
       tr.insertCell().appendChild(x);
     }
+    // 8マスずつ、大きな矢印で動く(縦にも横にもスクロールしなくてよい)
+    const nav = document.createElement('div'); nav.className = 'gnav';
+    const arrow = (txt, to) => { const x = document.createElement('button'); x.type = 'button'; x.className = 'garrow'; x.textContent = txt; x.disabled = to < 0 || to >= pages; x.onclick = () => { stepPage.set(b, to); renderRows(); }; return x; };
+    const pl = document.createElement('span'); pl.className = 'gpage';
+    const unitName = b.unit === 4 ? '拍目' : 'つ目の' + UN;
+    pl.textContent = (pages > 1 ? (pg + 1) + '/' + pages + '　' : '') + (Math.floor(p0 / per) + 1) + (Math.floor((p1 - 1) / per) > Math.floor(p0 / per) ? '〜' + (Math.floor((p1 - 1) / per) + 1) : '') + unitName;
+    nav.appendChild(arrow('←', pg - 1)); nav.appendChild(pl); nav.appendChild(arrow('→', pg + 1));
+    box.appendChild(nav);
     wrap.appendChild(tb); box.appendChild(wrap);
     const note = document.createElement('p'); note.className = 'small';
-    note.textContent = 'マスをタップで、鳴る(黒)/休みの切り替え。休みのマスを長押しでゴースト(薄く小さく)、鳴っているマスを長押しでアクセント(赤)。アクセントを長押しすると、ふつうの音に戻る。横はこのブロックの長さぶんのマス(1マス=16分音符。' + ({ 4: '1 e & a で1拍', 8: '番号が8分音符の頭、・がそのうら', 2: '番号が2分音符の頭、・がその半分', 16: '番号が16分音符' }[b.unit] || '') + ')、縦はパート。元のパターンは4拍(16マス)なので、それより長いブロックでは、5拍目からは頭に戻ってくり返した音が入っている。押して直せる。';
+    note.textContent = 'マスをタップで、鳴る(黒)/休みの切り替え。休みのマスを長押しでゴースト(薄く小さく)、鳴っているマスを長押しでアクセント(赤)。アクセントを長押しすると、ふつうの音に戻る。横は8マスずつ、上の大きな矢印(←→)で動く(1マス=16分音符。' + ({ 4: '1 e & a で1拍', 8: '番号が8分音符の頭、・がそのうら', 2: '番号が2分音符の頭、・がその半分', 16: '番号が16分音符' }[b.unit] || '') + ')、縦はパート。元のパターンは4拍(16マス)なので、それより長いブロックでは、5拍目からは頭に戻ってくり返した音が入っている。押して直せる。';
     box.appendChild(note);
     // くり返して2倍: いまの長さぶんの中身を2回並べて、長さを2倍にする(1/4 → 2/4 → 4/4 → 8/4 のように、少し作ってから広げられる)
     const dbl = document.createElement('button');
