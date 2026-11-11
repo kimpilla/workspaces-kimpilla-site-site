@@ -109,10 +109,11 @@
     if (pg && !E.off.RIM) [3, 7, 11, 14, 15].forEach((i, k) => { if (!o.RIM[i] && !o.SNARE[i] && rnd(sd + 97 + k * 13) < pg) o.RIM[i] = 3; });
     return o;
   }
-  const pendingHere = (bi, bar) => !!(S.work && S.work.dirty && S.cur && S.cur.k === 'list' && S.cur.bi === bi && S.cur.bar === bar && S.work.key === 'list-' + bi + '-' + bar);
+  S.works = {};      // 小節ごとの「まだ保存していない直し」(別の小節を選んでも残る)
+  const pendingHere = (bi, bar) => { const w = S.works['list-' + bi + '-' + bar]; return w && w.dirty ? w : null; };
   const effRows = (b, bi, bar, E) => {
     if (b.intro) return copyRows(b.fillRows);
-    if (pendingHere(bi, bar)) E = Object.assign({}, E, { rows: S.work.rows });     // まだ保存していない直しも、鳴らすと聞こえる
+    const pw = pendingHere(bi, bar); if (pw) E = Object.assign({}, E, { rows: pw.rows });     // まだ保存していない直しも、鳴らすと聞こえる
     let m;
     if (E.rows) m = copyRows(E.rows);
     else { m = blockMain(E, bi, bar); if (E.fill) ROWS.forEach((n) => { for (let i = E.fill.from; i < 16; i++) m[n][i] = E.fill.rows[n][i]; }); }
@@ -140,7 +141,7 @@
         for (let bar = 0; bar < b.bars; bar++) {
           const E = b.intro ? { crashAt: 0, fill: b.fillType !== 'none' ? {} : null } : barEff(b, bar);
           const rows = effRows(b, bi, bar, E), t0 = t, seedBar = bi * 1000 + rep * 100 + bar;
-          const withFill = !!E.fill || !!(b.ov && b.ov[bar] && b.ov[bar].fl) || (pendingHere(bi, bar) && S.work.fl);
+          const withFill = !!E.fill || !!(b.ov && b.ov[bar] && b.ov[bar].fl) || (pendingHere(bi, bar) ? pendingHere(bi, bar).fl : false);
           const landing = landNext && $('land').checked;
           if (landing && !rows.CRASH[0]) ev.push({ t: t0, row: 'CRASH', vel: 0.9, bi });
           if (E.crashAt) { const st = E.crashAt === 3 ? 8 : 0; if (!rows.CRASH[st] && !(st === 0 && landing)) ev.push({ t: t0 + (st / 4) * spb, row: 'CRASH', vel: 0.9, bi }); }
@@ -284,8 +285,13 @@
   const openB = new WeakSet();                       // 「⋯」を開いているブロック
   const curBlock = () => (S.cur ? (S.cur.k === 'draft' ? S.draft : S.blocks[S.cur.bi]) : null);
   const curBi = () => (S.cur && S.cur.k === 'list' ? S.cur.bi : 0);
+  let rfT = 0;
+  function refreshPlay() {       // 鳴らしている間に直したら、すぐ鳴らし直す(音は、ループの頭でまとめて予約しているため)
+    if (!playing) return; clearTimeout(rfT);
+    rfT = setTimeout(() => { if (!playing) return; const aud = S.audition, pb = previewBlocks, pi = previewInfo; stopAll(); if (aud) auditionBar(); else { previewBlocks = pb; previewInfo = pi; play(); } }, 120);
+  }
   function changed(full) {
-    save(); updateTotal();
+    save(); updateTotal(); refreshPlay();
     if (full) { const sc = $('seq').scrollTop; drawSeq(); $('seq').scrollTop = sc; drawSheet(); drawSongGrid(); }
   }
 
@@ -323,10 +329,10 @@
   // ---- 並び: 小節の四角 ----
   function barCell(b, bi, k, kind) {
     const E = barEff(b, k), o = b.ov && b.ov[k], isSel = S.cur && S.cur.k === kind && S.cur.bi === bi && S.cur.bar === k;
-    const dirty = isSel && S.work && S.work.dirty;
+    const dirty = !!pendingHere(bi, k);
     const x = el('button', { type: 'button', className: 'bar' + (E.fill || (o && o.fl) ? ' fl' : E.ex ? ' ex' : '') + (isSel ? ' sel' : '') + (dirty ? ' pend' : ''), textContent: String(k + 1) });
     x.dataset.kind = kind; x.dataset.bi = bi; x.dataset.bar = k;
-    x.onclick = () => { S.cur = { k: kind, bi, bar: k }; S.work = null; drawSeq(); drawSheet(); const q = document.querySelector('.bar.sel'); if (q) q.scrollIntoView({ block: 'nearest' }); };
+    x.onclick = () => { S.cur = { k: kind, bi, bar: k }; drawSeq(); drawSheet(); const q = document.querySelector('.bar.sel'); if (q) q.scrollIntoView({ block: 'nearest' }); };
     return x;
   }
   function playOnly(b, kind, bi, btn) {
@@ -355,10 +361,10 @@
         const bt = el('div', { className: 'btns' });
         const mk = (txt, fn) => { const x = el('button', { type: 'button', className: 'sbtn', textContent: txt }); x.onclick = fn; bt.appendChild(x); };
         const fix = (n) => { if (S.cur && S.cur.k === 'list') { if (S.cur.bi === bi) S.cur.bi = n; else if (S.cur.bi === n) S.cur.bi = bi; } };
-        mk('↑ 前へ', () => { if (bi > 0) { [S.blocks[bi - 1], S.blocks[bi]] = [S.blocks[bi], S.blocks[bi - 1]]; fix(bi - 1); changed(true); } });
-        mk('↓ 後ろへ', () => { if (bi < S.blocks.length - 1) { [S.blocks[bi + 1], S.blocks[bi]] = [S.blocks[bi], S.blocks[bi + 1]]; fix(bi + 1); changed(true); } });
-        mk('複製', () => { S.blocks.splice(bi + 1, 0, JSON.parse(JSON.stringify(b))); changed(true); });
-        mk('🗑 消す', () => { S.blocks.splice(bi, 1); S.cur = null; changed(true); });
+        mk('↑ 前へ', () => { if (bi > 0) { S.works = {}; S.work = null; [S.blocks[bi - 1], S.blocks[bi]] = [S.blocks[bi], S.blocks[bi - 1]]; fix(bi - 1); changed(true); } });
+        mk('↓ 後ろへ', () => { if (bi < S.blocks.length - 1) { S.works = {}; S.work = null; [S.blocks[bi + 1], S.blocks[bi]] = [S.blocks[bi], S.blocks[bi + 1]]; fix(bi + 1); changed(true); } });
+        mk('複製', () => { S.works = {}; S.work = null; S.blocks.splice(bi + 1, 0, JSON.parse(JSON.stringify(b))); changed(true); });
+        mk('🗑 消す', () => { S.works = {}; S.work = null; S.blocks.splice(bi, 1); S.cur = null; changed(true); });
         m.appendChild(bt);
       }
       d.appendChild(m);
@@ -370,7 +376,7 @@
     if (!S.blocks.length) {
       box.appendChild(el('p', { textContent: 'ブロックを作ると、小節の四角が出る。四角をタップして、小節を直す。' }));
       const r0 = el('div', { className: 'row' });
-      [8, 4].forEach((n) => { const x = el('button', { type: 'button', textContent: '＋ ' + n + '小節のブロックを作る' }); x.onclick = () => { S.blocks.push(newBlock(n)); S.cur = { k: 'list', bi: 0, bar: 0 }; S.work = null; changed(true); }; r0.appendChild(x); });
+      [8, 4].forEach((n) => { const x = el('button', { type: 'button', textContent: '＋ ' + n + '小節のブロックを作る' }); x.onclick = () => { S.blocks.push(newBlock(n)); S.cur = { k: 'list', bi: 0, bar: 0 }; S.work = null; S.works = {}; changed(true); }; r0.appendChild(x); });
       box.appendChild(r0);
     }
     S.blocks.forEach((b, i) => box.appendChild(blockCard(b, 'list', i)));
@@ -378,8 +384,8 @@
     const addB = (n) => { S.blocks.push(newBlock(n)); S.cur = { k: 'list', bi: S.blocks.length - 1, bar: 0 }; S.work = null; changed(true); };
     if (S.askLen) { bt.appendChild(el('span', { className: 'small', textContent: '長さ: ' })); [4, 8].forEach((n) => { const x = el('button', { type: 'button', className: 'sbtn', textContent: n + '小節' }); x.onclick = () => { S.askLen = false; addB(n); }; bt.appendChild(x); }); }
     else { const ab = el('button', { type: 'button', className: 'sbtn', textContent: '＋ ブロック' }); ab.onclick = () => { S.askLen = true; drawSeq(); }; bt.appendChild(ab); }
-    const ai = el('button', { type: 'button', className: 'sbtn', textContent: '＋ 曲頭ロール' }); ai.onclick = () => { S.blocks.unshift(newIntro()); S.cur = null; S.work = null; changed(true); }; bt.appendChild(ai);
-    const rs = el('button', { type: 'button', className: 'sbtn', textContent: 'ブロックを全部消す' }); rs.onclick = () => { if (!S.blocks.length || !window.confirm('並びのブロックを、全部消しますか？')) return; S.blocks = initial(); S.cur = null; S.work = null; changed(true); }; bt.appendChild(rs);
+    const ai = el('button', { type: 'button', className: 'sbtn', textContent: '＋ 曲頭ロール' }); ai.onclick = () => { S.blocks.unshift(newIntro()); S.cur = null; S.work = null; S.works = {}; changed(true); }; bt.appendChild(ai);
+    const rs = el('button', { type: 'button', className: 'sbtn', textContent: 'ブロックを全部消す' }); rs.onclick = () => { if (!S.blocks.length || !window.confirm('並びのブロックを、全部消しますか？')) return; S.blocks = initial(); S.cur = null; S.work = null; S.works = {}; changed(true); }; bt.appendChild(rs);
     box.appendChild(bt);
     box.appendChild(el('p', { className: 'small', textContent: '白=標準　黒=変えた小節　赤=フィル　点線=まだ保存していない　点滅=いま鳴っている小節' }));
   }
@@ -396,8 +402,10 @@
   function getWork(b, bi, bar) {
     const key = S.cur.k + '-' + bi + '-' + bar;
     if (!S.work || S.work.key !== key) {
+      if (S.works[key]) { S.work = S.works[key]; return S.work; }
       const rows = baseRows(b, bi, bar), E = barEff(b, bar);
       S.work = { key, rows, dirty: false, fl: !!(b.ov[bar] && b.ov[bar].fl) || !!E.fill, opts: { add: Object.assign({}, E.add), accent: E.accent, crashAt: rows.CRASH[0] ? 1 : rows.CRASH[8] ? 3 : 0 } };
+      S.works[key] = S.work;
     }
     return S.work;
   }
@@ -430,22 +438,23 @@
     sv.onclick = () => {
       const from = S.scope === 'all' ? 0 : bar, to = S.scope === 'this' ? bar : b.bars - 1;
       for (let k = from; k <= to; k++) { const o = ovs[k] || (ovs[k] = {}); o.rows = copyRows(w.rows); o.fl = !!w.fl; o.crashAt = 0; delete o.fill; delete o.off; delete o.add; delete o.accent; }
+      for (let k = from; k <= to; k++) delete S.works['list-' + bi + '-' + k];
       S.work = null; changed(true);
     };
     act.appendChild(sv);
-    const rs = el('button', { type: 'button', className: 'sbtn', textContent: '元に戻す' }); rs.disabled = !w.dirty; rs.onclick = () => { S.work = null; changed(true); }; act.appendChild(rs);
+    const rs = el('button', { type: 'button', className: 'sbtn', textContent: '元に戻す' }); rs.disabled = !w.dirty; rs.onclick = () => { delete S.works[w.key]; S.work = null; changed(true); }; act.appendChild(rs);
     const sc = el('select'); [['this', '保存: この小節だけ'], ['tail', '保存: ここから最後まで'], ['all', '保存: ブロックの全部']].forEach(([v, t]) => { const o = el('option', { value: v, textContent: t }); if (v === S.scope) o.selected = true; sc.appendChild(o); });
     sc.onchange = () => { S.scope = sc.value; }; act.appendChild(sc);
     box.appendChild(act);
     const act2 = el('div', { className: 'row' });
-    const std = el('button', { type: 'button', className: 'sbtn', textContent: '標準にする' }); std.disabled = !ovs[bar]; std.onclick = () => { delete ovs[bar]; S.work = null; changed(true); }; act2.appendChild(std);
-    const cp = el('button', { type: 'button', className: 'sbtn', textContent: '前の小節をコピー' }); cp.disabled = !(bar > 0 && ovs[bar - 1]); cp.onclick = () => { ovs[bar] = JSON.parse(JSON.stringify(ovs[bar - 1])); S.work = null; changed(true); }; act2.appendChild(cp);
+    const std = el('button', { type: 'button', className: 'sbtn', textContent: '標準にする' }); std.disabled = !ovs[bar]; std.onclick = () => { delete ovs[bar]; delete S.works[w.key]; S.work = null; changed(true); }; act2.appendChild(std);
+    const cp = el('button', { type: 'button', className: 'sbtn', textContent: '前の小節をコピー' }); cp.disabled = !(bar > 0 && ovs[bar - 1]); cp.onclick = () => { ovs[bar] = JSON.parse(JSON.stringify(ovs[bar - 1])); delete S.works[w.key]; S.work = null; changed(true); }; act2.appendChild(cp);
     if (!S.sheetOpen) return;
     const tabs = el('div', { className: 'stabs' });
     [['grid', 'グリッド'], ['fill', 'フィル'], ['how', '足す音'], ['mute', 'ミュート']].forEach(([k, n]) => { const x = el('button', { type: 'button', className: 'stab' + (S.sheetTab === k ? ' on' : ''), textContent: n }); x.onclick = () => { S.sheetTab = k; drawSheet(); }; tabs.appendChild(x); });
     box.appendChild(tabs);
     const muted = MUTE_OF(b), edit = (n, i, v) => { w.rows[n][i] = v; w.dirty = true; };
-    const grid = (page) => { const g = el('div', { className: 'g sm' }); gridInto(g, { get: (n, i) => w.rows[n][i], set: edit, tintFrom: null, muted, onChange: () => { drawSeq(); drawSheet(); } }, 'bar', page); return g; };
+    const grid = (page) => { const g = el('div', { className: 'g sm' }); gridInto(g, { get: (n, i) => w.rows[n][i], set: edit, tintFrom: null, muted, onChange: () => { drawSeq(); drawSheet(); refreshPlay(); } }, 'bar', page); return g; };
     const body = el('div', { className: 'shbody' });
     if (S.sheetTab === 'grid') { body.appendChild(grid()); body.appendChild(el('p', { className: 'small', textContent: 'タップ=鳴る/休み。長押し=アクセント・ゴースト。薄い行は、ミュート中。' })); }
     else if (S.sheetTab === 'mute') {
@@ -479,7 +488,7 @@
             if (!FILL_KEEP.includes(t)) ROWS.forEach((n) => { if (n !== 'CRASH') for (let i = s0; i < e0; i++) w.rows[n][i] = 0; });
             types[t].forEach(([n, i]) => { w.rows[n][s0 + i - (whole ? 0 : 0)] = 1; });
           }
-          w.dirty = true; S.pg.bar = whole ? 0 : half; drawSeq(); drawSheet();
+          w.dirty = true; S.pg.bar = whole ? 0 : half; drawSeq(); drawSheet(); refreshPlay();
         };
         fr.appendChild(x);
       });
