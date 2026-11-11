@@ -586,7 +586,7 @@
           if (fine) S.res = fine;
           S.sheetTab = 'grid'; if (need > 1) S.scope = 'pend'; S.pg.bar = Math.floor((g0 % NS) / (SL * (S.res <= 6 ? 2 : 1))); drawSeq(); drawSheet(); refreshPlay();
         };
-        r.appendChild(x); r.appendChild(el('span', { textContent: fb.name + (ok ? '' : '(この小節からは入らない)') })); r.appendChild(el('span', { className: 'small', textContent: ' ' + (need > 1 ? '【次の小節に続く】' : '') + fb.note }));
+        r.appendChild(x); r.appendChild(el('span', { textContent: fb.name + (ok ? '' : '(この小節からは入らない)') })); r.appendChild(el('span', { className: 'small', textContent: ' ' + (need > 1 ? '【次の小節に続く】' : '') + (Math.abs(endB / 4 - Math.round(endB / 4)) > 1e-6 ? '【終わりが小節の頭に着かない】' : '') + fb.note }));
         body.appendChild(r);
       });
       body.appendChild(el('p', { className: 'small', textContent: 'フィルのあとの小節の1拍目には、クラッシュが鳴る(「曲のリズム」の設定)。' }));
