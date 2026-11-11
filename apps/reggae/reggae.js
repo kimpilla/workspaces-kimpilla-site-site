@@ -710,7 +710,6 @@
       m.appendChild(mb); m.appendChild(sb); tr.appendChild(m); sync();
       const e = el('td'), eb = el('button', { type: 'button', textContent: '書き出し' }); eb.onclick = () => exportWav(k, k); e.appendChild(eb); tr.appendChild(e); t.appendChild(tr);
     });
-    [['ベース(仮)'], ['上音']].forEach(([n]) => { const tr = el('tr', { className: 'off' }); tr.appendChild(el('td', { textContent: n })); tr.appendChild(el('td', { colSpan: 2, textContent: 'あとで決める' })); t.appendChild(tr); });
   }
   function drawBlockExports() {
     const box = $('blkExp'); box.innerHTML = '';
