@@ -68,17 +68,17 @@
   }
   const initial = () => [];      // 最初は、ブロックなし。「ブロックを作る」で足す
 
-  const S = { song: { pat: 'ワンドロップ', rows: PATTERNS['ワンドロップ'](), bpm: 76 }, blocks: initial(), draft: newBlock(8), cur: null, mute: {}, solo: {}, p: { shuffle: 58, accvar: 35, sway: 30 } };
+  const S = { song: { pat: 'ワンドロップ', rows: PATTERNS['ワンドロップ'](), bpm: 76 }, blocks: initial(), draft: newBlock(8), cur: null, mute: {}, solo: {}, p: { shuffle: 58, accvar: 35, sway: 30 }, kit: 'real' };
   const KEY = 'kimpilla_reggae_v2';
   const okRows = (r) => r && ROWS.every((n) => Array.isArray(r[n]) && (r[n].length === 16 || r[n].length === NS));
   const fix96 = (r) => (r && r.CRASH && r.CRASH.length === 16 ? up16(r) : r);
-  function save() { try { localStorage.setItem(KEY, JSON.stringify({ song: S.song, blocks: S.blocks, draft: S.draft, p: S.p })); } catch (e) { /* 保存できなくても動く */ } }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify({ song: S.song, blocks: S.blocks, draft: S.draft, p: S.p, kit: S.kit })); } catch (e) { /* 保存できなくても動く */ } }
   function load() {
     try {
       const o = JSON.parse(localStorage.getItem(KEY) || 'null');
       if (o && o.song && okRows(o.song.rows) && Array.isArray(o.blocks)) {
         o.blocks.forEach((b) => { if (!okRows(b.fillRows)) b.fillRows = zero(); else { if (b.fillRows.CRASH.length === 16 && b.fillFrom) b.fillFrom = b.fillFrom * U16; b.fillRows = fix96(b.fillRows); } if (b.ov) Object.keys(b.ov).forEach((k) => { const q = b.ov[k]; if (q.rows) q.rows = fix96(q.rows); if (q.fill && q.fill.rows) { if (q.fill.rows.CRASH.length === 16) q.fill.from *= U16; q.fill.rows = fix96(q.fill.rows); } }); b.ov = b.ov || {}; b.off = b.off || {}; b.add = Object.assign({ open: 0, ghost: 0 }, b.add); b.alt = b.alt || 0; b.fillBar = b.fillBar || 0; b.crashAt = b.crashAt || 0; b.accent = b.accent || 'keep'; });
-        S.song = { pat: o.song.pat, rows: fix96(o.song.rows), bpm: o.song.bpm || 76 }; S.blocks = o.blocks; if (o.draft && okRows(o.draft.fillRows)) { S.draft = Object.assign(newBlock(8), o.draft); S.draft.add = Object.assign({ open: 0, ghost: 0 }, S.draft.add); S.draft.off = S.draft.off || {}; } if (o.p) Object.assign(S.p, o.p);
+        S.song = { pat: o.song.pat, rows: fix96(o.song.rows), bpm: o.song.bpm || 76 }; S.blocks = o.blocks; if (o.draft && okRows(o.draft.fillRows)) { S.draft = Object.assign(newBlock(8), o.draft); S.draft.add = Object.assign({ open: 0, ghost: 0 }, S.draft.add); S.draft.off = S.draft.off || {}; } if (o.p) Object.assign(S.p, o.p); if (o.kit && o.kit in KITS) S.kit = o.kit;
       }
     } catch (e) { /* 読めなければ、最初の状態 */ }
   }
@@ -194,7 +194,52 @@
   const audible = (part) => (anySolo() ? !!S.solo[part] : !S.mute[part]);
   function updateGains() { if (!ctx) return; PARTS.forEach(([k]) => { partGain[k].gain.value = audible(k) ? 1 : 0; }); }
 
+  // ---- 合成音(ハードコア・ビートと同じ作り): 録音を使わずに、その場で作る ----
+  const nbCache = new WeakMap();
+  const noiseBuf = (c) => { let b = nbCache.get(c); if (!b) { b = c.createBuffer(1, c.sampleRate, c.sampleRate); const d = b.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; nbCache.set(c, b); } return b; };
+  function noiseHit(c, out, t, type, freq, q, dec, g) {
+    const s = c.createBufferSource(); s.buffer = noiseBuf(c);
+    const f = c.createBiquadFilter(); f.type = type; f.frequency.value = freq; f.Q.value = q;
+    const e = c.createGain(); e.gain.setValueAtTime(g, t); e.gain.exponentialRampToValueAtTime(0.001, t + dec);
+    s.connect(f); f.connect(e); e.connect(out); s.start(t, Math.random() * 0.5); s.stop(t + dec + 0.02);
+  }
+  function toneHit(c, out, t, f0, f1, dec, g, drop) {
+    const o = c.createOscillator(); o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t + (drop || 0.05));
+    const e = c.createGain(); e.gain.setValueAtTime(g, t); e.gain.exponentialRampToValueAtTime(0.001, t + dec);
+    o.connect(e); e.connect(out); o.start(t); o.stop(t + dec + 0.02);
+  }
+  const METAL = [1, 1.4471, 1.6170, 1.9265, 2.5028, 2.6637];
+  function metalHit(c, out, t, base, hp, dec, g) {
+    const f = c.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = hp;
+    const e = c.createGain(); e.gain.setValueAtTime(g, t); e.gain.exponentialRampToValueAtTime(0.001, t + dec);
+    f.connect(e); e.connect(out);
+    for (const m of METAL) { const o = c.createOscillator(); o.type = 'square'; o.frequency.value = base * m; o.connect(f); o.start(t); o.stop(t + dec + 0.02); }
+  }
+  const SYN_BAND = { K: { f0: 120, f1: 52, td: 0.06, dec: 0.3, click: 0.35, clickHz: 3500 }, S: { tone: 185, toneG: 0.45, toneDec: 0.1, nHz: 2000, nQ: 0.6, nDec: 0.17, wire: 0.45, wireDec: 0.2 }, T: { f0: 130, f1: 82, td: 0.07, dec: 0.45, click: 0.3 }, M: { f0: 175, f1: 118, td: 0.06, dec: 0.38, click: 0.3 }, O: { hp: 7500, dec: 0.4 }, H: { hp: 8500, dec: 0.05 }, C: { base: 300, hp: 4500, dec: 1.6, n: 0.5 } };
+  const KITS = { 'real': '実録音(Big Rusty Drums)', 'machine': 'マシン(合成音)', 'band': 'バンド寄り(合成音)' };
+  function synthHit(c, out, t, row, vel) {
+    const v = Math.min(1.3, Math.max(0.15, vel));
+    if (S.kit === 'machine') {
+      if (row === 'KICK') { toneHit(c, out, t, 160, 50, 0.22, v); noiseHit(c, out, t, 'lowpass', 2500, 1, 0.01, v * 0.3); }
+      else if (row === 'SNARE') { toneHit(c, out, t, 300, 180, 0.08, v * 0.5); noiseHit(c, out, t, 'bandpass', 2200, 0.7, 0.14, v); }
+      else if (row === 'RIM') { toneHit(c, out, t, 1800, 1500, 0.03, v * 0.5, 0.01); noiseHit(c, out, t, 'bandpass', 3200, 2, 0.03, v * 0.6); }
+      else if (row === 'HAT') noiseHit(c, out, t, 'highpass', 7500, 1, 0.04, v);
+      else if (row === 'OPEN') noiseHit(c, out, t, 'highpass', 6500, 1, 0.4, v * 0.9);
+      else if (row === 'CRASH') noiseHit(c, out, t, 'highpass', 4000, 0.5, 1.2, v);
+      else { const f = row === 'T-HI' ? [190, 125] : row === 'T-MID' ? [165, 110] : [120, 75]; toneHit(c, out, t, f[0], f[1], 0.3, v * 0.9, 0.06); noiseHit(c, out, t, 'bandpass', 1000, 1, 0.05, v * 0.25); }
+      return;
+    }
+    const K = SYN_BAND, vv = v * (0.88 + 0.24 * Math.random());
+    if (row === 'KICK') { toneHit(c, out, t, K.K.f0, K.K.f1, K.K.dec, vv, K.K.td); noiseHit(c, out, t, 'highpass', K.K.clickHz, 1, 0.008, vv * K.K.click); }
+    else if (row === 'SNARE') { const P = K.S; toneHit(c, out, t, P.tone * 1.2, P.tone, P.toneDec, vv * P.toneG, 0.02); toneHit(c, out, t, P.tone * 1.9, P.tone * 1.8, P.toneDec * 0.7, vv * P.toneG * 0.4, 0.02); noiseHit(c, out, t, 'bandpass', P.nHz, P.nQ, P.nDec, vv); noiseHit(c, out, t, 'highpass', 5500, 0.7, P.wireDec, vv * P.wire); }
+    else if (row === 'RIM') { toneHit(c, out, t, 1700, 1400, 0.035, vv * 0.5, 0.01); noiseHit(c, out, t, 'bandpass', 3000, 2, 0.03, vv * 0.6); }
+    else if (row === 'HAT') noiseHit(c, out, t, 'highpass', K.H.hp, 1, K.H.dec, vv * 0.8);
+    else if (row === 'OPEN') { noiseHit(c, out, t, 'highpass', K.O.hp, 1, K.O.dec, vv * 0.8); metalHit(c, out, t, 320, 6500, K.O.dec, vv * 0.05); }
+    else if (row === 'CRASH') { const P = K.C; noiseHit(c, out, t, 'highpass', P.hp, 0.6, P.dec, vv * P.n); metalHit(c, out, t, P.base, P.hp, P.dec, vv * 0.07); }
+    else { const P = row === 'T-LO' ? K.T : K.M, m = row === 'T-HI' ? 1.25 : 1; toneHit(c, out, t, P.f0 * m, P.f1 * m, P.dec, vv, P.td); toneHit(c, out, t, P.f0 * m * 1.5, P.f1 * m * 1.5, P.dec * 0.5, vv * 0.3, P.td); noiseHit(c, out, t, 'bandpass', 1200, 0.8, 0.03, vv * P.click); }
+  }
   function hit(c, dest, t, row, vel) {
+    if (S.kit !== 'real') { synthHit(c, dest(row), t, row, vel); return; }
     const pair = BUF[row], name = vel >= 0.75 ? pair[1] : pair[0], src = c.createBufferSource(); src.buffer = buffers[name];
     const g = c.createGain(); g.gain.value = Math.min(1.3, Math.max(0.15, vel)); src.connect(g); g.connect(dest(row)); src.start(t);
   }
@@ -606,6 +651,8 @@
   drawParts(); drawBlockExports(); drawSongGrid(); drawSeq(); drawSheet(); updateTotal();
   $('tabR').onclick = () => showTab('r'); $('tabS').onclick = () => showTab('s'); $('tabO').onclick = () => showTab('o');
   showTab('s');
+  Object.keys(KITS).forEach((k) => { const o = el('option', { value: k, textContent: KITS[k] }); if (k === S.kit) o.selected = true; $('kit').appendChild(o); });
+  $('kit').onchange = () => { S.kit = $('kit').value; save(); refreshPlay(); };
   $('play').onclick = () => { if (playing) stopAll(); previewBlocks = null; play(); };
   $('stop').onclick = stopAll;
   $('land').onchange = updateTotal;
