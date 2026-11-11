@@ -200,8 +200,7 @@
     ['KICK', 'RIM', 'SNARE'].forEach((n) => {
       for (let i = 0; i < 16; i++) {
         if (!b.rows[n][i]) continue;
-        const on = i % 4 === 0;
-        b.rows[n][i] = kind === 'none' ? 1 : kind === 'omote' ? (on ? 2 : 1) : kind === 'ura' ? (on ? 1 : 2) : (Math.random() < 0.4 ? 2 : 1);
+        b.rows[n][i] = kind === 'none' ? 1 : kind === 'omote' ? (i === 0 ? 2 : 1) : kind === 'ura' ? (i === 8 ? 2 : 1) : (Math.random() < 0.4 ? 2 : 1);
       }
     });
   }
