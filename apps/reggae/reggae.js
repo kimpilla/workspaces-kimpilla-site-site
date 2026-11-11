@@ -82,7 +82,7 @@
     try {
       const o = JSON.parse(localStorage.getItem(KEY) || 'null');
       if (o && o.song && okRows(o.song.rows) && Array.isArray(o.blocks)) {
-        o.blocks.forEach((b) => { if (b.intro) { b.intro = false; b.bars = 1; b.reps = b.reps || 1; b.fillType = 'none'; b.fillRows = zero(); b.fillFrom = 0; b.fillBar = 0; } if (!okRows(b.fillRows)) b.fillRows = zero(); else { if (b.fillRows.CRASH.length === 16 && b.fillFrom) b.fillFrom = b.fillFrom * U16; b.fillRows = fix96(b.fillRows); } if (b.ov) Object.keys(b.ov).forEach((k) => { const q = b.ov[k]; if (q.rows) q.rows = fix96(q.rows); if (q.fill && q.fill.rows) { if (q.fill.rows.CRASH.length === 16) q.fill.from *= U16; q.fill.rows = fix96(q.fill.rows); } }); b.ov = b.ov || {}; b.off = b.off || {}; b.add = Object.assign({ open: 0, ghost: 0 }, b.add); b.alt = b.alt || 0; b.fillBar = b.fillBar || 0; b.crashAt = b.crashAt || 0; b.accent = b.accent || 'keep'; });
+        o.blocks.forEach((b) => { if (b.fillType && b.fillType !== 'none' && !b.intro) { b.fillType = 'none'; b.fillRows = zero(); b.fillFrom = 0; b.fillBar = 0; } if (b.intro) { b.intro = false; b.bars = 1; b.reps = b.reps || 1; b.fillType = 'none'; b.fillRows = zero(); b.fillFrom = 0; b.fillBar = 0; } if (!okRows(b.fillRows)) b.fillRows = zero(); else { if (b.fillRows.CRASH.length === 16 && b.fillFrom) b.fillFrom = b.fillFrom * U16; b.fillRows = fix96(b.fillRows); } if (b.ov) Object.keys(b.ov).forEach((k) => { const q = b.ov[k]; if (q.rows) q.rows = fix96(q.rows); if (q.fill && q.fill.rows) { if (q.fill.rows.CRASH.length === 16) q.fill.from *= U16; q.fill.rows = fix96(q.fill.rows); } }); b.ov = b.ov || {}; b.off = b.off || {}; b.add = Object.assign({ open: 0, ghost: 0 }, b.add); b.alt = b.alt || 0; b.fillBar = b.fillBar || 0; b.crashAt = b.crashAt || 0; b.accent = b.accent || 'keep'; });
         S.song = { pat: o.song.pat, rows: fix96(o.song.rows), bpm: o.song.bpm || 76, hat: o.song.hat || 12 }; S.blocks = o.blocks; if (o.draft && okRows(o.draft.fillRows)) { o.draft.fillRows = fix96(o.draft.fillRows); S.draft = Object.assign(newBlock(8), o.draft); S.draft.add = Object.assign({ open: 0, ghost: 0 }, S.draft.add); S.draft.off = S.draft.off || {}; } if (o.p) Object.assign(S.p, o.p); if (o.kit && o.kit in KITS) S.kit = o.kit; if (Array.isArray(o.myFills)) S.myFills = o.myFills.filter(okFill).map((f) => Object.assign(f, { mine: true }));
       }
     } catch (e) { /* 読めなければ、最初の状態 */ }
@@ -397,16 +397,7 @@
     cr.appendChild(el('small', { className: 'small', textContent: ' 最初の小節だけ' })); d.appendChild(line('クラッシュ', cr));
     const ac = el('span'); ACCENTS.forEach(([k, n]) => { ac.appendChild(chip(n, b.accent === k ? 'on' : '', () => { b.accent = k; changed(true); redraw(); })); });
     d.appendChild(line('アクセント', ac));
-    const fs = el('select'); FILL_TYPES.forEach(([k, n]) => { const o = el('option', { value: k, textContent: n }); if (k === b.fillType) o.selected = true; fs.appendChild(o); });
-    fs.onchange = () => { b.fillType = fs.value; b.alt = 0; applyFill(b); changed(true); redraw(); };
-    const idea = el('button', { type: 'button', className: 'chip', textContent: '案を出す' }); idea.onclick = () => { if (b.fillType === 'none') b.fillType = 'tom'; b.alt++; applyFill(b); changed(true); redraw(); };
-    d.appendChild(line('フィル', fs, idea));
-    if (b.fillType !== 'none') {
-      const ps = el('select'); ps.appendChild(el('option', { value: 0, textContent: '最後の小節(' + b.bars + '小節目)' }));
-      for (let k = 1; k < b.bars; k++) { const o = el('option', { value: k, textContent: k + '小節目' }); if (k === b.fillBar) o.selected = true; ps.appendChild(o); }
-      ps.onchange = () => { b.fillBar = +ps.value; changed(true); redraw(); };
-      d.appendChild(line('入れる小節', ps));
-    }
+    // 自動のフィル(タムの下降・案を出す・入れる小節)は、「曲頭フィル」「4小節目のフィル」「8小節目のフィル」のボタンに置き換えた
   }
 
   // ---- 並び: 小節の四角 ----
