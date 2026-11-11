@@ -450,17 +450,16 @@
   function drawSeq() {
     const box = $('seq'); box.innerHTML = '';
     if (!S.blocks.length) {
-      box.appendChild(el('p', { textContent: 'ブロックを作ると、小節の四角が出る。四角をタップして、小節を直す。' }));
+      box.appendChild(el('p', { textContent: 'ブロックを作ると、小節の四角が出る。四角をタップして、小節を直す。曲頭の導入だけを書き出したいときは、1小節のブロックを作って、フィルのタブで導入を置く。' }));
       const r0 = el('div', { className: 'row' });
-      [8, 4].forEach((n) => { const x = el('button', { type: 'button', textContent: '＋ ' + n + '小節のブロックを作る' }); x.onclick = () => { S.blocks.push(newBlock(n)); S.cur = { k: 'list', bi: 0, bar: 0 }; S.work = null; S.works = {}; changed(true); }; r0.appendChild(x); });
+      [8, 4, 1].forEach((n) => { const x = el('button', { type: 'button', textContent: '＋ ' + n + '小節のブロックを作る' }); x.onclick = () => { S.blocks.push(newBlock(n)); S.cur = { k: 'list', bi: 0, bar: 0 }; S.work = null; S.works = {}; changed(true); }; r0.appendChild(x); });
       box.appendChild(r0);
     }
     S.blocks.forEach((b, i) => box.appendChild(blockCard(b, 'list', i)));
     const bt = el('div', { className: 'row' });
     const addB = (n) => { S.blocks.push(newBlock(n)); S.cur = { k: 'list', bi: S.blocks.length - 1, bar: 0 }; S.work = null; changed(true); };
-    if (S.askLen) { bt.appendChild(el('span', { className: 'small', textContent: '長さ: ' })); [4, 8].forEach((n) => { const x = el('button', { type: 'button', className: 'sbtn', textContent: n + '小節' }); x.onclick = () => { S.askLen = false; addB(n); }; bt.appendChild(x); }); }
+    if (S.askLen) { bt.appendChild(el('span', { className: 'small', textContent: '長さ: ' })); [1, 4, 8].forEach((n) => { const x = el('button', { type: 'button', className: 'sbtn', textContent: n + '小節' }); x.onclick = () => { S.askLen = false; addB(n); }; bt.appendChild(x); }); }
     else { const ab = el('button', { type: 'button', className: 'sbtn', textContent: '＋ ブロック' }); ab.onclick = () => { S.askLen = true; drawSeq(); }; bt.appendChild(ab); }
-    const ai = el('button', { type: 'button', className: 'sbtn', textContent: '＋ 曲頭ロール' }); ai.onclick = () => { S.blocks.unshift(newIntro()); S.cur = null; S.work = null; S.works = {}; changed(true); }; bt.appendChild(ai);
     const rs = el('button', { type: 'button', className: 'sbtn', textContent: 'ブロックを全部消す' }); rs.onclick = () => { if (!S.blocks.length || !window.confirm('並びのブロックを、全部消しますか？')) return; S.blocks = initial(); S.cur = null; S.work = null; S.works = {}; changed(true); }; bt.appendChild(rs);
     box.appendChild(bt);
     box.appendChild(el('p', { className: 'small', textContent: '白=標準　黒=変えた小節　赤=フィル　点線=まだ保存していない　点滅=いま鳴っている小節' }));
