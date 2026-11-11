@@ -716,7 +716,7 @@
       const m = el('td', { className: 'm' }), lb = el('label'), cb = el('input', { type: 'checkbox' });
       cb.checked = !S.mute[k]; cb.onchange = () => { S.mute[k] = !cb.checked; updateGains(); };
       lb.appendChild(cb); lb.appendChild(document.createTextNode(' 入れる')); m.appendChild(lb); tr.appendChild(m);
-      const e = el('td'), eb = el('button', { type: 'button', textContent: '書き出し' }); eb.onclick = () => { const q = expRange(); exportWav(k, k + q.sfx, q.blk); }; e.appendChild(eb); tr.appendChild(e); t.appendChild(tr);
+      t.appendChild(tr);
     });
   }
   // 書き出す範囲: 全体 / ブロック n。パートごと・まとめて、どちらもこの範囲で書き出す
@@ -762,6 +762,7 @@
   $('stop').onclick = stopAll;
   $('land').onchange = updateTotal;
   $('saveMix').onclick = () => { const q = expRange(); exportWav(null, q.mix, q.blk); };
+  $('saveParts').onclick = async () => { const q = expRange(), ks = PARTS.map(([k]) => k).filter((k) => !S.mute[k]); if (!ks.length) { $('status').textContent = 'チェックしたパートがない。'; return; } for (const k of ks) await exportWav(k, k + q.sfx, q.blk); };
   // ---- 曲データのテキスト ----
   const dmsg = (t) => { $('dataMsg').textContent = t; };
   $('dataOut').onclick = () => { $('dataTxt').value = dataText(); dmsg('テキストにした(' + $('dataTxt').value.length + '文字)。「コピー」で、メモやGitHubに貼れる。'); };

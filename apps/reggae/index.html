@@ -156,11 +156,13 @@
   <h2>1. 書き出す範囲</h2>
   <div class="row"><select id="expBlk"></select></div>
   <p class="small">「全体」は、並べたブロックを順に全部。ブロックを選ぶと、そのブロックだけ。下のパートごとも、全パートまとめても、ここで選んだ範囲を書き出す。</p>
-  <h2>2. 全パートまとめて書き出す</h2>
-  <div class="row"><button id="saveMix" type="button">1で選んだ範囲を、1つのWAVで書き出す(「入れる」にチェックしたパートだけ)</button></div>
-  <h2>3. パートごとに書き出す</h2>
+  <h2>2. 入れるパート</h2>
   <table class="parts" id="parts"></table>
-  <p class="small">「入れる」のチェックを外したパートは、再生でも、上の「全パートまとめて」のWAVでも、鳴らさない(鳴らしながら切り替えられる)。パートごとの「書き出し」は、チェックに関係なく、1で選んだ範囲の、そのパートだけをWAVにする。</p>
+  <p class="small">チェックを外したパートは、再生でも、書き出しでも、鳴らさない(鳴らしながら切り替えられる)。</p>
+  <h2>3. 書き出す</h2>
+  <div class="row"><button id="saveMix" type="button">チェックしたパートを、1つのWAVにまとめて書き出す</button></div>
+  <div class="row"><button id="saveParts" type="button">チェックしたパートを、パートごとに別々のWAVで書き出す</button></div>
+  <p class="small">どちらも、1で選んだ範囲を書き出す。パートごとは、チェックしたパートの数だけファイルができる。</p>
   <h2>書き出しの設定</h2>
   <div class="row"><label><input id="headIn" type="checkbox" checked> 冒頭フィルを入れる</label></div>
   <p class="small">「曲頭フィル」で選んだフィルを、WAVに入れるかどうか。外すと、その小節はフィルを置く前の形で書き出す。</p>
@@ -181,6 +183,6 @@
 <script src="../../audio-unlock.js?v=4"></script>
 <script src="../common/wav.js"></script>
 <script src="samples.js?v=20261112"></script>
-<script src="reggae.js?v=20261112u"></script>
+<script src="reggae.js?v=20261112v"></script>
 </body>
 </html>
