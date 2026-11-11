@@ -68,17 +68,22 @@
   }
   const initial = () => [];      // 最初は、ブロックなし。「ブロックを作る」で足す
 
-  const S = { song: { pat: 'ワンドロップ', rows: PATTERNS['ワンドロップ'](), bpm: 76 }, blocks: initial(), draft: newBlock(8), cur: null, mute: {}, solo: {}, p: { shuffle: 58, accvar: 35, sway: 30 }, kit: 'real' };
+  const S = { song: { pat: 'ワンドロップ', rows: PATTERNS['ワンドロップ'](), bpm: 76 }, blocks: initial(), draft: newBlock(8), cur: null, mute: {}, solo: {}, p: { shuffle: 58, accvar: 35, sway: 30 }, kit: 'real', myFills: [] };
   const KEY = 'kimpilla_reggae_v2';
   const okRows = (r) => r && ROWS.filter((n) => n !== 'TIMB').every((n) => Array.isArray(r[n]) && (r[n].length === 16 || r[n].length === NS));
   const fix96 = (r) => { if (r && r.CRASH && r.CRASH.length === 16) return up16(r); if (r && r.CRASH && !r.TIMB) r.TIMB = new Array(r.CRASH.length).fill(0); return r; };
-  function save() { try { localStorage.setItem(KEY, JSON.stringify({ song: S.song, blocks: S.blocks, draft: S.draft, p: S.p, kit: S.kit })); } catch (e) { /* 保存できなくても動く */ } }
+  const okFill = (f) => f && (f.grp === 'song' || f.grp === 'intro') && typeof f.name === 'string' && f.len > 0 && f.bars && f.bars[0] && Array.isArray(f.bars[0].hits) && f.bars[0].hits.every((h) => ROWS.includes(h[0]) && h[1] >= 0 && h[1] < 16);
+  // テキスト保存: 96マスの段は、数字の文字列にして短くする
+  const packRows = (k, v) => (Array.isArray(v) && v.length === NS && v.every((x) => x === 0 || x === 1 || x === 2 || x === 3)) ? 'r' + v.join('') : v;
+  const unpackRows = (k, v) => (typeof v === 'string' && /^r[0-3]{96}$/.test(v)) ? v.slice(1).split('').map(Number) : v;
+  const dataText = () => JSON.stringify({ app: 'reggae-beat', v: 1, song: S.song, blocks: S.blocks, draft: S.draft, p: S.p, kit: S.kit, myFills: S.myFills }, packRows, 1);
+  function save() { try { localStorage.setItem(KEY, JSON.stringify({ song: S.song, blocks: S.blocks, draft: S.draft, p: S.p, kit: S.kit, myFills: S.myFills })); } catch (e) { /* 保存できなくても動く */ } }
   function load() {
     try {
       const o = JSON.parse(localStorage.getItem(KEY) || 'null');
       if (o && o.song && okRows(o.song.rows) && Array.isArray(o.blocks)) {
         o.blocks.forEach((b) => { if (!okRows(b.fillRows)) b.fillRows = zero(); else { if (b.fillRows.CRASH.length === 16 && b.fillFrom) b.fillFrom = b.fillFrom * U16; b.fillRows = fix96(b.fillRows); } if (b.ov) Object.keys(b.ov).forEach((k) => { const q = b.ov[k]; if (q.rows) q.rows = fix96(q.rows); if (q.fill && q.fill.rows) { if (q.fill.rows.CRASH.length === 16) q.fill.from *= U16; q.fill.rows = fix96(q.fill.rows); } }); b.ov = b.ov || {}; b.off = b.off || {}; b.add = Object.assign({ open: 0, ghost: 0 }, b.add); b.alt = b.alt || 0; b.fillBar = b.fillBar || 0; b.crashAt = b.crashAt || 0; b.accent = b.accent || 'keep'; });
-        S.song = { pat: o.song.pat, rows: fix96(o.song.rows), bpm: o.song.bpm || 76, hat: o.song.hat || 12 }; S.blocks = o.blocks; if (o.draft && okRows(o.draft.fillRows)) { o.draft.fillRows = fix96(o.draft.fillRows); S.draft = Object.assign(newBlock(8), o.draft); S.draft.add = Object.assign({ open: 0, ghost: 0 }, S.draft.add); S.draft.off = S.draft.off || {}; } if (o.p) Object.assign(S.p, o.p); if (o.kit && o.kit in KITS) S.kit = o.kit;
+        S.song = { pat: o.song.pat, rows: fix96(o.song.rows), bpm: o.song.bpm || 76, hat: o.song.hat || 12 }; S.blocks = o.blocks; if (o.draft && okRows(o.draft.fillRows)) { o.draft.fillRows = fix96(o.draft.fillRows); S.draft = Object.assign(newBlock(8), o.draft); S.draft.add = Object.assign({ open: 0, ghost: 0 }, S.draft.add); S.draft.off = S.draft.off || {}; } if (o.p) Object.assign(S.p, o.p); if (o.kit && o.kit in KITS) S.kit = o.kit; if (Array.isArray(o.myFills)) S.myFills = o.myFills.filter(okFill).map((f) => Object.assign(f, { mine: true }));
       }
     } catch (e) { /* 読めなければ、最初の状態 */ }
   }
@@ -489,6 +494,7 @@
     { grp: 'song', name: 'Buffalo Soldier(Bob Marley、Carlton Barrett)', at: 0, len: 4, note: '1小節。4分3連のキック・スネア・スネア → スネア+キック → スネア → 8分3連のフロア2つ', bars: [{ hits: [['KICK', 0, 1], ['SNARE', 2 * T, 1], ['SNARE', 4 * T, 1], ['SNARE', 2, 1], ['KICK', 2, 1], ['SNARE', 2 + 2 * T, 1], ['T-LO', 2 + 4 * T, 1], ['T-LO', 2 + 5 * T, 1]] }] },
   ];
   FILL_BLOCKS.sort((a, b) => (a.grp === 'song' ? 0 : 1) - (b.grp === 'song' ? 0 : 1));
+  const allFills = () => FILL_BLOCKS.concat(S.myFills).sort((a, b) => (a.grp === 'song' ? 0 : 1) - (b.grp === 'song' ? 0 : 1));
   function mkWork(b, bi, bar) {
     const key = 'list-' + bi + '-' + bar;
     if (S.works[key] && S.works[key].dirty) return S.works[key];      // 直している途中のものは、そのまま
@@ -571,7 +577,7 @@
       atSel.onchange = () => { S.fillAt = atSel.value === '' ? null : Number(atSel.value); drawSheet(); };
       body.appendChild(line('置く場所(この小節の)', atSel));
       let lastGrp = '';
-      FILL_BLOCKS.forEach((fb) => {
+      allFills().forEach((fb) => {
         if (fb.grp !== lastGrp) { lastGrp = fb.grp; body.appendChild(el('p', { className: 'small', textContent: fb.grp === 'song' ? '【曲の途中・つなぎのフィル】手本: Stephen Taylor「5 Reggae Drum Fills」(Black Uhuru、Gregory Isaacs など、実際の曲)' : '【曲頭の導入】手本: Sly Dunbar の曲頭ロール。曲の頭に入るもの(途中のフィルの手本ではない)' })); }
         const r = el('div', { className: 'row' });
         const start = S.fillAt == null ? fb.at : S.fillAt, endB = start + fb.len, need = Math.ceil(endB / 4), ok = bar + need <= b.bars;
@@ -586,9 +592,31 @@
           if (fine) S.res = fine;
           S.sheetTab = 'grid'; if (need > 1) S.scope = 'pend'; S.pg.bar = Math.floor((g0 % NS) / (SL * (S.res <= 6 ? 2 : 1))); drawSeq(); drawSheet(); refreshPlay();
         };
-        r.appendChild(x); r.appendChild(el('span', { textContent: fb.name + (ok ? '' : '(この小節からは入らない)') })); r.appendChild(el('span', { className: 'small', textContent: ' ' + (need > 1 ? '【次の小節に続く】' : '') + (Math.abs(endB / 4 - Math.round(endB / 4)) > 1e-6 ? '【終わりが小節の頭に着かない】' : '') + fb.note }));
+        r.appendChild(x); r.appendChild(el('span', { textContent: fb.name + (fb.mine ? '(自分)' : '') + (ok ? '' : '(この小節からは入らない)') }));
+        if (fb.mine) { const dl = el('button', { type: 'button', className: 'sbtn', textContent: '消す' }); dl.onclick = () => { S.myFills = S.myFills.filter((f) => f !== fb); save(); drawSheet(); }; r.appendChild(dl); } r.appendChild(el('span', { className: 'small', textContent: ' ' + (need > 1 ? '【次の小節に続く】' : '') + (Math.abs(endB / 4 - Math.round(endB / 4)) > 1e-6 ? '【終わりが小節の頭に着かない】' : '') + fb.note }));
         body.appendChild(r);
       });
+      // 自分のフィルを作る: いま選んでいる小節のグリッドの、決めた範囲を登録する
+      const mk = el('details', { className: 'fold' }); mk.open = !!S.mkOpen; mk.ontoggle = () => { S.mkOpen = mk.open; };
+      mk.appendChild(el('summary', { textContent: '自分のフィルを作る(グリッドの形を登録)' }));
+      mk.appendChild(el('p', { className: 'small', textContent: '先に「グリッド」のタブで、この小節をフィルの形に直しておく(フィルにしたい範囲以外は、そのままでよい)。ここで範囲を決めて登録すると、その範囲の音が、一覧に加わる。' }));
+      const mGrp = el('select'); [['song', '曲の途中のフィル'], ['intro', '曲頭の導入']].forEach(([v, t]) => mGrp.appendChild(el('option', { value: v, textContent: t })));
+      const mSt = el('select'); for (let h = 0; h < 8; h++) mSt.appendChild(el('option', { value: String(h / 2), textContent: (Math.floor(h / 2) + 1) + '拍目' + (h % 2 ? 'の裏' : '') }));
+      const mLn = el('select'); for (let h = 1; h <= 16; h++) { const o = el('option', { value: String(h / 2), textContent: h / 2 + '拍' }); if (h === 4) o.selected = true; mLn.appendChild(o); }
+      const mNm = el('input', { type: 'text', placeholder: '名前(例: 4小節目のフィル)' }); mNm.style.width = '12em';
+      const mGo = el('button', { type: 'button', className: 'sbtn', textContent: '登録する' });
+      mGo.onclick = () => {
+        const st = Number(mSt.value), ln = Number(mLn.value), g0 = Math.round(st * SL), g1 = Math.round((st + ln) * SL), need = Math.ceil((st + ln) / 4), hits = [];
+        if (bar + need > b.bars) { mMsg.textContent = 'この小節からでは、範囲がブロックの終わりを越える。'; return; }
+        for (let g = g0; g < g1; g++) { const wk = mkWork(b, bi, bar + Math.floor(g / NS)), q = g % NS; ROWS.forEach((n) => { const v = wk.rows[n][q]; if (v) hits.push([n, Math.round(g / SL * 10000) / 10000, v]); }); }
+        if (!hits.length) { mMsg.textContent = 'その範囲には、音がない。'; return; }
+        const nm = mNm.value.trim() || ('自分のフィル ' + (S.myFills.length + 1));
+        S.myFills.push({ grp: mGrp.value, mine: true, name: nm, at: st, len: ln, note: '自分で作った(' + (Math.floor(st) + 1) + '拍目' + (st % 1 ? 'の裏' : '') + 'から' + ln + '拍、音' + hits.length + '個)', bars: [{ hits }] });
+        S.mkOpen = true; save(); drawSheet();
+      };
+      const mMsg = el('p', { className: 'small' });
+      mk.appendChild(line('種類', mGrp)); mk.appendChild(line('始まり(この小節の)', mSt)); mk.appendChild(line('長さ', mLn)); mk.appendChild(line('名前', mNm)); mk.appendChild(mGo); mk.appendChild(mMsg);
+      body.appendChild(mk);
       body.appendChild(el('p', { className: 'small', textContent: 'フィルのあとの小節の1拍目には、クラッシュが鳴る(「曲のリズム」の設定)。' }));
     }
     box.appendChild(body);
@@ -699,4 +727,17 @@
   $('stop').onclick = stopAll;
   $('land').onchange = updateTotal;
   $('saveMix').onclick = () => exportWav(null, 'mix');
+  // ---- 曲データのテキスト ----
+  const dmsg = (t) => { $('dataMsg').textContent = t; };
+  $('dataOut').onclick = () => { $('dataTxt').value = dataText(); dmsg('テキストにした(' + $('dataTxt').value.length + '文字)。「コピー」で、メモやGitHubに貼れる。'); };
+  $('dataCopy').onclick = async () => { $('dataTxt').value = dataText(); try { await navigator.clipboard.writeText($('dataTxt').value); dmsg('コピーした。'); } catch (e) { $('dataTxt').select(); dmsg('自動でコピーできなかった。欄を長押しして、コピーして。'); } };
+  let inArm = false;
+  $('dataIn').onclick = () => {
+    const t = $('dataTxt').value.trim();
+    if (!t) { dmsg('欄に、貼ったテキストがない。'); return; }
+    let o; try { o = JSON.parse(t, unpackRows); } catch (e) { dmsg('テキストが読めない(途中で切れていないか確認して)。'); inArm = false; $('dataIn').textContent = '貼ったテキストを読み込む'; return; }
+    if (!(o && o.app === 'reggae-beat' && o.song && okRows(fix96(o.song.rows)) && Array.isArray(o.blocks))) { dmsg('レゲエ・ビートのテキストではないみたい。'); return; }
+    if (!inArm) { inArm = true; $('dataIn').textContent = 'もう一度押すと、いまのデータを置き換える'; dmsg('いまのデータは、置き換わる。先に「テキストにする」で残しておくと安心。'); return; }
+    try { localStorage.setItem(KEY, JSON.stringify(o)); location.reload(); } catch (e) { dmsg('このブラウザには、保存できなかった。'); }
+  };
 })();

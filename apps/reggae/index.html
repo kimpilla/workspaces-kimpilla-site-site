@@ -164,6 +164,12 @@
   <div class="row"><button id="saveMix" type="button">いまの鳴らし方(M・S反映)を1つのWAVで書き出す</button></div>
   <div class="row"><label><input id="wrap" type="checkbox" checked> 余韻を頭に重ねて、そのままループできる長さにする</label></div>
   <p class="small status" id="status"></p>
+  <h2>曲データをテキストで残す</h2>
+  <div class="row"><button id="dataOut" type="button">いまのデータをテキストにする</button> <button id="dataCopy" type="button">コピー</button></div>
+  <div class="row"><textarea id="dataTxt" rows="7" style="width:100%" placeholder="ここに出る。別のときのテキストを貼って、下のボタンで読み込める"></textarea></div>
+  <div class="row"><button id="dataIn" type="button">貼ったテキストを読み込む</button></div>
+  <p class="small status" id="dataMsg"></p>
+  <p class="small">曲のリズム・並び・ブロックの直し・自分のフィルが入る。音の種類(キット)も入る。M・Sは入らない。</p>
   <p class="small">ドラムの音は実録音(Karoryfer Samples の Big Rusty Drums、CC0)。</p>
 </section>
 </main>
@@ -171,6 +177,6 @@
 <script src="../../audio-unlock.js?v=4"></script>
 <script src="../common/wav.js"></script>
 <script src="samples.js?v=20261112"></script>
-<script src="reggae.js?v=20261112h"></script>
+<script src="reggae.js?v=20261112i"></script>
 </body>
 </html>
