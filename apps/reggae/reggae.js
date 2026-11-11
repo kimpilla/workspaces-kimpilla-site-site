@@ -199,8 +199,8 @@
     let list = ev, len = dur, shift = 0;
     if (blk != null) {
       const sp = spans[blk]; shift = sp.t0; list = ev.filter((e) => e.bi === blk);
-      const own = sp.t1 - sp.t0; len = unify ? Math.max(...spans.map((x) => x.t1 - x.t0)) : own;
-      if (len > own + 0.001) {       // 足りない分は、くり返して、長さをそろえる
+      const own = sp.t1 - sp.t0, ub = Math.round(+$('unifyBars').value || 0); len = unify ? (ub > 0 ? ub * 4 * 60 / S.song.bpm : Math.max(...spans.map((x) => x.t1 - x.t0))) : own;
+      if (unify && Math.abs(len - own) > 0.001) {       // 足りない分は、くり返して、長さをそろえる
         const base = list.map((e) => ({ ...e, t: Math.max(0, e.t - shift) })); list = []; shift = 0;
         for (let k = 0; k * own < len - 0.001; k++) base.forEach((e) => { const t = e.t + k * own; if (t < len) list.push({ ...e, t }); });
       }

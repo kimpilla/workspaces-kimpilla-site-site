@@ -103,7 +103,8 @@
 <h2>保存</h2>
 <div class="row"><button id="saveMix" type="button">いまの鳴らし方(M・S反映)を1つのWAVで書き出す</button></div>
 <div class="row"><label><input id="wrap" type="checkbox" checked> 余韻を頭に重ねて、そのままループできる長さにする</label></div>
-<div class="row"><label><input id="unify" type="checkbox"> ブロックごとの書き出しで、長さをいちばん長いブロックにそろえる(足りない分は、くり返す)</label></div>
+<div class="row"><label><input id="unify" type="checkbox"> ブロックごとの書き出しで、長さをそろえる(足りない分は、くり返す)</label> <label>小節数 <input id="unifyBars" type="number" min="1" max="64" inputmode="numeric" placeholder="自動" style="width:70px"></label></div>
+<p class="small">小節数が空なら、いちばん長いブロックに合わせる。数を入れると、その小節数に合わせる(短いブロックはくり返し、長いブロックは途中で切る)。</p>
 <p class="small status" id="status"></p>
 <p class="small">ブロックごとの書き出しは、並びの各ブロックの「書き出し」から。M・Sも反映される。Loopy ProやKoalaに入れて、そのまま切り替えられる。ドラムの音は、Karoryfer Samples の Big Rusty Drums(CC0)。</p>
 </main>
