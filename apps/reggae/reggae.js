@@ -109,8 +109,10 @@
     if (pg && !E.off.RIM) [3, 7, 11, 14, 15].forEach((i, k) => { if (!o.RIM[i] && !o.SNARE[i] && rnd(sd + 97 + k * 13) < pg) o.RIM[i] = 3; });
     return o;
   }
+  const pendingHere = (bi, bar) => !!(S.work && S.work.dirty && S.cur && S.cur.k === 'list' && S.cur.bi === bi && S.cur.bar === bar && S.work.key === 'list-' + bi + '-' + bar);
   const effRows = (b, bi, bar, E) => {
     if (b.intro) return copyRows(b.fillRows);
+    if (pendingHere(bi, bar)) E = Object.assign({}, E, { rows: S.work.rows });     // まだ保存していない直しも、鳴らすと聞こえる
     let m;
     if (E.rows) m = copyRows(E.rows);
     else { m = blockMain(E, bi, bar); if (E.fill) ROWS.forEach((n) => { for (let i = E.fill.from; i < 16; i++) m[n][i] = E.fill.rows[n][i]; }); }
@@ -138,7 +140,7 @@
         for (let bar = 0; bar < b.bars; bar++) {
           const E = b.intro ? { crashAt: 0, fill: b.fillType !== 'none' ? {} : null } : barEff(b, bar);
           const rows = effRows(b, bi, bar, E), t0 = t, seedBar = bi * 1000 + rep * 100 + bar;
-          const withFill = !!E.fill || !!(b.ov && b.ov[bar] && b.ov[bar].fl);
+          const withFill = !!E.fill || !!(b.ov && b.ov[bar] && b.ov[bar].fl) || (pendingHere(bi, bar) && S.work.fl);
           const landing = landNext && $('land').checked;
           if (landing && !rows.CRASH[0]) ev.push({ t: t0, row: 'CRASH', vel: 0.9, bi });
           if (E.crashAt) { const st = E.crashAt === 3 ? 8 : 0; if (!rows.CRASH[st] && !(st === 0 && landing)) ev.push({ t: t0 + (st / 4) * spb, row: 'CRASH', vel: 0.9, bi }); }
