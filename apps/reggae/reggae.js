@@ -711,12 +711,11 @@
   // ---- パート・書き出し ----
   function drawParts() {
     const t = $('parts'); t.innerHTML = '';
+    t.appendChild(el('span', { className: 'small', textContent: '鳴らすパート: ' }));
     PARTS.forEach(([k, n]) => {
-      const tr = el('tr'); tr.appendChild(el('td', { textContent: n }));
-      const m = el('td', { className: 'm' }), lb = el('label'), cb = el('input', { type: 'checkbox' });
+      const lb = el('label'), cb = el('input', { type: 'checkbox' });
       cb.checked = !S.mute[k]; cb.onchange = () => { S.mute[k] = !cb.checked; updateGains(); };
-      lb.appendChild(cb); lb.appendChild(document.createTextNode(' 入れる')); m.appendChild(lb); tr.appendChild(m);
-      t.appendChild(tr);
+      lb.appendChild(cb); lb.appendChild(document.createTextNode(n)); lb.style.whiteSpace = 'nowrap'; t.appendChild(lb);
     });
   }
   // 書き出す範囲: 全体 / ブロック n。パートごと・まとめて、どちらもこの範囲で書き出す
