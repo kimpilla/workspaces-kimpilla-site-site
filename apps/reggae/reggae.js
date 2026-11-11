@@ -65,16 +65,16 @@
   }
   const initial = () => [newBlock(8), newBlock(4, 'tom'), newBlock(8, 'light')];
 
-  const S = { song: { pat: 'ワンドロップ', rows: PATTERNS['ワンドロップ'](), bpm: 76 }, blocks: initial(), sel: 0, mute: {}, solo: {}, p: { shuffle: 58, accvar: 35, sway: 30 } };
+  const S = { song: { pat: 'ワンドロップ', rows: PATTERNS['ワンドロップ'](), bpm: 76 }, blocks: initial(), draft: newBlock(8), sel: 0, mute: {}, solo: {}, p: { shuffle: 58, accvar: 35, sway: 30 } };
   const KEY = 'kimpilla_reggae_v2';
   const okRows = (r) => r && ROWS.every((n) => Array.isArray(r[n]) && r[n].length === 16);
-  function save() { try { localStorage.setItem(KEY, JSON.stringify({ song: S.song, blocks: S.blocks, p: S.p })); } catch (e) { /* 保存できなくても動く */ } }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify({ song: S.song, blocks: S.blocks, draft: S.draft, p: S.p })); } catch (e) { /* 保存できなくても動く */ } }
   function load() {
     try {
       const o = JSON.parse(localStorage.getItem(KEY) || 'null');
       if (o && o.song && okRows(o.song.rows) && Array.isArray(o.blocks) && o.blocks.length) {
         o.blocks.forEach((b) => { if (!okRows(b.fillRows)) b.fillRows = zero(); b.off = b.off || {}; b.add = Object.assign({ open: 0, ghost: 0 }, b.add); b.alt = b.alt || 0; b.fillBar = b.fillBar || 0; b.crashAt = b.crashAt || 0; b.accent = b.accent || 'keep'; });
-        S.song = { pat: o.song.pat, rows: o.song.rows, bpm: o.song.bpm || 76 }; S.blocks = o.blocks; if (o.p) Object.assign(S.p, o.p);
+        S.song = { pat: o.song.pat, rows: o.song.rows, bpm: o.song.bpm || 76 }; S.blocks = o.blocks; if (o.draft && okRows(o.draft.fillRows)) { S.draft = Object.assign(newBlock(8), o.draft); S.draft.add = Object.assign({ open: 0, ghost: 0 }, S.draft.add); S.draft.off = S.draft.off || {}; } if (o.p) Object.assign(S.p, o.p);
       }
     } catch (e) { /* 読めなければ、最初の状態 */ }
   }
@@ -108,10 +108,12 @@
     return m;
   };
 
+  let previewBlocks = null;      // 「ためす」の鳴らし中は、そのブロックだけ
   const warp = (frac, s) => (frac < 0.5 ? frac * (s / 0.5) : s + (frac - 0.5) * ((1 - s) / 0.5));
-  function timeline() {
+  function timeline(list) {
+    const BL = list || S.blocks;
     const ev = []; let t = 0; const s = S.p.shuffle / 100; let landNext = false; const spb = 60 / S.song.bpm; const spans = [];
-    S.blocks.forEach((b, bi) => {
+    BL.forEach((b, bi) => {
       const tb = t;
       for (let rep = 0; rep < b.reps; rep++) {
         for (let bar = 0; bar < b.bars; bar++) {
@@ -180,7 +182,7 @@
     const my = ++session;
     const run = () => {
       if (!playing || my !== session) return;
-      const { ev, dur } = timeline(), t0 = Math.max(ctx.currentTime + 0.08, nodesUntil);
+      const { ev, dur } = timeline(previewBlocks), t0 = Math.max(ctx.currentTime + 0.08, nodesUntil);
       ev.forEach((e) => hit(ctx, (row) => partGain[PART_OF[row]], t0 + e.t, e.row, e.vel));
       nodesUntil = t0 + dur;
       if ($('loop').checked) timer = setTimeout(run, Math.max(50, (nodesUntil - ctx.currentTime - 1) * 1000));
@@ -189,7 +191,7 @@
     run();
   }
   function stopAll() {
-    playing = false; session++; clearTimeout(timer); $('play').textContent = '▶ 再生'; nodesUntil = 0;
+    playing = false; session++; clearTimeout(timer); $('play').textContent = '▶ 再生'; $('prev').textContent = '▶ これだけ鳴らす'; previewBlocks = null; nodesUntil = 0;
     if (ctx) {      // 予約済みの音を、まとめて止める(出力を作り直す)
       master.disconnect(); master = ctx.createGain(); master.gain.value = 0.9; master.connect(ctx.destination);
       PARTS.forEach(([k]) => { partGain[k].disconnect(); const g = ctx.createGain(); g.connect(master); partGain[k] = g; });
@@ -235,38 +237,43 @@
   const chip = (txt, cls, fn) => { const x = el('button', { type: 'button', className: 'chip' + (cls ? ' ' + cls : ''), textContent: txt }); x.onclick = fn; return x; };
   const line = (label, ...kids) => { const r = el('div', { className: 'bl' }); r.appendChild(el('span', { className: 'bk', textContent: label })); const w = el('span', { className: 'bv' }); kids.forEach((k) => w.appendChild(k)); r.appendChild(w); return r; };
 
+  // ブロックの変え方の操作(並びのブロックと、「ためす」で共通)
+  function controls(d, b, redraw, selectIt) {
+    const num = (label, key, min, max) => { const l = el('label', {}, label + ' '), inp = el('input', { type: 'number', min, max, value: b[key], inputMode: 'numeric' }); inp.onchange = () => { const v = Math.max(min, Math.min(max, Math.round(+inp.value || min))); inp.value = v; b[key] = v; changed(false); redraw(); }; l.appendChild(inp); return l; };
+    const r2 = el('div', { className: 'row' });
+    if (!b.intro) {
+      const bs = el('select'); [...new Set([4, 8, b.bars])].sort((x, y) => x - y).forEach((v) => { const o = el('option', { value: v, textContent: v + '小節' }); if (v === b.bars) o.selected = true; bs.appendChild(o); });
+      bs.onchange = () => { b.bars = +bs.value; changed(true); redraw(); };
+      const bl = el('label', {}, '長さ '); bl.appendChild(bs); r2.appendChild(bl);
+    }
+    r2.appendChild(num('回数', 'reps', 1, 16)); d.appendChild(r2);
+    if (!b.intro) {
+      const offs = el('span'); OFFS.forEach(([k, n]) => { offs.appendChild(chip(n, b.off[k] ? 'cut' : '', () => { b.off[k] = !b.off[k]; changed(true); redraw(); })); });
+      d.appendChild(line('抜く音', offs));
+      ADDS.forEach(([k, n]) => { const w = el('span'); LEVELS.forEach(([v, t]) => { w.appendChild(chip(t, b.add[k] === v ? 'on' : '', () => { b.add[k] = v; changed(true); redraw(); })); }); d.appendChild(line(n, w)); });
+      const cr = el('span'); [[0, 'なし'], [1, '1拍目'], [3, '3拍目']].forEach(([v, n]) => { cr.appendChild(chip(n, b.crashAt === v ? 'on' : '', () => { b.crashAt = v; changed(false); redraw(); })); });
+      cr.appendChild(el('small', { className: 'small', textContent: ' 最初の小節だけ' })); d.appendChild(line('クラッシュ', cr));
+      const ac = el('span'); ACCENTS.forEach(([k, n]) => { ac.appendChild(chip(n, b.accent === k ? 'on' : '', () => { b.accent = k; changed(true); redraw(); })); });
+      d.appendChild(line('アクセント', ac));
+      const fs = el('select'); FILL_TYPES.forEach(([k, n]) => { const o = el('option', { value: k, textContent: n }); if (k === b.fillType) o.selected = true; fs.appendChild(o); });
+      fs.onchange = () => { b.fillType = fs.value; b.alt = 0; applyFill(b); selectIt(); focusFill(b); changed(true); redraw(); };
+      const idea = el('button', { type: 'button', className: 'chip', textContent: '案を出す' }); idea.onclick = () => { if (b.fillType === 'none') b.fillType = 'tom'; b.alt++; applyFill(b); selectIt(); focusFill(b); changed(true); redraw(); };
+      d.appendChild(line('フィル', fs, idea));
+      if (b.fillType !== 'none') {
+        const ps = el('select'); ps.appendChild(el('option', { value: 0, textContent: '最後の小節(' + b.bars + '小節目)' }));
+        for (let k = 1; k < b.bars; k++) { const o = el('option', { value: k, textContent: k + '小節目' }); if (k === b.fillBar) o.selected = true; ps.appendChild(o); }
+        ps.onchange = () => { b.fillBar = +ps.value; changed(true); redraw(); };
+        d.appendChild(line('入れる小節', ps));
+      }
+    }
+  }
+
   function drawBlocks() {
     const box = $('rows'); box.innerHTML = '';
     S.blocks.forEach((b, i) => {
       const d = el('div', { className: 'blk' + (i === S.sel ? ' sel' : '') });
       d.innerHTML = '<div class="ttl">ブロック ' + (i + 1) + '　' + (b.intro ? '' : b.bars + '小節 × ') + b.reps + '回' + (b.intro ? '<span class="tag">曲頭ロール</span>' : '') + (b.fillType !== 'none' && !b.intro ? '<span class="tag fl">フィル ' + fillBarLabel(b) + ' ' + beatName(b.fillFrom) + 'から</span>' : '') + '</div>';
-      const num = (label, key, min, max) => { const l = el('label', {}, label + ' '), inp = el('input', { type: 'number', min, max, value: b[key], inputMode: 'numeric' }); inp.onchange = () => { const v = Math.max(min, Math.min(max, Math.round(+inp.value || min))); inp.value = v; b[key] = v; changed(false); drawBlocks(); }; l.appendChild(inp); return l; };
-      const r2 = el('div', { className: 'row' });
-      if (!b.intro) {
-        const bs = el('select'); [...new Set([4, 8, b.bars])].sort((x, y) => x - y).forEach((v) => { const o = el('option', { value: v, textContent: v + '小節' }); if (v === b.bars) o.selected = true; bs.appendChild(o); });
-        bs.onchange = () => { b.bars = +bs.value; changed(true); drawBlocks(); };
-        const bl = el('label', {}, '長さ '); bl.appendChild(bs); r2.appendChild(bl);
-      }
-      r2.appendChild(num('回数', 'reps', 1, 16)); d.appendChild(r2);
-      if (!b.intro) {
-        const offs = el('span'); OFFS.forEach(([k, n]) => { offs.appendChild(chip(n, b.off[k] ? 'cut' : '', () => { b.off[k] = !b.off[k]; changed(true); drawBlocks(); })); });
-        d.appendChild(line('抜く音', offs));
-        ADDS.forEach(([k, n]) => { const w = el('span'); LEVELS.forEach(([v, t]) => { w.appendChild(chip(t, b.add[k] === v ? 'on' : '', () => { b.add[k] = v; changed(true); drawBlocks(); })); }); d.appendChild(line(n, w)); });
-        const cr = el('span'); [[0, 'なし'], [1, '1拍目'], [3, '3拍目']].forEach(([v, n]) => { cr.appendChild(chip(n, b.crashAt === v ? 'on' : '', () => { b.crashAt = v; changed(false); drawBlocks(); })); });
-        cr.appendChild(el('small', { className: 'small', textContent: ' 最初の小節だけ' })); d.appendChild(line('クラッシュ', cr));
-        const ac = el('span'); ACCENTS.forEach(([k, n]) => { ac.appendChild(chip(n, b.accent === k ? 'on' : '', () => { b.accent = k; changed(true); drawBlocks(); })); });
-        d.appendChild(line('アクセント', ac));
-        const fs = el('select'); FILL_TYPES.forEach(([k, n]) => { const o = el('option', { value: k, textContent: n }); if (k === b.fillType) o.selected = true; fs.appendChild(o); });
-        fs.onchange = () => { b.fillType = fs.value; b.alt = 0; applyFill(b); S.sel = i; focusFill(b); changed(true); drawBlocks(); };
-        const idea = el('button', { type: 'button', className: 'chip', textContent: '案を出す' }); idea.onclick = () => { if (b.fillType === 'none') b.fillType = 'tom'; b.alt++; applyFill(b); S.sel = i; focusFill(b); changed(true); drawBlocks(); };
-        d.appendChild(line('フィル', fs, idea));
-        if (b.fillType !== 'none') {
-          const ps = el('select'); ps.appendChild(el('option', { value: 0, textContent: '最後の小節(' + b.bars + '小節目)' }));
-          for (let k = 1; k < b.bars; k++) { const o = el('option', { value: k, textContent: k + '小節目' }); if (k === b.fillBar) o.selected = true; ps.appendChild(o); }
-          ps.onchange = () => { b.fillBar = +ps.value; changed(true); drawBlocks(); };
-          d.appendChild(line('入れる小節', ps));
-        }
-      }
+      controls(d, b, drawBlocks, () => { S.sel = i; });
       const bt = el('div', { className: 'btns' });
       const mk = (txt, fn) => { const x = el('button', { type: 'button', textContent: txt }); x.onclick = fn; bt.appendChild(x); return x; };
       mk('書き出し', () => exportWav(null, 'block' + (i + 1), i));
@@ -363,8 +370,12 @@
   const ps = $('pat'); Object.keys(PATTERNS).forEach((k) => { const o = el('option', { textContent: k }); if (k === S.song.pat) o.selected = true; ps.appendChild(o); });
   ps.onchange = () => { S.song.pat = ps.value; S.song.rows = PATTERNS[ps.value](); changed(true); };
   $('bpm').value = S.song.bpm; $('bpm').onchange = () => { const v = Math.max(50, Math.min(140, Math.round(+$('bpm').value || 76))); $('bpm').value = v; S.song.bpm = v; changed(false); };
-  drawBlocks(); drawParts(); drawGrid(); updateTotal();
-  $('play').onclick = () => { play(); };
+  function drawDraft() { const box = $('draft'); box.innerHTML = ''; const d = el('div', { className: 'blk' }); controls(d, S.draft, drawDraft, () => {}); box.appendChild(d); }
+  drawDraft(); drawBlocks(); drawParts(); drawGrid(); updateTotal();
+  $('play').onclick = () => { if (playing) stopAll(); previewBlocks = null; play(); };
+  $('prev').onclick = () => { if (playing && previewBlocks) { stopAll(); return; } if (playing) stopAll(); previewBlocks = [S.draft]; $('prev').textContent = '■ 止める'; play(); };
+  $('addDraft').onclick = () => { S.blocks.push(JSON.parse(JSON.stringify(S.draft))); S.sel = S.blocks.length - 1; changed(true); drawBlocks(); $('draftNote').textContent = 'ブロック ' + S.blocks.length + ' として、並びの最後に入れた。'; };
+
   $('stop').onclick = stopAll;
   $('add').onclick = () => { S.blocks.push(newBlock(4)); S.sel = S.blocks.length - 1; changed(true); drawBlocks(); };
   $('addIntro').onclick = () => { S.blocks.unshift(newIntro()); S.sel = 0; changed(true); drawBlocks(); };
