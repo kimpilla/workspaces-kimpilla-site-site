@@ -713,7 +713,7 @@
     const t = $('parts'); t.innerHTML = '';
     PARTS.forEach(([k, n]) => {
       const tr = el('tr'); tr.appendChild(el('td', { textContent: n }));
-      const m = el('td', { className: 'm' }), mb = el('button', { type: 'button', textContent: 'M' }), sb = el('button', { type: 'button', textContent: 'S' });
+      const m = el('td', { className: 'm' }), mb = el('button', { type: 'button', textContent: 'ミュート' }), sb = el('button', { type: 'button', textContent: 'ソロ' });
       const sync = () => { mb.classList.toggle('on', !!S.mute[k]); sb.classList.toggle('on', !!S.solo[k]); };
       mb.onclick = () => { S.mute[k] = !S.mute[k]; sync(); updateGains(); }; sb.onclick = () => { S.solo[k] = !S.solo[k]; sync(); updateGains(); };
       m.appendChild(mb); m.appendChild(sb); tr.appendChild(m); sync();
