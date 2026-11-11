@@ -78,7 +78,7 @@
       const o = JSON.parse(localStorage.getItem(KEY) || 'null');
       if (o && o.song && okRows(o.song.rows) && Array.isArray(o.blocks)) {
         o.blocks.forEach((b) => { if (!okRows(b.fillRows)) b.fillRows = zero(); else { if (b.fillRows.CRASH.length === 16 && b.fillFrom) b.fillFrom = b.fillFrom * U16; b.fillRows = fix96(b.fillRows); } if (b.ov) Object.keys(b.ov).forEach((k) => { const q = b.ov[k]; if (q.rows) q.rows = fix96(q.rows); if (q.fill && q.fill.rows) { if (q.fill.rows.CRASH.length === 16) q.fill.from *= U16; q.fill.rows = fix96(q.fill.rows); } }); b.ov = b.ov || {}; b.off = b.off || {}; b.add = Object.assign({ open: 0, ghost: 0 }, b.add); b.alt = b.alt || 0; b.fillBar = b.fillBar || 0; b.crashAt = b.crashAt || 0; b.accent = b.accent || 'keep'; });
-        S.song = { pat: o.song.pat, rows: fix96(o.song.rows), bpm: o.song.bpm || 76 }; S.blocks = o.blocks; if (o.draft && okRows(o.draft.fillRows)) { S.draft = Object.assign(newBlock(8), o.draft); S.draft.add = Object.assign({ open: 0, ghost: 0 }, S.draft.add); S.draft.off = S.draft.off || {}; } if (o.p) Object.assign(S.p, o.p); if (o.kit && o.kit in KITS) S.kit = o.kit;
+        S.song = { pat: o.song.pat, rows: fix96(o.song.rows), bpm: o.song.bpm || 76, hat: o.song.hat || 12 }; S.blocks = o.blocks; if (o.draft && okRows(o.draft.fillRows)) { S.draft = Object.assign(newBlock(8), o.draft); S.draft.add = Object.assign({ open: 0, ghost: 0 }, S.draft.add); S.draft.off = S.draft.off || {}; } if (o.p) Object.assign(S.p, o.p); if (o.kit && o.kit in KITS) S.kit = o.kit;
       }
     } catch (e) { /* 読めなければ、最初の状態 */ }
   }
@@ -680,8 +680,13 @@
     ['accvar', 'アクセントのブレ', 0, 100, (v) => String(Math.round(v))],
     ['sway', 'ゆれ', 0, 100, (v) => String(Math.round(v))],
   ], S.p, () => { changed(true); });
+  // ハイハットの細かさ: 曲のリズムのハイハットの段だけを、選んだ間隔で並べ直す(オープンハットの位置は残す)
+  const HATRES = [[24, '4分'], [12, '8分'], [8, '8分3連'], [6, '16分'], [4, '16分3連']];
+  const applyHat = () => { const st = S.song.hat || 12, r = S.song.rows; for (let i = 0; i < NS; i++) r.HAT[i] = (i % st === 0 && !r.OPEN[i]) ? 1 : 0; };
+  const hs = $('hatres'); HATRES.forEach(([v, t]) => { const o = el('option', { value: String(v), textContent: t }); if (v === (S.song.hat || 12)) o.selected = true; hs.appendChild(o); });
+  hs.onchange = () => { S.song.hat = Number(hs.value); applyHat(); changed(true); drawSongGrid(); };
   const ps = $('pat'); Object.keys(PATTERNS).forEach((k) => { const o = el('option', { textContent: k }); if (k === S.song.pat) o.selected = true; ps.appendChild(o); });
-  ps.onchange = () => { S.song.pat = ps.value; S.song.rows = PATTERNS[ps.value](); changed(true); };
+  ps.onchange = () => { S.song.pat = ps.value; S.song.rows = PATTERNS[ps.value](); if ((S.song.hat || 12) !== 12) applyHat(); changed(true); };
   $('bpm').value = S.song.bpm; $('bpm').onchange = () => { const v = Math.max(50, Math.min(140, Math.round(+$('bpm').value || 76))); $('bpm').value = v; S.song.bpm = v; changed(false); };
   drawParts(); drawBlockExports(); drawSongGrid(); drawSeq(); drawSheet(); updateTotal();
   $('tabR').onclick = () => showTab('r'); $('tabS').onclick = () => showTab('s'); $('tabO').onclick = () => showTab('o');
