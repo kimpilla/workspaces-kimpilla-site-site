@@ -109,6 +109,11 @@
     });
     // 足す音: 小節ごとに、ほんの少しだけ入る(同じ小節は、いつも同じ)
     const ph = [0, 0.22, 0.5][E.add.open], pg = [0, 0.1, 0.28][E.add.ghost];
+    if (E.det) {   // 小節の「足す音」タブ: 押したら必ず見える形に決める(少し=1か所、多め=2か所/4か所)
+      if (E.add.open && !E.off.OPEN) (E.add.open === 1 ? [36] : [36, 84]).forEach((i) => { o.HAT[i] = 0; o.OPEN[i] = 1; });
+      if (E.add.ghost && !E.off.RIM) (E.add.ghost === 1 ? [18] : [18, 42, 66, 90]).forEach((i) => { if (!o.RIM[i] && !o.SNARE[i]) o.RIM[i] = 3; });
+      return o;
+    }
     if (ph && !E.off.OPEN) [36, 84].forEach((i, k) => { if (o.HAT[i] && !o.OPEN[i] && rnd(sd + 31 + k * 17) < ph * (k ? 1 : 0.6)) { o.HAT[i] = 0; o.OPEN[i] = 1; } });
     if (pg && !E.off.RIM) [18, 42, 66, 84, 90].forEach((i, k) => { if (!o.RIM[i] && !o.SNARE[i] && rnd(sd + 97 + k * 13) < pg) o.RIM[i] = 3; });
     return o;
@@ -539,14 +544,14 @@
       body.appendChild(el('p', { className: 'small', textContent: '押した楽器は、このブロックの全部の小節で鳴らない(書き出しでも抜ける)。もう一度押すと戻る。保存はいらない。' }));
     } else if (S.sheetTab === 'how') {
       const recompute = () => {
-        const E = barEff(b, bar), o = w.opts, m = blockMain({ off: {}, add: o.add, accent: o.accent }, bi, bar);
+        const E = barEff(b, bar), o = w.opts, m = blockMain({ off: {}, add: o.add, accent: o.accent, det: true }, bi, bar);
         if (o.crashAt) m.CRASH[o.crashAt === 3 ? 48 : 0] = 1;
         w.rows = m; w.dirty = true; w.fl = false; changed(true);
       };
       ADDS.forEach(([k, n]) => { const wv = el('span'); LEVELS.forEach(([v, t]) => { wv.appendChild(chip(t, w.opts.add[k] === v ? 'on' : '', () => { w.opts.add[k] = v; recompute(); })); }); body.appendChild(line(n, wv)); });
       const cr = el('span'); [[0, 'なし'], [1, '1拍目'], [3, '3拍目']].forEach(([v, n]) => { cr.appendChild(chip(n, w.opts.crashAt === v ? 'on' : '', () => { w.opts.crashAt = v; recompute(); })); }); body.appendChild(line('クラッシュ', cr));
       const ac = el('span'); ACCENTS.forEach(([k, n]) => { ac.appendChild(chip(n, w.opts.accent === k ? 'on' : '', () => { w.opts.accent = k; recompute(); })); }); body.appendChild(line('アクセント', ac));
-      body.appendChild(el('p', { className: 'small', textContent: '押すと、この小節のグリッドが作り直される(グリッドで手直しした分は消える)。聞いて、良ければ「保存」。' }));
+      body.appendChild(el('p', { className: 'small', textContent: '押すと、この小節のグリッドが作り直される(グリッドで手直しした分は消える)。「少し」は1〜2拍目に1か所、「多め」は小節の中に複数入る。グリッドのタブで確認して、聞いて、良ければ「保存」。' }));
     } else {
       body.appendChild(el('p', { className: 'small', textContent: 'フィルのブロックを選んで「あてはめる」と、いま選んでいる小節のグリッドが、その形に替わる。聞いて、良ければ「保存」。手本の譜面から、譜面の位置のまま起こしたもの(3連・6連は、グリッドの「細かさ」を切り替えると見える)。' }));
       FILL_BLOCKS.forEach((fb) => {
