@@ -401,34 +401,24 @@
   S.pg = { song: 0, bar: 0 };
   S.sheetOpen = true; S.sheetTab = 'grid'; S.fillHalf = 1; S.fillSel = ''; S.scope = 'this';
   const MUTE_OF = (b) => (n) => OFFS.some(([k]) => b.off && b.off[k] && OFF_ROWS[k].includes(n));
-  // フィルの型。半小節(8コマ)の中の位置で書く。8分音符を中心に、最後だけ細かくする(レゲエのゆったりしたテンポでは、16分の連打は忙しすぎる)
-  const FILLS = {
-    short: {
-      'タム下り': [['T-HI', 0], ['T-HI', 2], ['T-MID', 4], ['T-LO', 6]],
-      'スネア→タム': [['SNARE', 0], ['SNARE', 2], ['T-MID', 4], ['T-LO', 6]],
-      'スネア4つ': [['SNARE', 0], ['SNARE', 2], ['SNARE', 4], ['SNARE', 6]],
-      '最後に詰める': [['SNARE', 0], ['SNARE', 4], ['SNARE', 6], ['SNARE', 7]],
-      'リムで止める': [['RIM', 4], ['RIM', 6]],
-      'ハット→オープン': [['HAT', 0], ['HAT', 2], ['HAT', 4], ['OPEN', 6]],
-      'ハット細かく': [['HAT', 0], ['HAT', 2], ['HAT', 4], ['HAT', 5], ['HAT', 6], ['HAT', 7]],
-    },
-    long: {
-      'タム回し(長)': [['SNARE', 0], ['SNARE', 4], ['T-HI', 8], ['T-HI', 10], ['T-MID', 12], ['T-LO', 14]],
-      'スネアロール(長)': [['SNARE', 0], ['SNARE', 4], ['SNARE', 8], ['SNARE', 10], ['SNARE', 12], ['SNARE', 13], ['SNARE', 14], ['SNARE', 15]],
-      'ハット→タム(長)': [['HAT', 0], ['HAT', 2], ['HAT', 4], ['HAT', 6], ['T-HI', 8], ['T-HI', 10], ['T-MID', 12], ['T-LO', 14]],
-    },
-  };
-  const FILL_KEEP = ['ハット細かく', 'ハット→オープン'];     // これらは、ほかの音を残す
-  function getWork(b, bi, bar) {
-    const key = S.cur.k + '-' + bi + '-' + bar;
-    if (!S.work || S.work.key !== key) {
-      if (S.works[key]) { S.work = S.works[key]; return S.work; }
-      const rows = baseRows(b, bi, bar), E = barEff(b, bar);
-      S.work = { key, rows, dirty: false, fl: !!(b.ov[bar] && b.ov[bar].fl) || !!E.fill, opts: { add: Object.assign({}, E.add), accent: E.accent, crashAt: rows.CRASH[0] ? 1 : rows.CRASH[8] ? 3 : 0 } };
-      S.works[key] = S.work;
-    }
-    return S.work;
+  // フィルのブロック(1〜2小節)。選んだ小節に「あてはめる」と、その小節のグリッドが、この形に替わる。
+  // 手本: スライ・ダンバーの曲頭ロール譜面(Todd Bishop 採譜、Serge Gainsbourg『Aux Armes et caetera』)の特徴(16分のロール、アクセント、タムを下りる、最後にキックで着地)を取り入れた案。一音ずつの写しではない
+  // bars[i] = { from: この小節の、どのコマから置き換えるか, hits: [[行, コマ, 1=鳴る/2=アクセント], …] }
+  const rl = (row, from, to, acc) => { const o = []; for (let i = from; i <= to; i++) o.push([row, i, acc && (i - from) % acc === 0 ? 2 : 1]); return o; };
+  const FILL_BLOCKS = [
+    { name: '短い(最後の1拍のスネア)', bars: [{ from: 12, hits: [['SNARE', 12, 2], ['SNARE', 13, 1], ['SNARE', 14, 1], ['SNARE', 15, 2]] }] },
+    { name: '1小節: タムを下りる', bars: [{ from: 8, hits: [['KICK', 8, 1]].concat(rl('T-HI', 8, 11, 4), rl('T-MID', 12, 13, 2), [['T-LO', 14, 1], ['T-LO', 15, 2]]) }] },
+    { name: '1小節: スネアから詰める', bars: [{ from: 0, hits: [['KICK', 0, 1], ['SNARE', 0, 2], ['SNARE', 2, 1], ['SNARE', 4, 2], ['SNARE', 6, 1], ['SNARE', 8, 2]].concat(rl('SNARE', 9, 11, 0), [['SNARE', 12, 2], ['SNARE', 13, 1], ['SNARE', 14, 1], ['SNARE', 15, 2]]) }] },
+    { name: '2小節: ゆっくり → 詰める', bars: [{ from: 8, hits: [['SNARE', 8, 2], ['SNARE', 10, 1], ['SNARE', 12, 2], ['SNARE', 14, 1]] }, { from: 0, hits: [['KICK', 0, 1], ['SNARE', 0, 2], ['SNARE', 2, 1], ['SNARE', 4, 2], ['SNARE', 6, 1], ['SNARE', 8, 1], ['SNARE', 9, 1], ['SNARE', 10, 1], ['SNARE', 11, 1], ['T-MID', 12, 2], ['T-MID', 13, 1], ['T-LO', 14, 1], ['T-LO', 15, 2]] }] },
+    { name: '2小節: タムのロール → 止める', bars: [{ from: 0, hits: [['KICK', 0, 1]].concat(rl('T-HI', 0, 3, 4), rl('T-MID', 4, 7, 4), rl('T-LO', 8, 11, 4), rl('SNARE', 12, 15, 4)) }, { from: 0, hits: [['KICK', 0, 1], ['RIM', 8, 2]] }] },
+  ];
+  function mkWork(b, bi, bar) {
+    const key = 'list-' + bi + '-' + bar;
+    if (S.works[key]) return S.works[key];
+    const rows = baseRows(b, bi, bar), E = barEff(b, bar);
+    return (S.works[key] = { key, rows, dirty: false, fl: !!(b.ov[bar] && b.ov[bar].fl) || !!E.fill, opts: { add: Object.assign({}, E.add), accent: E.accent, crashAt: rows.CRASH[0] ? 1 : rows.CRASH[8] ? 3 : 0 } });
   }
+  function getWork(b, bi, bar) { S.work = mkWork(b, bi, bar); return S.work; }
   function auditionBar() {
     if (playing && S.audition) { stopAll(); drawSheet(); return; }
     if (playing) stopAll();
@@ -454,16 +444,20 @@
     box.appendChild(mini);
     const act = el('div', { className: 'row' });
     const pl = el('button', { type: 'button', className: 'sbtn' + (playing && S.audition ? ' on' : ''), textContent: playing && S.audition ? '■ 止める' : '▶ この小節を鳴らす' }); pl.onclick = auditionBar; act.appendChild(pl);
-    const sv = el('button', { type: 'button', className: 'sbtn', textContent: '保存' }); sv.disabled = !w.dirty;
+    const pends = Object.keys(S.works).filter((k) => S.works[k].dirty && k.indexOf('list-' + bi + '-') === 0).map((k) => +k.split('-')[2]);
+    const sv = el('button', { type: 'button', className: 'sbtn', textContent: '保存' }); sv.disabled = !(w.dirty || pends.length);
     sv.onclick = () => {
-      const from = S.scope === 'all' ? 0 : bar, to = S.scope === 'this' ? bar : b.bars - 1;
-      for (let k = from; k <= to; k++) { const o = ovs[k] || (ovs[k] = {}); o.rows = copyRows(w.rows); o.fl = !!w.fl; o.crashAt = 0; delete o.fill; delete o.off; delete o.add; delete o.accent; }
-      for (let k = from; k <= to; k++) delete S.works['list-' + bi + '-' + k];
+      const put = (k, src) => { const o = ovs[k] || (ovs[k] = {}); o.rows = copyRows(src.rows); o.fl = !!src.fl; o.crashAt = 0; delete o.fill; delete o.off; delete o.add; delete o.accent; };
+      if (S.scope === 'pend') { pends.forEach((k) => { put(k, S.works['list-' + bi + '-' + k]); delete S.works['list-' + bi + '-' + k]; }); }
+      else {
+        const from = S.scope === 'all' ? 0 : bar, to = S.scope === 'this' ? bar : b.bars - 1;
+        for (let k = from; k <= to; k++) { put(k, w); delete S.works['list-' + bi + '-' + k]; }
+      }
       S.work = null; changed(true);
     };
     act.appendChild(sv);
     const rs = el('button', { type: 'button', className: 'sbtn', textContent: '元に戻す' }); rs.disabled = !w.dirty; rs.onclick = () => { delete S.works[w.key]; S.work = null; changed(true); }; act.appendChild(rs);
-    const sc = el('select'); [['this', '保存: この小節だけ'], ['tail', '保存: ここから最後まで'], ['all', '保存: ブロックの全部']].forEach(([v, t]) => { const o = el('option', { value: v, textContent: t }); if (v === S.scope) o.selected = true; sc.appendChild(o); });
+    const sc = el('select'); [['this', '保存: この小節だけ'], ['pend', '保存: 直した小節すべて(点線)'], ['tail', '保存: ここから最後まで'], ['all', '保存: ブロックの全部']].forEach(([v, t]) => { const o = el('option', { value: v, textContent: t }); if (v === S.scope) o.selected = true; sc.appendChild(o); });
     sc.onchange = () => { S.scope = sc.value; }; act.appendChild(sc);
     box.appendChild(act);
     const act2 = el('div', { className: 'row' });
@@ -492,29 +486,24 @@
       const ac = el('span'); ACCENTS.forEach(([k, n]) => { ac.appendChild(chip(n, w.opts.accent === k ? 'on' : '', () => { w.opts.accent = k; recompute(); })); }); body.appendChild(line('アクセント', ac));
       body.appendChild(el('p', { className: 'small', textContent: '押すと、この小節のグリッドが作り直される(グリッドで手直しした分は消える)。聞いて、良ければ「保存」。' }));
     } else {
-      const half = S.fillHalf, whole = half === 2, s0 = whole ? 0 : half * 8, e0 = whole ? 16 : s0 + 8;
-      const rg = el('div', { className: 'row' }); rg.appendChild(el('span', { className: 'small', textContent: '入れる場所' }));
-      [[0, '1〜2拍目'], [1, '3〜4拍目'], [2, '1〜4拍目(長め)']].forEach(([h, t]) => { const x = el('button', { type: 'button', className: 'sbtn' + (half === h ? ' on' : ''), textContent: t }); x.onclick = () => { S.fillHalf = h; S.fillSel = ''; S.pg.bar = h === 2 ? 0 : h; drawSheet(); }; rg.appendChild(x); });
-      body.appendChild(rg);
-      const types = Object.assign({}, whole ? FILLS.long : FILLS.short), fr = el('div', { className: 'row' });
-      const none = '標準に戻す'; [none].concat(Object.keys(types)).forEach((t) => {
-        const x = el('button', { type: 'button', className: 'sbtn' + (S.fillSel === t ? ' on' : ''), textContent: t });
+      body.appendChild(el('p', { className: 'small', textContent: 'フィルのブロックを選んで「あてはめる」と、いま選んでいる小節のグリッドが、その形に替わる(2小節のものは、次の小節も)。聞いて、良ければ「保存」。' }));
+      FILL_BLOCKS.forEach((fb) => {
+        const r = el('div', { className: 'row' });
+        const need = fb.bars.length, ok = bar + need <= b.bars;
+        const x = el('button', { type: 'button', className: 'sbtn', textContent: 'あてはめる' }); x.disabled = !ok;
         x.onclick = () => {
-          S.fillSel = t;
-          const std = blockMain({ off: {}, add: w.opts.add, accent: w.opts.accent }, bi, bar);
-          ROWS.forEach((n) => { if (n !== 'CRASH') for (let i = s0; i < e0; i++) w.rows[n][i] = std[n][i]; });
-          w.fl = t !== none;
-          if (t !== none) {
-            if (!FILL_KEEP.includes(t)) ROWS.forEach((n) => { if (n !== 'CRASH') for (let i = s0; i < e0; i++) w.rows[n][i] = 0; });
-            types[t].forEach(([n, i]) => { w.rows[n][s0 + i - (whole ? 0 : 0)] = 1; });
-          }
-          w.dirty = true; S.pg.bar = whole ? 0 : half; drawSeq(); drawSheet(); refreshPlay();
+          fb.bars.forEach((pb, i) => {
+            const wk = mkWork(b, bi, bar + i);
+            ROWS.forEach((n) => { if (n !== 'CRASH') for (let s = pb.from; s < 16; s++) wk.rows[n][s] = 0; });
+            pb.hits.forEach(([n, s, v]) => { wk.rows[n][s] = v; });
+            wk.dirty = true; wk.fl = true;
+          });
+          S.sheetTab = 'grid'; if (need > 1) S.scope = 'pend'; S.pg.bar = fb.bars[0].from >= 8 ? 1 : 0; drawSeq(); drawSheet(); refreshPlay();
         };
-        fr.appendChild(x);
+        r.appendChild(x); r.appendChild(el('span', { textContent: fb.name + (ok ? '' : '(この小節からは入らない)') }));
+        body.appendChild(r);
       });
-      body.appendChild(fr);
-      body.appendChild(grid(whole ? undefined : half));
-      body.appendChild(el('p', { className: 'small', textContent: '場所と種類を押すと、下のグリッドがそのフィルに変わる。タム・スネアのフィルは他の音が止まり、ハットのフィルは他の音を残す。手でも直せる。場所を替えて、もう一度押すと、1〜2拍目と3〜4拍目の両方に入れられる。' }));
+      body.appendChild(el('p', { className: 'small', textContent: 'フィルのあとの小節の1拍目には、クラッシュが鳴る(「曲のリズム」の設定)。形は、手本の譜面の特徴を取り入れた案で、一音ずつの写しではない。' }));
     }
     box.appendChild(body);
     box.appendChild(act2);
