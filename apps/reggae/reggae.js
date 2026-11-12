@@ -232,7 +232,6 @@
     f.connect(e); e.connect(out);
     for (const m of METAL) { const o = c.createOscillator(); o.type = 'square'; o.frequency.value = base * m; o.connect(f); o.start(t); o.stop(t + dec + 0.02); }
   }
-  const SYN_BAND = { K: { f0: 120, f1: 52, td: 0.06, dec: 0.3, click: 0.35, clickHz: 3500 }, S: { tone: 185, toneG: 0.45, toneDec: 0.1, nHz: 2000, nQ: 0.6, nDec: 0.17, wire: 0.45, wireDec: 0.2 }, T: { f0: 130, f1: 82, td: 0.07, dec: 0.45, click: 0.3 }, M: { f0: 175, f1: 118, td: 0.06, dec: 0.38, click: 0.3 }, O: { hp: 7500, dec: 0.4 }, H: { hp: 8500, dec: 0.05 }, C: { base: 300, hp: 4500, dec: 1.6, n: 0.5 } };
   // 最初の「レゲエドラム音の試作」の合成音(キック・リム・スネア・ハット・シンドラム風のタム・クラッシュ)
   function pnoise(c, out, t, dur, type, f, q, vol, decay) { const s = c.createBufferSource(); s.buffer = noiseBuf(c); s.loop = true; const bq = c.createBiquadFilter(); bq.type = type; bq.frequency.value = f; bq.Q.value = q; const g = c.createGain(); g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0008, t + (decay || dur)); s.connect(bq); bq.connect(g); g.connect(out); s.start(t, Math.random() * 0.5); s.stop(t + dur + 0.05); }
   function ptone(c, out, t, type, f0, f1, sw, dur, vol) { const o = c.createOscillator(); o.type = type; o.frequency.setValueAtTime(f0, t); if (f1 !== f0) o.frequency.exponentialRampToValueAtTime(f1, t + sw); const g = c.createGain(); g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0008, t + dur); o.connect(g); g.connect(out); o.start(t); o.stop(t + dur + 0.05); }
@@ -241,41 +240,21 @@
     RIM: (c, o, t, v) => { ptone(c, o, t, 'triangle', 1750, 1250, 0.02, 0.05, 0.5 * v); ptone(c, o, t, 'sine', 420, 380, 0.02, 0.06, 0.35 * v); pnoise(c, o, t, 0.04, 'bandpass', 2400, 1.2, 0.5 * v, 0.035); },
     SNARE: (c, o, t, v) => { ptone(c, o, t, 'triangle', 210, 160, 0.06, 0.14, 0.55 * v); pnoise(c, o, t, 0.2, 'highpass', 1600, 0.7, 0.75 * v, 0.17); },
     HAT: (c, o, t, v) => { pnoise(c, o, t, 0.06, 'highpass', 7200, 0.9, 0.42 * v, 0.045); },
-    OPEN: (c, o, t, v) => { pnoise(c, o, t, 0.34, 'highpass', 6500, 0.9, 0.4 * v, 0.3); },
+    OPEN: (c, o, t, v) => { pnoise(c, o, t, 0.22, 'highpass', 6500, 0.9, 0.4 * v, 0.17); },
     'T-HI': (c, o, t, v) => { ptone(c, o, t, 'sine', 780, 230, 0.13, 0.34, 0.85 * v); pnoise(c, o, t, 0.02, 'highpass', 3000, 0.7, 0.2 * v, 0.015); },
     'T-MID': (c, o, t, v) => { ptone(c, o, t, 'sine', 600, 165, 0.15, 0.42, 0.9 * v); pnoise(c, o, t, 0.02, 'highpass', 3000, 0.7, 0.18 * v, 0.015); },
     'T-LO': (c, o, t, v) => { ptone(c, o, t, 'sine', 440, 112, 0.17, 0.52, 0.95 * v); pnoise(c, o, t, 0.02, 'highpass', 3000, 0.7, 0.16 * v, 0.015); },
     TIMB: (c, o, t, v) => { ptone(c, o, t, 'sine', 640, 600, 0.02, 0.3, 0.5 * v); ptone(c, o, t, 'sine', 1010, 960, 0.02, 0.22, 0.32 * v); ptone(c, o, t, 'sine', 1640, 1600, 0.02, 0.14, 0.2 * v); pnoise(c, o, t, 0.03, 'bandpass', 4200, 1.4, 0.55 * v, 0.03); },
     CRASH: (c, o, t, v) => { pnoise(c, o, t, 1.5, 'highpass', 4800, 0.7, 0.55 * v, 1.4); [3300, 4130, 5210, 6370].forEach((f) => ptone(c, o, t, 'square', f, f, 0, 0.9, 0.025 * v)); },
   };
-  const KITS = { 'proto': 'レゲエ合成音(最初の試作)', 'real': '実録音(Big Rusty Drums)', 'machine': 'マシン(合成音)', 'band': 'バンド寄り(合成音)' };
-  function synthHit(c, out, t, row, vel) {
-    const v = Math.min(1.3, Math.max(0.15, vel));
-    if (S.kit === 'proto') { PROTO[row](c, out, t, Math.min(1.2, Math.max(0.15, vel))); return; }
-    if (S.kit === 'machine') {
-      if (row === 'KICK') { toneHit(c, out, t, 160, 50, 0.22, v); noiseHit(c, out, t, 'lowpass', 2500, 1, 0.01, v * 0.3); }
-      else if (row === 'SNARE') { toneHit(c, out, t, 300, 180, 0.08, v * 0.5); noiseHit(c, out, t, 'bandpass', 2200, 0.7, 0.14, v); }
-      else if (row === 'RIM') { toneHit(c, out, t, 1800, 1500, 0.03, v * 0.5, 0.01); noiseHit(c, out, t, 'bandpass', 3200, 2, 0.03, v * 0.6); }
-      else if (row === 'HAT') noiseHit(c, out, t, 'highpass', 7500, 1, 0.04, v);
-      else if (row === 'OPEN') noiseHit(c, out, t, 'highpass', 6500, 1, 0.4, v * 0.9);
-      else if (row === 'CRASH') noiseHit(c, out, t, 'highpass', 4000, 0.5, 1.2, v);
-      else { const f = row === 'T-HI' ? [190, 125] : row === 'T-MID' ? [165, 110] : [120, 75]; toneHit(c, out, t, f[0], f[1], 0.3, v * 0.9, 0.06); noiseHit(c, out, t, 'bandpass', 1000, 1, 0.05, v * 0.25); }
-      return;
-    }
-    const K = SYN_BAND, vv = v * (0.88 + 0.24 * Math.random());
-    if (row === 'KICK') { toneHit(c, out, t, K.K.f0, K.K.f1, K.K.dec, vv, K.K.td); noiseHit(c, out, t, 'highpass', K.K.clickHz, 1, 0.008, vv * K.K.click); }
-    else if (row === 'SNARE') { const P = K.S; toneHit(c, out, t, P.tone * 1.2, P.tone, P.toneDec, vv * P.toneG, 0.02); toneHit(c, out, t, P.tone * 1.9, P.tone * 1.8, P.toneDec * 0.7, vv * P.toneG * 0.4, 0.02); noiseHit(c, out, t, 'bandpass', P.nHz, P.nQ, P.nDec, vv); noiseHit(c, out, t, 'highpass', 5500, 0.7, P.wireDec, vv * P.wire); }
-    else if (row === 'RIM') { toneHit(c, out, t, 1700, 1400, 0.035, vv * 0.5, 0.01); noiseHit(c, out, t, 'bandpass', 3000, 2, 0.03, vv * 0.6); }
-    else if (row === 'HAT') noiseHit(c, out, t, 'highpass', K.H.hp, 1, K.H.dec, vv * 0.8);
-    else if (row === 'OPEN') { noiseHit(c, out, t, 'highpass', K.O.hp, 1, K.O.dec, vv * 0.8); metalHit(c, out, t, 320, 6500, K.O.dec, vv * 0.05); }
-    else if (row === 'CRASH') { const P = K.C; noiseHit(c, out, t, 'highpass', P.hp, 0.6, P.dec, vv * P.n); metalHit(c, out, t, P.base, P.hp, P.dec, vv * 0.07); }
-    else { const P = row === 'T-LO' ? K.T : K.M, m = row === 'T-HI' ? 1.25 : 1; toneHit(c, out, t, P.f0 * m, P.f1 * m, P.dec, vv, P.td); toneHit(c, out, t, P.f0 * m * 1.5, P.f1 * m * 1.5, P.dec * 0.5, vv * 0.3, P.td); noiseHit(c, out, t, 'bandpass', 1200, 0.8, 0.03, vv * P.click); }
-  }
+  const KITS = { 'proto': 'レゲエ合成音(最初の試作)', 'real': '実録音(Big Rusty Drums)' };
+  function synthHit(c, out, t, row, vel) { PROTO[row](c, out, t, Math.min(1.2, Math.max(0.15, vel))); }
   function hit(c, dest, t, row, vel) {
     if (row === 'TIMB') { PROTO.TIMB(c, dest(row), t, Math.min(1.2, Math.max(0.15, vel))); return; }      // ティンバレスは録音素材がないので、どの音でも合成音
     if (S.kit !== 'real') { synthHit(c, dest(row), t, row, vel); return; }
     const pair = BUF[row], name = vel >= 0.75 ? pair[1] : pair[0], src = c.createBufferSource(); src.buffer = buffers[name];
-    const g = c.createGain(); g.gain.value = Math.min(1.3, Math.max(0.15, vel)); src.connect(g); g.connect(dest(row)); src.start(t);
+    const g = c.createGain(), vol = Math.min(1.3, Math.max(0.15, vel)); g.gain.value = vol; src.connect(g); g.connect(dest(row)); src.start(t);
+    if (row === 'OPEN') { g.gain.setValueAtTime(vol, t + 0.06); g.gain.exponentialRampToValueAtTime(0.001, t + 0.3); src.stop(t + 0.32); }      // オープンハットは、長く伸びすぎないよう、0.3秒で消す
   }
 
   // ---- 再生 ----
