@@ -189,7 +189,25 @@
   }
 
   // ---- 音 ----
-  let ctx = null, master = null, partGain = {}, buffers = null, loading = null;
+  let ctx = null, master = null, partGain = {}, loading = null;
+  // 録音のキットは、キットごとに音を持つ。'real' は samples.js(最初から読む)、ほかは samples_<キット>.js を選んだときに読む
+  const kitBufs = {}, kitLoad = {};
+  const loadScript = (src) => new Promise((res, rej) => { const e = document.createElement('script'); e.src = src; e.onload = res; e.onerror = rej; document.head.appendChild(e); });
+  function loadKit(k) {
+    if (k === 'proto' || !KITS[k]) k = 'real';
+    if (kitLoad[k]) return kitLoad[k];
+    kitLoad[k] = (async () => {
+      let src = window.REGGAE_WAV;
+      if (k !== 'real') { await loadScript('samples_' + k + '.js?v=20261112'); src = (window.REGGAE_KITWAV || {})[k] || {}; }
+      const out = {};
+      for (const n of Object.keys(src)) out[n] = await new Promise((res, rej) => ctx.decodeAudioData(b64(src[n]), res, rej));
+      if (k !== 'real') {                                   // そのキットに無い音(Gogodze のクラッシュなど)は、Big Rusty Drums の音で補う
+        await loadKit('real'); Object.keys(kitBufs.real).forEach((n) => { if (!out[n]) out[n] = kitBufs.real[n]; });
+      }
+      kitBufs[k] = out;
+    })();
+    return kitLoad[k];
+  }
   const b64 = (s) => { const bin = atob(s), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u.buffer; };
   function ensure() {
     if (!ctx) {
@@ -198,13 +216,7 @@
       PARTS.forEach(([k]) => { const g = ctx.createGain(); g.connect(master); partGain[k] = g; });
       updateGains();
     } else if (ctx.state === 'suspended') ctx.resume();
-    if (!loading) {
-      loading = (async () => {
-        const out = {};
-        for (const k of Object.keys(window.REGGAE_WAV)) out[k] = await new Promise((res, rej) => ctx.decodeAudioData(b64(window.REGGAE_WAV[k]), res, rej));
-        buffers = out;
-      })();
-    }
+    loading = loadKit(S.kit);
     return loading;
   }
   const anySolo = () => Object.keys(S.solo).some((k) => S.solo[k]);
@@ -247,13 +259,16 @@
     TIMB: (c, o, t, v) => { ptone(c, o, t, 'sine', 640, 600, 0.02, 0.3, 0.5 * v); ptone(c, o, t, 'sine', 1010, 960, 0.02, 0.22, 0.32 * v); ptone(c, o, t, 'sine', 1640, 1600, 0.02, 0.14, 0.2 * v); pnoise(c, o, t, 0.03, 'bandpass', 4200, 1.4, 0.55 * v, 0.03); },
     CRASH: (c, o, t, v) => { pnoise(c, o, t, 1.5, 'highpass', 4800, 0.7, 0.55 * v, 1.4); [3300, 4130, 5210, 6370].forEach((f) => ptone(c, o, t, 'square', f, f, 0, 0.9, 0.025 * v)); },
   };
-  const KITS = { 'proto': 'レゲエ合成音(最初の試作)', 'real': '実録音(Big Rusty Drums)' };
+  const KITS = { 'proto': 'レゲエ合成音(最初の試作)', 'real': '実録音(Big Rusty Drums)', 'gogodze': '実録音(Gogodze Phu Vol II)', 'naked': '実録音(Naked Drums)', 'sm': '実録音(SM Drums)' };
+  const KIT_GAIN = { real: 1, gogodze: 0.75, naked: 0.55, sm: 0.75 };          // キットごとの音量の差をそろえる
   function synthHit(c, out, t, row, vel) { PROTO[row](c, out, t, Math.min(1.2, Math.max(0.15, vel))); }
   function hit(c, dest, t, row, vel) {
     if (row === 'TIMB') { PROTO.TIMB(c, dest(row), t, Math.min(1.2, Math.max(0.15, vel))); return; }      // ティンバレスは録音素材がないので、どの音でも合成音
-    if (S.kit !== 'real') { synthHit(c, dest(row), t, row, vel); return; }
-    const pair = BUF[row], name = vel >= 0.75 ? pair[1] : pair[0], src = c.createBufferSource(); src.buffer = buffers[name];
-    const g = c.createGain(); g.gain.value = Math.min(1.3, Math.max(0.15, vel)); src.connect(g); g.connect(dest(row)); src.start(t);
+    const bufs = S.kit === 'proto' ? null : kitBufs[S.kit];
+    const pair = BUF[row], name = vel >= 0.75 ? pair[1] : pair[0];
+    if (!bufs || !bufs[name]) { synthHit(c, dest(row), t, row, vel); return; }    // 合成音のキット、または録音を読み込み中
+    const src = c.createBufferSource(); src.buffer = bufs[name];
+    const g = c.createGain(); g.gain.value = Math.min(1.3, Math.max(0.15, vel)) * (KIT_GAIN[S.kit] || 1); src.connect(g); g.connect(dest(row)); src.start(t);
   }
 
   // ---- 再生 ----
@@ -751,7 +766,7 @@
   $('tabR').onclick = () => showTab('r'); $('tabS').onclick = () => showTab('s'); $('tabO').onclick = () => showTab('o');
   showTab('s');
   Object.keys(KITS).forEach((k) => { const o = el('option', { value: k, textContent: KITS[k] }); if (k === S.kit) o.selected = true; $('kit').appendChild(o); });
-  $('kit').onchange = () => { S.kit = $('kit').value; save(); refreshPlay(); };
+  $('kit').onchange = async () => { S.kit = $('kit').value; save(); if (ctx) { $('kit').disabled = true; try { await loadKit(S.kit); } catch (e) { /* 読めなければ合成音で鳴る */ } $('kit').disabled = false; } refreshPlay(); };
   $('play').onclick = () => { if (playing) stopAll(); previewBlocks = null; play(); };
   $('stop').onclick = stopAll;
   $('land').onchange = updateTotal;
