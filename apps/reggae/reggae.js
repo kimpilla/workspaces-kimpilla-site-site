@@ -84,7 +84,7 @@
       if (o && o.song && okRows(o.song.rows) && Array.isArray(o.blocks)) {
         o.blocks = o.blocks.filter((b) => !b.intro);
         o.blocks.forEach((b) => { delete b.headBak; if (b.lead && b.lead.rows && okRows(b.lead.rows)) b.lead.rows = fix96(b.lead.rows); else delete b.lead; if (b.fillType && b.fillType !== 'none' && !b.intro) { b.fillType = 'none'; b.fillRows = zero(); b.fillFrom = 0; b.fillBar = 0; } if (b.intro) { b.intro = false; b.bars = 1; b.reps = b.reps || 1; b.fillType = 'none'; b.fillRows = zero(); b.fillFrom = 0; b.fillBar = 0; } if (!okRows(b.fillRows)) b.fillRows = zero(); else { if (b.fillRows.CRASH.length === 16 && b.fillFrom) b.fillFrom = b.fillFrom * U16; b.fillRows = fix96(b.fillRows); } if (b.ov) Object.keys(b.ov).forEach((k) => { const q = b.ov[k]; if (q.rows) q.rows = fix96(q.rows); if (q.fill && q.fill.rows) { if (q.fill.rows.CRASH.length === 16) q.fill.from *= U16; q.fill.rows = fix96(q.fill.rows); } }); b.ov = b.ov || {}; b.off = b.off || {}; b.add = Object.assign({ open: 0, ghost: 0 }, b.add); b.alt = b.alt || 0; b.fillBar = b.fillBar || 0; b.crashAt = b.crashAt || 0; b.accent = b.accent || 'keep'; });
-        S.song = { pat: o.song.pat, rows: fix96(o.song.rows), bpm: o.song.bpm || 76, hat: o.song.hat || 12 }; S.blocks = o.blocks; if (o.draft && okRows(o.draft.fillRows)) { o.draft.fillRows = fix96(o.draft.fillRows); S.draft = Object.assign(newBlock(8), o.draft); S.draft.add = Object.assign({ open: 0, ghost: 0 }, S.draft.add); S.draft.off = S.draft.off || {}; } if (o.p) Object.assign(S.p, o.p); if (o.kit && o.kit in KITS) S.kit = o.kit; if (Array.isArray(o.myFills)) S.myFills = o.myFills.filter(okFill).map((f) => Object.assign(f, { mine: true }));
+        S.song = { pat: o.song.pat, rows: fix96(o.song.rows), bpm: o.song.bpm || 76, hat: o.song.hat || 12, openLen: o.song.openLen || 'mid' }; S.blocks = o.blocks; if (o.draft && okRows(o.draft.fillRows)) { o.draft.fillRows = fix96(o.draft.fillRows); S.draft = Object.assign(newBlock(8), o.draft); S.draft.add = Object.assign({ open: 0, ghost: 0 }, S.draft.add); S.draft.off = S.draft.off || {}; } if (o.p) Object.assign(S.p, o.p); if (o.kit && o.kit in KITS) S.kit = o.kit; if (Array.isArray(o.myFills)) S.myFills = o.myFills.filter(okFill).map((f) => Object.assign(f, { mine: true }));
       }
     } catch (e) { /* 読めなければ、最初の状態 */ }
   }
@@ -249,12 +249,13 @@
   };
   const KITS = { 'proto': 'レゲエ合成音(最初の試作)', 'real': '実録音(Big Rusty Drums)' };
   function synthHit(c, out, t, row, vel) { PROTO[row](c, out, t, Math.min(1.2, Math.max(0.15, vel))); }
+  const OPENTC = { raw: 0, mid: 0.14, short: 0.07 };
   function hit(c, dest, t, row, vel) {
     if (row === 'TIMB') { PROTO.TIMB(c, dest(row), t, Math.min(1.2, Math.max(0.15, vel))); return; }      // ティンバレスは録音素材がないので、どの音でも合成音
     if (S.kit !== 'real') { synthHit(c, dest(row), t, row, vel); return; }
     const pair = BUF[row], name = vel >= 0.75 ? pair[1] : pair[0], src = c.createBufferSource(); src.buffer = buffers[name];
     const g = c.createGain(), vol = Math.min(1.3, Math.max(0.15, vel)); g.gain.value = vol; src.connect(g); g.connect(dest(row)); src.start(t);
-    if (row === 'OPEN') { g.gain.setValueAtTime(vol, t + 0.06); g.gain.exponentialRampToValueAtTime(0.001, t + 0.3); src.stop(t + 0.32); }      // オープンハットは、長く伸びすぎないよう、0.3秒で消す
+    if (row === 'OPEN') { const tc = OPENTC[S.song.openLen || 'mid']; if (tc) { g.gain.setValueAtTime(vol, t + 0.04); g.gain.setTargetAtTime(0, t + 0.04, tc); src.stop(t + 0.04 + tc * 8); } }      // オープンハットの余韻を、なめらかに短くする(元の録音のまま / ふつう / 短め)
   }
 
   // ---- 再生 ----
@@ -745,6 +746,8 @@
   const applyHat = () => { const st = S.song.hat || 12, r = S.song.rows; for (let i = 0; i < NS; i++) r.HAT[i] = ((st === 'gu' ? [0, 12, 18].includes(i % 24) : i % st === 0) && !r.OPEN[i]) ? 1 : 0; };
   const hs = $('hatres'); HATRES.forEach(([v, t]) => { const o = el('option', { value: String(v), textContent: t }); if (String(v) === String(S.song.hat || 12)) o.selected = true; hs.appendChild(o); });
   hs.onchange = () => { S.song.hat = hs.value === 'gu' ? 'gu' : Number(hs.value); applyHat(); changed(true); drawSongGrid(); };
+  const ol = $('openlen'); [['mid', 'ふつう'], ['short', '短め'], ['raw', '元の録音のまま']].forEach(([v, t]) => { const o = el('option', { value: v, textContent: t }); if ((S.song.openLen || 'mid') === v) o.selected = true; ol.appendChild(o); });
+  ol.onchange = () => { S.song.openLen = ol.value; changed(true); };
   const ps = $('pat'); Object.keys(PATTERNS).forEach((k) => { const o = el('option', { textContent: k }); if (k === S.song.pat) o.selected = true; ps.appendChild(o); });
   ps.onchange = () => { S.song.pat = ps.value; S.song.rows = PATTERNS[ps.value](); if ((S.song.hat || 12) !== 12) applyHat(); changed(true); };
   $('bpm').value = S.song.bpm; $('bpm').onchange = () => { const v = Math.max(50, Math.min(140, Math.round(+$('bpm').value || 76))); $('bpm').value = v; S.song.bpm = v; changed(false); };
