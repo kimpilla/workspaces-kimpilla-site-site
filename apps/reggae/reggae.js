@@ -286,14 +286,15 @@
     await ensure(); await loading;
     if (playing) return;
     playing = true; $('play').textContent = '▶ 再生中';
-    const my = ++session; segs = []; cancelAnimationFrame(raf); raf = requestAnimationFrame(trackLoop);
+    const my = ++session; segs = []; cancelAnimationFrame(raf); raf = requestAnimationFrame(trackLoop); let pass = 0;
     const run = () => {
       if (!playing || my !== session) return;
-      const tl = timeline(previewBlocks, previewInfo.bi); let ev = tl.ev; const dur = tl.dur, skip = startAt > 0 && startAt < dur ? startAt : 0; startAt = 0;
+      const noLead = pass > 0; pass++; S.noHead = noLead;      // 曲頭フィルは、最初の1回だけ。くり返しの2回目からは入れない
+      let tl; try { tl = timeline(previewBlocks, previewInfo.bi); } finally { S.noHead = false; } let ev = tl.ev; const dur = tl.dur, skip = startAt > 0 && startAt < dur ? startAt : 0; startAt = 0;
       if (skip) ev = ev.filter((e) => e.t >= skip).map((e) => Object.assign({}, e, { t: e.t - skip }));
       const t0 = Math.max(ctx.currentTime + 0.08, nodesUntil);
       ev.forEach((e) => hit(ctx, (row) => partGain[PART_OF[row]], t0 + e.t, e.row, e.vel));
-      segs.push({ audition: !!S.audition, t0: t0 - skip, dur, preview: !!previewBlocks, pk: previewInfo.kind, pbi: previewInfo.bi, blocks: (previewBlocks || S.blocks).map((x) => ({ bars: x.bars, reps: x.reps, lead: x.lead ? 1 : 0 })) }); if (segs.length > 3) segs.shift();
+      segs.push({ audition: !!S.audition, t0: t0 - skip, dur, preview: !!previewBlocks, pk: previewInfo.kind, pbi: previewInfo.bi, blocks: (previewBlocks || S.blocks).map((x) => ({ bars: x.bars, reps: x.reps, lead: x.lead && !noLead ? 1 : 0 })) }); if (segs.length > 3) segs.shift();
       nodesUntil = t0 + dur - skip;
       if ($('loop').checked || S.audition) timer = setTimeout(run, Math.max(50, (nodesUntil - ctx.currentTime - 1) * 1000));
       else timer = setTimeout(() => { if (my === session) stopAll(); }, (nodesUntil - ctx.currentTime + 1.5) * 1000);
