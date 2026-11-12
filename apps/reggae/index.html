@@ -161,7 +161,7 @@
   <div class="row"><label>範囲 <select id="expBlk"></select></label></div>
   <p class="small">「全体」は、並べたブロックを順に全部。ブロックを選ぶと、そのブロックだけ。</p>
   <div class="row"><label><input id="headIn" type="checkbox" checked> 冒頭フィルを入れる</label></div>
-  <p class="small">「曲頭フィル」で選んだフィルを、WAVに入れるかどうか。外すと、その小節はフィルを置く前の形で書き出す。</p>
+  <p class="small">「曲頭フィル」で選んだ、ブロックの前の導入1小節を、WAVに入れるかどうか。外すと、ブロックの小節だけを書き出す。</p>
   <div class="row"><label><input id="wrap" type="checkbox" checked> 余韻を頭に重ねて、そのままループできる長さにする</label></div>
   <div class="row"><label><input id="unify" type="checkbox"> ブロックの長さをそろえる(足りない分は、くり返す)</label> <label>小節数 <input id="unifyBars" type="number" min="1" max="64" inputmode="numeric" placeholder="自動" style="width:70px"></label></div>
   <p class="small">長さをそろえるのは、ブロックを選んだときだけ効く。小節数が空なら、いちばん長いブロックに合わせる。Loopy ProやKoalaに入れて、そのまま切り替えられる。</p>
@@ -183,6 +183,6 @@
 <script src="../../audio-unlock.js?v=4"></script>
 <script src="../common/wav.js"></script>
 <script src="samples.js?v=20261112"></script>
-<script src="reggae.js?v=20261112z"></script>
+<script src="reggae.js?v=20261113a"></script>
 </body>
 </html>
