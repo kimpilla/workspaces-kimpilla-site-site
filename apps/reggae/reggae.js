@@ -251,6 +251,7 @@
   function synthHit(c, out, t, row, vel) { PROTO[row](c, out, t, Math.min(1.2, Math.max(0.15, vel))); }
   function hit(c, dest, t, row, vel) {
     if (row === 'TIMB') { PROTO.TIMB(c, dest(row), t, Math.min(1.2, Math.max(0.15, vel))); return; }      // ティンバレスは録音素材がないので、どの音でも合成音
+    if (row === 'OPEN') { PROTO.OPEN(c, dest(row), t, Math.min(1.2, Math.max(0.15, vel))); return; }      // 録音のオープンハット(hoS)は、ライドのチップだった(ユーザー指摘)。ちゃんとした録音素材が来るまで、合成音で鳴らす
     if (S.kit !== 'real') { synthHit(c, dest(row), t, row, vel); return; }
     const pair = BUF[row], name = vel >= 0.75 ? pair[1] : pair[0], src = c.createBufferSource(); src.buffer = buffers[name];
     const g = c.createGain(); g.gain.value = Math.min(1.3, Math.max(0.15, vel)); src.connect(g); g.connect(dest(row)); src.start(t);
