@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>ピュンピュンマシーン | kimpilla</title>
+<style>
+  /* 配置は、手本のダブサイレン(Benidub DS71)の面をそのまま写す。600×715 の面を、画面に合わせて拡大縮小する。ロゴ・製品名は入れない。
+     DS71 にはエコーがないので、右(せまい画面では下)に、別の箱としてエコーを置く */
+  :root { --bg:#151515; --panel:#26282b; --ink:#eceae4; --mu:#9a988f; --led:#ff4d2a; --ledg:#48ff7a; --mod:#d9a92e; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { margin:0; background:var(--bg); touch-action:pan-y; overscroll-behavior:none; }
+  body { font-family:"Arial Narrow","Helvetica Neue","Roboto Condensed",Arial,sans-serif; -webkit-user-select:none; user-select:none;
+    padding:max(10px,env(safe-area-inset-top)) max(20px,env(safe-area-inset-right)) 20px max(20px,env(safe-area-inset-left)); color:var(--mu); }
+  header { display:flex; justify-content:space-between; align-items:center; gap:10px; max-width:1000px; margin:0 auto 8px; font:12px system-ui,sans-serif; }
+  header a { color:#888; text-decoration:none; }
+  .stage { margin:0 auto; position:relative; }
+  .scaler { position:absolute; left:0; top:0; transform-origin:0 0; }
+  .panel { position:absolute; background:var(--panel); border-radius:14px; box-shadow:0 0 0 8px #1c1d1f, 0 16px 36px #000c; overflow:hidden; }
+  .panel:before { content:""; position:absolute; inset:8px; border:2px solid #bdbbb4; border-radius:8px; pointer-events:none; }
+  .strip { position:absolute; left:8px; right:8px; top:8px; height:22px; background:#c9c7c0; color:#222; font-weight:700; font-size:12px; display:flex; justify-content:space-between; padding:3px 16px; border-radius:6px 6px 0 0; }
+  .t { position:absolute; transform:translate(-50%,-50%); font-weight:700; letter-spacing:.05em; white-space:nowrap; font-size:13px; color:var(--ink); }
+  .t.s { font-size:11px; } .t.b { font-size:15px; letter-spacing:.08em; }
+  .tagw { position:absolute; transform:translate(-50%,-50%); background:var(--ink); color:#1d1e20; font-weight:800; font-size:14px; letter-spacing:.08em; padding:2px 16px; clip-path:polygon(8px 0,calc(100% - 8px) 0,100% 50%,calc(100% - 8px) 100%,8px 100%,0 50%); }
+  .brk { position:absolute; border-bottom:2px solid var(--ink); border-left:2px solid var(--ink); border-right:2px solid var(--ink); height:8px; }
+  .brkt { position:absolute; border-top:2px solid var(--ink); border-left:2px solid var(--ink); border-right:2px solid var(--ink); height:8px; }
+  /* つまみ: 上下になぞって回す */
+  .knob { position:absolute; transform:translate(-50%,-50%); border-radius:50%; touch-action:none; cursor:ns-resize; }
+  .knob .scale { position:absolute; inset:-30%; border-radius:50%; background:repeating-conic-gradient(from -135deg, var(--ink) 0 1.2deg, transparent 1.2deg 9deg);
+    -webkit-mask:radial-gradient(circle, transparent 66%, #000 67%, #000 76%, transparent 77%); mask:radial-gradient(circle, transparent 66%, #000 67%, #000 76%, transparent 77%); }
+  .knob.w .scale { inset:-26%; background:repeating-conic-gradient(var(--ink) 0 1deg, transparent 1deg 4deg); -webkit-mask:radial-gradient(circle, transparent 62%, #000 63%, #000 78%, transparent 79%); mask:radial-gradient(circle, transparent 62%, #000 63%, #000 78%, transparent 79%); }
+  .knob.mod:before { content:""; position:absolute; inset:-27%; border-radius:50%; background:var(--mod); -webkit-mask:radial-gradient(circle, transparent 62%, #000 63%, #000 78%, transparent 79%); mask:radial-gradient(circle, transparent 62%, #000 63%, #000 78%, transparent 79%); }
+  .knob.mod .scale { background:repeating-conic-gradient(#1d1e20 0 1deg, transparent 1deg 4deg); }
+  .tagw.mod { background:var(--mod); }
+  .knob .body { position:absolute; inset:0; border-radius:50%; background:radial-gradient(circle, #1a1a1a 55%, transparent 56%), repeating-conic-gradient(#0a0a0a 0 15deg, #1d1d1d 15deg 30deg); box-shadow:0 6px 10px #000b; }
+  .knob .rot { position:absolute; inset:0; transform:rotate(var(--a,0deg)); }
+  .knob .cap { position:absolute; inset:24%; border-radius:50%; background:radial-gradient(circle at 42% 38%, #fbfbfb, #b9b9b9 50%, #6f6f6f); box-shadow:0 0 0 2px #000; }
+  .knob .ptr { position:absolute; left:50%; top:2%; width:4%; min-width:3px; height:30%; margin-left:-2%; background:#fff; border-radius:2px; }
+  .led { position:absolute; transform:translate(-50%,-50%); width:26px; height:26px; border-radius:50%; background:radial-gradient(circle,#4a1a12 40%,#2b2b2b 42%); border:2px solid var(--ink); }
+  .led.on { background:radial-gradient(circle,var(--led) 40%,#2b2b2b 42%); box-shadow:0 0 14px var(--led); }
+  .led.g.on { background:radial-gradient(circle,var(--ledg) 40%,#2b2b2b 42%); box-shadow:0 0 14px var(--ledg); }
+  .sled { position:absolute; transform:translate(-50%,-50%); width:12px; height:12px; border-radius:50%; background:#3a3a3a; border:2px solid #777; }
+  .sled.on { background:var(--ledg); box-shadow:0 0 8px var(--ledg); }
+  .rbtn { position:absolute; transform:translate(-50%,-50%); width:44px; height:44px; border-radius:50%; background:radial-gradient(circle at 45% 40%,#9b9b9b,#5d5d5d 70%); border:3px solid #111; box-shadow:0 0 0 2px var(--ink), 0 4px 0 #000; cursor:pointer; padding:0; }
+  .rbtn.on { transform:translate(-50%,calc(-50% + 3px)); box-shadow:0 0 0 2px var(--ink), 0 1px 0 #000; }
+  .ricon { position:absolute; transform:translate(-50%,-50%); width:32px; height:26px; border:2px solid var(--ink); border-radius:2px; background:transparent; color:var(--ink); padding:0; display:grid; place-items:center; cursor:pointer; }
+  .ricon svg { width:20px; height:16px; fill:none; stroke:currentColor; stroke-width:2.2; }
+  .ricon.on { background:var(--ink); color:#1d1e20; }
+  .ricon.wide { width:40px; } .ricon.wide svg { width:28px; }
+  .scr { background:#101112; border:2px solid var(--ink); border-radius:4px; padding:3px 4px 2px; display:flex; flex-direction:column; align-items:center; }
+  .scr span { font-size:8px; color:var(--mu); font-family:system-ui,sans-serif; white-space:nowrap; }
+  .seg2 { position:absolute; transform:translate(-50%,-50%); display:flex; border:2px solid var(--ink); border-radius:4px; overflow:hidden; }
+  .seg2 button { font:800 11px inherit; font-family:inherit; letter-spacing:.04em; color:var(--ink); background:#17181a; border:0; padding:6px 8px; min-height:38px; cursor:pointer; white-space:nowrap; }
+  .seg2 button + button { border-left:2px solid var(--ink); }
+  .seg2 button.on { background:var(--ink); color:#1d1e20; }
+  .flab { position:absolute; transform:translate(-50%,-50%); border:2px solid var(--ink); padding:2px 6px; color:var(--ink); font-weight:800; font-size:11px; line-height:1.5; white-space:nowrap; }
+  .flab .sled { position:relative; display:inline-block; transform:none; width:9px; height:9px; margin-right:5px; vertical-align:-1px; }
+  .icon { position:absolute; transform:translate(-50%,-50%); color:var(--ink); }
+  .icon svg { display:block; fill:none; stroke:currentColor; stroke-width:2.2; }
+  /* 4つのトリガー: 押している間、鳴る */
+  .padbox { position:absolute; width:118px; height:126px; border:2px solid var(--ink); border-radius:2px; transform:translateX(-50%); }
+  .padbox .lab { position:absolute; left:0; right:0; top:0; height:42px; background:var(--ink); color:#1d1e20; display:grid; grid-template-rows:1fr 1fr; place-items:center; }
+  .padbox .lab svg { width:66px; height:15px; fill:none; stroke:currentColor; stroke-width:2.2; }
+  .padbox .lab.one { grid-template-rows:1fr; } .padbox .lab.one svg { width:84px; height:24px; stroke-width:2.4; }
+  .pad { position:absolute; left:12px; right:12px; top:56px; height:58px; background:linear-gradient(#33363a,#17181a); border:3px solid #0a0a0a; border-radius:6px; box-shadow:0 6px 0 #000; cursor:pointer; touch-action:none; }
+  .pad.on { transform:translateY(4px); box-shadow:0 2px 0 #000; background:linear-gradient(#3e4146,#1c1d20); }
+  .name { position:absolute; transform:translate(-50%,-50%); color:var(--ink); font-weight:900; font-size:19px; letter-spacing:.06em; line-height:1; white-space:nowrap; }
+  .name small { display:block; font-weight:700; font-size:12px; letter-spacing:.04em; }
+  .onbtn { position:absolute; transform:translate(-50%,-50%); width:84px; height:54px; background:linear-gradient(#33363a,#17181a); border:3px solid #0a0a0a; border-radius:6px; box-shadow:0 5px 0 #000; cursor:pointer; color:var(--mu); font:800 13px inherit; font-family:inherit; }
+  .onbtn.on { color:#1d1e20; background:var(--ink); }
+</style>
+<script src="../../audio-unlock.js?v=5"></script>
+</head>
+<body>
+<header><span>ピュンピュンマシーン</span><a href="../../apps.html">アプリ一覧へ</a></header>
+<div class="stage" id="stage"><div class="scaler" id="scaler"><div class="panel" id="panel"></div><div class="panel" id="mod"></div><div class="panel" id="echo"></div></div></div>
+<script src="dubsiren.js?v=20261117b"></script>
+</body>
+</html>
