@@ -126,7 +126,7 @@
   .pbtn.on, .mtog.act { animation:blinkOn 1s ease-in-out infinite; }
   @media (prefers-reduced-motion:reduce) { .pbtn.on, .mtog.act { animation:none; } }
   .pbtn.lk { background:linear-gradient(#2a0a18,#12060c); }
-  .pbtn.lk small:after { content:"  ▮LOCK"; color:var(--m); }
+  .pbtn.lk small:after { content:"  ▮EDIT"; color:var(--m); }
   .haz { height:6px; margin:10px 0 8px; background:repeating-linear-gradient(-45deg,var(--a) 0 6px,#000 6px 12px); }
   .help { color:var(--mu); font-size:9px; line-height:1.7; } .help em { font-style:normal; color:var(--tx); }
   .row2 { display:flex; gap:10px; align-items:center; }
@@ -239,6 +239,7 @@
   <details><summary>しくみ</summary><ul>
     <li><b>窓の景色</b>: 惑星の縞模様は、選んだ波のかたちそのもの。音が高いほど惑星の回転が速く、フィルターを閉じるともやがかかる。クセ(RESO)を上げると縁が光る。エコーは衛星の数と間隔、OSC2は小さな2つ目の惑星。</li>
     <li><b>つまみと景色</b>: CUTOFF=画面全体の色(低い=暗い琥珀色、高い=明るい青緑)、FM RATIO=縞の細かさ、F-ENV・F-DEC=鳴らした瞬間のもやの晴れ方、DETUNE=惑星が横にずれて、元の位置に影が残る(OSC2 の惑星も同じ)、OSC2 MIX=2つ目の惑星が量に合わせてフェードイン、SUB=惑星の下側の影、PITCH SWP=星の筋の長さ、NOISE=画面のざらつき、WOBBLE=縁のうねり、ATK・DEC・SUS・REL=惑星のまわりの光の立ち上がりと余韻、RATE・ARP SPAN=自動演奏の輪の速さと数。</li>
+    <li><b>ミッション音の設定</b>: ボタンを長押し(約0.5秒)すると、つまみがその音の設定に切り替わる(ボタンに EDIT と出る)。つまみを動かすと、その音だけが変わる(自分の設定とほかのミッション音は変わらない)。ページを開き直すと元に戻る。OFF にすると、つまみは自分の設定に戻る。</li>
     <li><b>ミッション音</b>: ボタンを押すたびに ON / OFF が切り替わる(別のを押すと切り替え)。ONにすると、鍵盤がその音色になり、その音の並びが下の SEQUENCE に出る(並びは直せる。AUTOPILOT を切っても、出たままで消えない)。つまみのPITCH SWPなどは、ミッション音がOFFの間の設定。</li>
     <li><b>自動で鳴る条件</b>: SEQUENCE に出ている並びが、次のどちらかのとき自動で鳴る。①ミッション音が ON で、AUTOPILOT も ON。②AUTO のレバーが SEQ。
       <ul>
@@ -259,6 +260,6 @@
   <div class="oct"><button id="octdn">◀ OCT-</button><span class="sp" id="octl"></span><button id="octup">OCT+ ▶</button></div>
   <div id="kb"></div>
 </div></div>
-<script src="spaceship.js"></script>
+<script src="spaceship.js?v=20261116a"></script>
 </body>
 </html>
