@@ -27,12 +27,17 @@
     sonar: { root: 69, rate: 6.7, cells: [[5, 0]] },
   };
   let ACT = null, LOCKED = false, pressing = null, lockTimer = 0;
+  // ミッション音の長押し: つまみがその音の設定に切り替わる。変えた分は ED[音名] に溜める(ページを開き直すと元に戻る)
+  const ED = {}; let EDIT = false;
+  const OWN = ['volume', 'arpRate', 'arpSpan'];                  // 音量・ARP/SEQの設定は、ミッション音ごとには持たない
+  const S = () => (EDIT && ACT ? E() : p);                        // つまみに出す値
+  const setK = (k, v) => { if (EDIT && ACT && OWN.indexOf(k) < 0) (ED[ACT] || (ED[ACT] = {}))[k] = v; else p[k] = v; };
   const events = [];                                              // 景色用の出来事(レーザー発射、ソナーなど)
 
   // 実際に鳴らす設定 = つまみの設定 + ミッション音の上書き
   function E() {
     const o = Object.assign({}, p), pr = ACT && PRE[ACT];
-    if (pr) { Object.assign(o, pr.p); const f = pr.p.fm; o.fmDepth = f === 'dial' ? p.fmDepth : (typeof f === 'number' ? f : 0); }
+    if (pr) { Object.assign(o, pr.p); const f = pr.p.fm; o.fmDepth = f === 'dial' ? p.fmDepth : (typeof f === 'number' ? f : 0); const ed = ED[ACT]; if (ed) Object.assign(o, ed); }
     else o.fmDepth = 0;                                           // WARP を押していない間は、FM は効かない
     return o;
   }
@@ -137,10 +142,10 @@
 
   // ---- ミッション音の入り切り(音は、シーケンサーが自動で鳴らす) ----
   let selfPlay = true;
-  function stopPreset() { seqHalt(); ACT = null; LOCKED = false; applyGlobal(); syncBtns(); syncSeq(); }
+  function stopPreset() { const was = EDIT; seqHalt(); ACT = null; EDIT = false; LOCKED = false; applyGlobal(); syncBtns(); syncSeq(); if (was) refreshAll(); }
   function activate(name) {
-    seqHalt(); ensureAudio(); ACT = name; LOCKED = false; applyGlobal();
-    syncBtns(); syncSeq();
+    const was = EDIT; seqHalt(); ensureAudio(); ACT = name; EDIT = false; LOCKED = false; applyGlobal();
+    syncBtns(); syncSeq(); if (was) refreshAll();
   }
   function setSelf(on) {                                          // OFF のときは、鍵盤の音色だけ変わる
     seqHalt(); selfPlay = on;
@@ -150,7 +155,7 @@
   $('gsw').addEventListener('click', () => { ensureAudio(); setSelf(!selfPlay); });
   function syncBtns() {
     const tg = $('mTog'); tg.classList.toggle('act', !!ACT); if (ACT) tg.style.setProperty('--k', '#2dff9b');
-    document.querySelectorAll('.pbtn').forEach((b) => { b.classList.toggle('on', ACT === b.dataset.p); b.classList.toggle('lk', ACT === b.dataset.p && LOCKED); });
+    document.querySelectorAll('.pbtn').forEach((b) => { b.classList.toggle('on', ACT === b.dataset.p); b.classList.toggle('lk', ACT === b.dataset.p && EDIT); });
   }
   let mpTimer = 0;
   const hideMp = () => { clearTimeout(mpTimer); $('mp').classList.add('hide'); $('mTog').classList.remove('open'); };
@@ -161,12 +166,13 @@
   $('mTog').addEventListener('click', () => { const o = $('mp').classList.toggle('hide'); $('mTog').classList.toggle('open', !o); keepMp(); });
   document.querySelectorAll('.pbtn').forEach((b) => {
     const name = b.dataset.p;
-    b.addEventListener('pointerdown', (e) => {                      // 押すたびに ON / OFF(別のを押すと切り替わる)
-      e.preventDefault(); ensureAudio();
-      if (ACT === name) stopPreset(); else activate(name);
-      click();
+    let lt = 0, long = false;
+    b.addEventListener('pointerdown', (e) => {                      // 短く押す: ON / OFF(別のを押すと切り替わる)。長押し: その音の設定をつまみに出す
+      e.preventDefault(); ensureAudio(); long = false; clearTimeout(lt);
+      lt = setTimeout(() => { long = true; if (ACT !== name) activate(name); EDIT = true; syncBtns(); refreshAll(); click(); }, 500);
     });
-    b.addEventListener('pointerup', hideMp); b.addEventListener('pointercancel', hideMp);
+    b.addEventListener('pointerup', () => { clearTimeout(lt); if (!long) { if (ACT === name) stopPreset(); else activate(name); click(); } hideMp(); });
+    b.addEventListener('pointercancel', () => { clearTimeout(lt); hideMp(); });
     b.addEventListener('contextmenu', (e) => e.preventDefault());
   });
 
@@ -423,15 +429,15 @@
   const setters = {}, waveSync = {};
   function drag(el, key, min, max, log, step, render) {
     let sy = 0, ss = 0, on = false;
-    el.addEventListener('pointerdown', (e) => { e.preventDefault(); el.setPointerCapture(e.pointerId); on = true; sy = e.clientY; ss = toS(p[key], min, max, log); });
+    el.addEventListener('pointerdown', (e) => { e.preventDefault(); el.setPointerCapture(e.pointerId); on = true; sy = e.clientY; ss = toS(S()[key], min, max, log); });
     el.addEventListener('pointermove', (e) => {
       if (!on) return;
       const s = Math.max(0, Math.min(1, ss + (sy - e.clientY) / 150));
       let v = fromS(s, min, max, log); if (!log) v = Math.round(v / step) * step; v = Math.max(min, Math.min(max, v));
-      p[key] = v; render(); applyGlobal();
+      setK(key, v); render(); applyGlobal();
     });
     const up = () => { on = false; }; el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
-    el.addEventListener('dblclick', () => { p[key] = DEFAULTS[key]; render(); applyGlobal(); });
+    el.addEventListener('dblclick', () => { setK(key, DEFAULTS[key]); render(); applyGlobal(); });
   }
   // 音色のつまみをランダムにする(音量・ARP/SEQの設定は変えない。大きな音にならない範囲で)
   // 対象(OSC / FILTER / ALL)のつまみだけをランダムにする
@@ -439,7 +445,7 @@
   const RKEYS = ['wave', 'wave2', 'cutoff', 'q', 'fEnv', 'fDecay', 'fmDepth', 'fmRatio', 'osc2', 'detune', 'sub', 'sweep', 'noise', 'wobble', 'attack', 'decay', 'sustain', 'release', 'delayTime', 'feedback', 'mix'];
   const RSCOPE = { voice: ['wave', 'wave2', 'fmDepth', 'fmRatio', 'osc2', 'detune', 'sub', 'sweep', 'noise', 'wobble', 'attack', 'decay', 'sustain', 'release'], fx: ['cutoff', 'q', 'fEnv', 'fDecay', 'delayTime', 'feedback', 'mix'], all: RKEYS };
   function randomize() {
-    undoSnap = {}; RKEYS.forEach((k) => { undoSnap[k] = p[k]; });
+    undoSnap = {}; RKEYS.forEach((k) => { undoSnap[k] = S()[k]; });
     const r = (a, b) => a + Math.random() * (b - a), lg = (a, b) => a * Math.pow(b / a, Math.random()), pick = (a) => a[Math.floor(Math.random() * a.length)];
     const W4 = ['sine', 'triangle', 'sawtooth', 'square'];
     const n = {
@@ -450,7 +456,7 @@
       attack: lg(0.002, 0.5), decay: r(0.1, 2), sustain: r(0.3, 1), release: r(0.1, 2),
       delayTime: r(0.1, 0.7), feedback: r(0.1, 0.6), mix: Math.random() < 0.2 ? 0 : r(0.1, 0.5),
     };
-    RSCOPE[rndScope].forEach((k) => { p[k] = n[k]; });
+    RSCOPE[rndScope].forEach((k) => { setK(k, n[k]); });
     refreshAll();
   }
   function refreshAll() {
@@ -469,13 +475,14 @@
     c.strokeStyle = '#17323c'; c.lineWidth = 1; c.beginPath();
     [100, 1000, 10000].forEach((f) => { c.moveTo(X(f), 0); c.lineTo(X(f), H); }); c.moveTo(0, Y(0)); c.lineTo(W, Y(0)); c.stroke();
     const path = (fc, col, dash, fill) => {
-      const h = resp(fc, p.q); c.beginPath();
+      const h = resp(fc, S().q); c.beginPath();
       for (let i = 0; i <= 120; i++) { const f = Math.exp(lo + (hi - lo) * i / 120), x = X(f), y = Y(h(f)); i ? c.lineTo(x, y) : c.moveTo(x, y); }
       c.setLineDash(dash || []); c.strokeStyle = col; c.lineWidth = 2; c.stroke(); c.setLineDash([]);
       if (fill) { c.lineTo(W, H); c.lineTo(0, H); c.closePath(); c.fillStyle = fill; c.fill(); }
     };
-    if (p.fEnv > 0.05) path(Math.min(20000, p.cutoff * Math.pow(2, p.fEnv)), '#27e8ff99', [5, 4]);
-    path(p.cutoff, '#2dff9b', null, '#2dff9b22');
+    const sp = S();
+    if (sp.fEnv > 0.05) path(Math.min(20000, sp.cutoff * Math.pow(2, sp.fEnv)), '#27e8ff99', [5, 4]);
+    path(sp.cutoff, '#2dff9b', null, '#2dff9b22');
   }
   function buildKnobs() {
     for (const g in ctlDefs) {
@@ -496,9 +503,9 @@
           : '<div class="dial"><i></i></div><div class="kl">' + label + '</div><output></output>';
         const o = el.querySelector('output');
         const render = () => {
-          if (key === 'mix' || key === 'delayTime') { const l = $('ecLed'); if (l) { l.classList.toggle('on', p.mix > 0); l.style.setProperty('--ect', Math.max(0.08, p.delayTime) + 's'); } }      // ECHOがかかっている間、ディレイの間隔でLEDが点滅する
+          if (key === 'mix' || key === 'delayTime') { const l = $('ecLed'); if (l) { l.classList.toggle('on', S().mix > 0); l.style.setProperty('--ect', Math.max(0.08, S().delayTime) + 's'); } }      // ECHOがかかっている間、ディレイの間隔でLEDが点滅する
           if (key === 'cutoff' || key === 'q' || key === 'fEnv') drawFilter();
-          const s = toS(p[key], min, max, log); o.textContent = fmt(p[key]);
+          const s = toS(S()[key], min, max, log); o.textContent = fmt(S()[key]);
           if (lever) el.querySelector('.hd').style.bottom = (s * 100) + '%'; else el.querySelector('.dial').style.setProperty('--r', (-135 + 270 * s) + 'deg');
         };
         render(); setters[key] = render; drag(el, key, min, max, log, step, render); box.appendChild(el);
@@ -518,14 +525,14 @@
     const WV = [['sine', 'SIN'], ['triangle', 'TRI'], ['sawtooth', 'SAW'], ['square', 'SQR']];
     [['tg1', 'wave', 'OSC1'], ['tg2', 'wave2', 'OSC2']].forEach(([id, key, name]) => {
       const box = $(id); box.innerHTML = '<span class="t">' + name + '</span><div class="slw"></div>';
-      waveSync[key] = mkLever(box.querySelector('.slw'), WV.map(([w, l]) => [w, l]), () => p[key], (v) => { p[key] = v; applyGlobal(); });
+      waveSync[key] = mkLever(box.querySelector('.slw'), WV.map(([w, l]) => [w, l]), () => S()[key], (v) => { setK(key, v); applyGlobal(); });
     });
     // RANDOM(赤いボタン + 警告のふた): ふたを開けると押せる。押したら、ふたは自動で閉まる
     { const box = $('rbox'); let tm = 0;
       const close = () => { box.classList.remove('open'); clearTimeout(tm); };
       $('rndCov').onclick = () => { box.classList.add('open'); clearTimeout(tm); tm = setTimeout(close, 6000); };
       $('rndBtn').onclick = () => { ensureAudio(); randomize(); $('rndUndo').disabled = false; close(); };
-      $('rndUndo').onclick = () => { if (!undoSnap) return; Object.assign(p, undoSnap); undoSnap = null; $('rndUndo').disabled = true; refreshAll(); };
+      $('rndUndo').onclick = () => { if (!undoSnap) return; Object.keys(undoSnap).forEach((k) => setK(k, undoSnap[k])); undoSnap = null; $('rndUndo').disabled = true; refreshAll(); };
       $('rRange').querySelectorAll('.seg').forEach((b) => { b.onclick = () => { rndScope = b.dataset.s; $('rRange').querySelectorAll('.seg').forEach((x) => x.classList.toggle('on', x === b)); }; });
       document.addEventListener('pointerdown', (e) => { if (!box.contains(e.target)) close(); }); }
   }
