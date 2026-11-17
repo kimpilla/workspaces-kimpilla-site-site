@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>7の組曲ルーパー | kimpilla</title>
+<script src="../../audio-unlock.js?v=5"></script>
+<style>
+* { box-sizing: border-box; }
+:root{--bg:#f3f1ec;--panel:#fffdf8;--fg:#1e1d1a;--muted:#6b675e;--line:#d8d3c7;--ring:#d9480f;--wait:#e8a33d;--cell:#ebe7de}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#15140f;--panel:#201e18;--fg:#efeadf;--muted:#a39d90;--line:#3a372e;--ring:#ff7a3d;--wait:#e8a33d;--cell:#2a2821;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#15140f;--panel:#201e18;--fg:#efeadf;--muted:#a39d90;--line:#3a372e;--ring:#ff7a3d;--wait:#e8a33d;--cell:#2a2821;color-scheme:dark}
+body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.5 system-ui,-apple-system,"Hiragino Sans",sans-serif;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px 40px;touch-action:manipulation}
+h1{font-size:20px;margin:4px 0 2px}
+.sub{color:var(--muted);font-size:12px;margin:0 0 8px}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}
+button{font:inherit;color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 12px;cursor:pointer}
+button.main{background:var(--fg);color:var(--bg);border-color:var(--fg);font-weight:700}
+.beat{display:flex;gap:4px}.beat i{width:12px;height:12px;border-radius:50%;background:var(--line)}.beat i.on{background:var(--ring)}
+.cnt{font:600 13px ui-monospace,monospace;color:var(--muted)}
+label.t{display:flex;align-items:center;gap:4px;font-size:12px;color:var(--muted)}
+.tabs{display:flex;gap:6px;margin:10px 0 8px}
+.tabs button{flex:1;font-weight:700;position:relative}
+.tabs button.on{background:var(--fg);color:var(--bg)}
+.tabs button .n{position:absolute;top:-6px;right:-6px;background:var(--ring);color:#fff;border-radius:10px;font:700 11px ui-monospace,monospace;padding:0 6px;display:none}
+.tabs button .n.show{display:block}
+.grid[hidden]{display:none}
+.grid{display:grid;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px}
+.cell{aspect-ratio:1;border-radius:50%;background:var(--cell);opacity:.35}
+.lp{aspect-ratio:1;border:0;padding:0;background:none;position:relative;display:block;min-width:0}
+.ring{position:absolute;inset:0;border-radius:50%;background:conic-gradient(var(--c) calc(var(--p)*1turn),color-mix(in srgb,var(--c) 22%,var(--cell)) 0)}
+.ring b{position:absolute;inset:9%;border-radius:50%;background:var(--panel);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:4px;text-align:center}
+.ring b span{font:600 10px/1.15 system-ui,sans-serif;color:var(--fg);overflow-wrap:anywhere;overflow:hidden;max-height:3.5em}
+.ring b em{font:700 10px ui-monospace,monospace;color:var(--muted);font-style:normal}
+.lp.play .ring b{background:color-mix(in srgb,var(--c) 55%,var(--panel))}
+.lp.wait .ring{animation:bl .4s steps(2) infinite}
+.lp.stopping .ring b{background:var(--wait)}
+.lp.pg::after{content:"";position:absolute;right:4%;top:4%;width:9px;height:9px;border-radius:2px;background:var(--fg);opacity:.5}
+@keyframes bl{50%{opacity:.35}}
+.lp:active .ring{transform:scale(.95)}
+.note{font-size:12px;color:var(--muted);margin-top:10px}
+</style>
+</head>
+<body>
+<p style="margin:8px 0;font:12px system-ui,sans-serif"><a href="../../apps.html" style="color:inherit">アプリ一覧へ</a></p>
+<h1>7の組曲ルーパー</h1>
+<p class="sub">Loopy Pro のプロジェクト「Glossy Trousers」の配置のまま(140BPM)。押すと次の区切りから鳴り、もう一度押すと次の区切りで止まる。ページを変えても、鳴っているループは止まらない。音は軽くしたもの。</p>
+<div class="bar">
+  <button id="go" class="main" type="button">▶ スタート</button>
+  <button id="stopAll" type="button">全部止める</button>
+  <span class="beat" id="beat"><i></i><i></i><i></i><i></i></span><span class="cnt" id="cnt">— 小節</span>
+  <span class="cnt" id="msg"></span>
+  <label class="t">待ち <select id="q"><option value="1">1小節</option><option value="2">2小節</option><option value="4">4小節</option></select></label>
+</div>
+<div class="tabs" id="tabs"></div>
+<div id="pages"></div>
+<p class="note">色は Loopy のグループの色。右上に小さな四角があるループは、Loopy で「同時に1つだけ」にしてあった組で、押すと同じ組のほかのループと入れ替わる。</p>
+<script>
+const D={"items":[{"f":"p1_209","page":1,"x":0,"y":0,"t":"A02 2","beats":8,"vol":2.0,"g":2,"pg":208,"peak":1.259},{"f":"p1_213","page":1,"x":1,"y":0,"t":"7 drum loop3 bpm140","beats":8,"vol":2.5,"g":2,"pg":208,"peak":1.237},{"f":"p1_217","page":1,"x":2,"y":0,"t":"7 drum loop1","beats":4,"vol":7.49,"g":2,"pg":208,"peak":1.415},{"f":"p1_221","page":1,"x":3,"y":0,"t":"7 drum loop4 bpm140","beats":28,"vol":9.58,"g":2,"pg":208,"peak":1.419},{"f":"p1_333","page":1,"x":0,"y":1,"t":"7 acid bass loop1 bpm140 2","beats":15.998,"vol":7.1,"g":4,"pg":352,"peak":1.419},{"f":"p1_339","page":1,"x":1,"y":1,"t":"7 acid bass loop2 bpm140 2","beats":15.998,"vol":5.85,"g":4,"pg":352,"peak":1.362},{"f":"p1_337","page":1,"x":2,"y":1,"t":"7 acid bass loop3 bpm140 2","beats":32,"vol":5.26,"g":4,"pg":352,"peak":1.337},{"f":"p1_322","page":1,"x":3,"y":1,"t":"7 Synth loop1 bpm140","beats":16,"vol":4.84,"g":6,"pg":321,"peak":1.173},{"f":"p1_326","page":1,"x":4,"y":1,"t":"C04 2","beats":4,"vol":4.73,"g":6,"pg":321,"peak":1.472},{"f":"p1_335","page":1,"x":0,"y":2,"t":"7 acid bass loop4 bpm140 4","beats":32,"vol":5.15,"g":4,"pg":352,"peak":1.403},{"f":"p1_190","page":1,"x":1,"y":2,"t":"7 acid bass loop5 bpm140","beats":28,"vol":7.25,"g":4,"pg":352,"peak":1.239},{"f":"p1_106","page":1,"x":0,"y":3,"t":"7 bass loop bpm140","beats":3.999,"vol":5.25,"g":3,"pg":null,"peak":0.821},{"f":"p1_300","page":1,"x":1,"y":4,"t":"","beats":32,"vol":1,"g":5,"pg":null,"peak":0.453},{"f":"p1_305","page":1,"x":2,"y":4,"t":"A08 2","beats":8,"vol":3.59,"g":3,"pg":null,"peak":1.023},{"f":"p1_309","page":1,"x":3,"y":4,"t":"7  voice loop bpm140","beats":12,"vol":1,"g":5,"pg":null,"peak":0.968},{"f":"p1_315","page":1,"x":4,"y":4,"t":"7synth loop2 bpm140 2","beats":70,"vol":2.29,"g":5,"pg":null,"peak":0.891},{"f":"p2_255","page":2,"x":0,"y":0,"t":"7-2 drum loop3 bpm140","beats":3.999,"vol":4.97,"g":2,"pg":373,"peak":1.254},{"f":"p2_259","page":2,"x":1,"y":0,"t":"7-2 drum loop1 bpm140","beats":3.999,"vol":5.62,"g":2,"pg":373,"peak":1.4},{"f":"p2_257","page":2,"x":2,"y":0,"t":"7-2 drum loop2 bpm140","beats":3.999,"vol":3.98,"g":2,"pg":373,"peak":1.251},{"f":"p2_261","page":2,"x":3,"y":0,"t":"7-2 drum loop4 bpm140","beats":7.999,"vol":3.47,"g":2,"pg":373,"peak":1.3},{"f":"p2_229","page":2,"x":0,"y":1,"t":"7-2 guitar loop1 bpm140","beats":8,"vol":2.45,"g":4,"pg":null,"peak":0.5},{"f":"p2_249","page":2,"x":0,"y":2,"t":"7-2 bass loop bpm140 2","beats":7.97,"vol":4.73,"g":3,"pg":null,"peak":0.377},{"f":"p2_362","page":2,"x":1,"y":3,"t":"7-2  breath loop1 bpm140 2","beats":7.999,"vol":1,"g":5,"pg":null,"peak":0.557},{"f":"p2_364","page":2,"x":2,"y":3,"t":"7-2 drop loop1 bpm140","beats":31.998,"vol":1,"g":5,"pg":null,"peak":1.484},{"f":"p2_279","page":2,"x":2,"y":4,"t":"B11 2","beats":7.999,"vol":4.48,"g":4,"pg":353,"peak":0.982},{"f":"p2_281","page":2,"x":3,"y":4,"t":"7-2 piano loop2 bpm140","beats":31.998,"vol":9.48,"g":4,"pg":353,"peak":1.417},{"f":"p3_387","page":3,"x":0,"y":0,"t":"A03 2","beats":8.027,"vol":0.8,"g":2,"pg":null,"peak":2.335},{"f":"p3_389","page":3,"x":0,"y":1,"t":"A08 4","beats":7.999,"vol":2.14,"g":4,"pg":null,"peak":1.698},{"f":"p3_399","page":3,"x":1,"y":1,"t":"A05 2","beats":15.909,"vol":3.47,"g":4,"pg":427,"peak":0.681},{"f":"p3_409","page":3,"x":2,"y":1,"t":"A12 2","beats":7.999,"vol":1.71,"g":4,"pg":427,"peak":0.67},{"f":"p3_391","page":3,"x":0,"y":2,"t":"A14 3","beats":8.0,"vol":0.82,"g":3,"pg":null,"peak":1.512},{"f":"p3_397","page":3,"x":0,"y":3,"t":"A02 3","beats":8,"vol":0.72,"g":5,"pg":null,"peak":1.361}],"cols":[5,4,3],"gcol":{"2":[0.9960784316062927,0.5411764979362488,0.03529411926865578],"3":[1,0.8784313797950745,0.09019608050584793],"4":[0.21960784494876862,0.6627451181411743,0.8705882430076599],"5":[0.9647058844566345,0.0941176488995552,0.6000000238418579],"6":[0.6745098233222961,0.9725490212440491,0.10980392247438431],"239":[0.4745098054409027,0.23137255012989044,0.7098039388656616]}};
+const BPM=140, BEAT=60/BPM, BAR=4*BEAT;
+const NAMES=['7-1','7-2','7-3'];
+const col=g=>{const c=D.gcol[g]||[.6,.6,.6]; return 'rgb('+c.map(v=>Math.round(v*255)).join(',')+')';};
+const clean=t=>t.replace(/\s*bpm140/,'').replace(/\s*loop/i,'').replace(/^7-2\s+/,'').replace(/^7\s*/,'').replace(/\s+\d$/,'').trim()||'(名前なし)';
+let ctx=null,out=null,t0=0,silent=null,loading=null,loaded=0,failed=0,page=1; const st={},bufs={};
+const msg=t=>document.getElementById('msg').textContent=t;
+function el(t,c,h){const e=document.createElement(t); if(c) e.className=c; if(h!==undefined) e.innerHTML=h; return e;}
+// 画面
+const tabs=document.getElementById('tabs'), pages=document.getElementById('pages');
+NAMES.forEach((n,i)=>{ const p=i+1, b=el('button',null,n+'<span class="n"></span>'); b.type='button'; b.onclick=()=>show(p); b.dataset.p=p; tabs.append(b);
+  const cols=D.cols[i], items=D.items.filter(x=>x.page===p), rows=Math.max(...items.map(x=>x.y))+1;
+  const g=el('div','grid'); g.dataset.p=p; g.style.gridTemplateColumns='repeat('+cols+',minmax(0,1fr))';
+  for(let y=0;y<rows;y++) for(let x=0;x<cols;x++){ const it=items.find(o=>o.x===x&&o.y===y);
+    if(!it){ g.append(el('div','cell')); continue; }
+    const btn=el('button','lp'+(it.pg?' pg':'')); btn.type='button'; btn.style.setProperty('--c',col(it.g)); btn.style.setProperty('--p',0);
+    btn.innerHTML='<span class="ring"><b><span></span><em></em></b></span>'; btn.querySelector('b span').textContent=clean(it.t); { const br=Math.round(it.beats/2)/2; btn.querySelector('em').textContent=(Number.isInteger(br)?br:br.toFixed(1))+'小節'; }
+    btn.onclick=()=>toggle(it); it.btn=btn; g.append(btn); }
+  pages.append(g); });
+function show(p){ page=p; [...tabs.children].forEach(b=>b.classList.toggle('on',+b.dataset.p===p)); [...pages.children].forEach(g=>g.hidden=+g.dataset.p!==p); }
+show(1);
+// 音
+function ensure(){ try{ if(navigator.audioSession) navigator.audioSession.type='playback'; }catch(e){}
+  if(!ctx){ ctx=new (window.AudioContext||window.webkitAudioContext)(); out=ctx.createDynamicsCompressor(); out.threshold.value=-10; out.ratio.value=4; out.connect(ctx.destination); }
+  if(ctx.state!=='running') ctx.resume().catch(()=>{});
+  if(!navigator.audioSession && !silent){ silent=new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YQAAAAA='); silent.loop=true; silent.setAttribute('playsinline',''); silent.play().catch(()=>{silent=null;}); } }
+function loadAll(){ if(loading) return loading; msg('読み込み 0/'+D.items.length);
+  loading=Promise.all(D.items.map(async x=>{ try{ const r=await fetch('lp/'+x.f+'.mp3'); if(!r.ok) throw new Error(r.status); const ab=await r.arrayBuffer();
+      const b=await new Promise((ok,ng)=>{ const pr=ctx.decodeAudioData(ab,ok,ng); if(pr&&pr.catch) pr.catch(ng); });
+      const L=Math.round(x.beats*BEAT*b.sampleRate), nb=ctx.createBuffer(1,L,b.sampleRate); nb.getChannelData(0).set(b.getChannelData(0).subarray(0,Math.min(L,b.length))); bufs[x.f]=nb; loaded++; }
+    catch(e){ failed++; console.warn(x.f,e); }
+    msg(loaded+failed<D.items.length?'読み込み '+(loaded+failed)+'/'+D.items.length:(failed?'読み込めなかった音: '+failed+'個':'')); }));
+  return loading; }
+const gainOf=x=>Math.max(0.3,Math.min(1.5,Math.sqrt(x.vol)/2));   // Loopy の音量のつまみを、だいたいの大きさに直す
+function nextBoundary(){ const q=+document.getElementById('q').value*BAR, now=ctx.currentTime+0.03; return t0+Math.ceil((now-t0)/q)*q; }
+function startClock(){ ensure(); loadAll(); if(t0) return; t0=ctx.currentTime+0.1; tick(); document.getElementById('go').textContent='● 回っている'; }
+function toggle(x){ startClock(); const s=st[x.f];
+  if(s&&(s.state==='play'||s.state==='wait'||s.state==='load')) return stopLoop(x);
+  if(x.pg) D.items.filter(y=>y!==x&&y.pg===x.pg).forEach(stopLoop);
+  if(!bufs[x.f]){ st[x.f]={state:'load'}; loading.then(()=>{ if(st[x.f]&&st[x.f].state==='load'){ delete st[x.f]; toggle(x); } }); return; }
+  const at=nextBoundary(), len=bufs[x.f].duration;
+  const src=ctx.createBufferSource(); src.buffer=bufs[x.f]; src.loop=true; const g=ctx.createGain(); g.gain.value=gainOf(x); src.connect(g).connect(out);
+  const off=(at-t0)%len; src.start(at,off); st[x.f]={src,g,start:at-off,startAt:at,state:'wait'}; }
+function stopLoop(x){ const s=st[x.f]; if(!s||s.state==='stopping'||s.state==='off') return;
+  if(s.state==='load'){ s.state='off'; return; }
+  if(s.state==='wait'){ try{s.src.stop()}catch(e){} s.state='off'; return; }
+  const at=nextBoundary(); s.g.gain.setValueAtTime(s.g.gain.value,at-0.005); s.g.gain.linearRampToValueAtTime(0,at+0.01); s.src.stop(at+0.02); s.stopAt=at; s.state='stopping'; }
+function tick(){ const now=ctx.currentTime, pos=now-t0, bar=Math.floor(pos/BAR), beat=Math.floor((pos%BAR)/BEAT);
+  document.querySelectorAll('#beat i').forEach((e,i)=>e.classList.toggle('on',pos>=0&&i===beat));
+  document.getElementById('cnt').textContent=pos>=0?(bar+1)+' 小節':'— 小節';
+  const per={1:0,2:0,3:0};
+  D.items.forEach(x=>{ const s=st[x.f]; let cls='',p=0;
+    if(s){ if(s.state==='wait'&&now>=s.startAt) s.state='play'; if(s.state==='stopping'&&now>=s.stopAt) s.state='off';
+      if(s.state!=='off'){ cls=s.state; if(s.state==='play'||s.state==='stopping'){ const len=x.beats*BEAT; p=((now-s.start)%len)/len; per[x.page]++; } } }
+    x.btn.classList.toggle('play',cls==='play'); x.btn.classList.toggle('wait',cls==='wait'||cls==='load'); x.btn.classList.toggle('stopping',cls==='stopping'); x.btn.style.setProperty('--p',p.toFixed(3)); });
+  [...tabs.children].forEach(b=>{ const n=b.querySelector('.n'), k=per[b.dataset.p]; n.textContent=k; n.classList.toggle('show',k>0); });
+  requestAnimationFrame(tick); }
+document.getElementById('go').onclick=()=>startClock();
+document.getElementById('stopAll').onclick=()=>D.items.forEach(stopLoop);
+document.addEventListener('visibilitychange',()=>{ if(document.hidden&&ctx) D.items.forEach(stopLoop); });
+window.addEventListener('error',e=>msg('エラー: '+e.message));
+window.addEventListener('unhandledrejection',e=>msg('エラー: '+(e.reason&&e.reason.message||e.reason)));
+</script>
+</body>
+</html>
