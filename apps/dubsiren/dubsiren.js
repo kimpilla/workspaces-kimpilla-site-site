@@ -5,8 +5,18 @@
   const $ = (id) => document.getElementById(id);
   const KEY = 'dubsiren-v3';
   const P = { vol: 0.7, decay: 0.35, depth: 0.55, tune: 0.45, sweep: 0.5, rate: 0.4, ftune: 0,
-    etime: 0.45, efb: 0.5, emix: 0.45, eon: 1 };
+    etime: 0.45, efb: 0.5, emix: 0.45, eon: 1, sel: 0 };
+  // 4つのボタンは、それぞれ自分の設定(プリセット)を持つ。押したボタンの設定がつまみに出て、つまみを回すとそのボタンの設定が変わる。
+  // VOLUME とエコーは、全部のボタンで共通(本人「ボタンごとの設定を持たせる」2026-11-17。本物の DS71 も、ボタンで中のプリセットを呼び出す)
+  const PADKEYS = ['decay', 'tune', 'sweep', 'ftune', 'depth', 'rate'];
+  P.pre = [
+    { decay: 0.35, tune: 0.45, sweep: 0.5, ftune: 0, depth: 0.55, rate: 0.35 },    // なめらかに上下: ゆっくりの定番
+    { decay: 0.25, tune: 0.6, sweep: 0.5, ftune: 0, depth: 0.4, rate: 0.5 },       // 2つの高さ: 高めで、はっきり刻む
+    { decay: 0.45, tune: 0.5, sweep: 0.32, ftune: 1, depth: 0.6, rate: 0.55 },     // 上から下へ: 押すと上がっていく
+    { decay: 0.55, tune: 0.38, sweep: 0.68, ftune: 1, depth: 0.7, rate: 0.28 },    // 下から上へ: 低めから、押すと下がっていく
+  ];
   try { Object.assign(P, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch (e) { /* 保存なしでも動く */ }
+  PADKEYS.forEach((k) => { P[k] = P.pre[P.sel][k]; });
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(P)); } catch (e) { /* そのまま */ } };
   const exp = (v, a, b) => a * Math.pow(b / a, v);
   const V = {
@@ -69,6 +79,7 @@
   }
   const set = (prm, v, t = 0.02) => { if (prm) prm.setTargetAtTime(v, ctx.currentTime, t); };
   function apply() {
+    PADKEYS.forEach((k) => { P.pre[P.sel][k] = P[k]; });      // いま選んでいるボタンの設定に書き戻す
     if (!ctx) return;
     set(N.osc.frequency, V.tune()); set(N.vcf.frequency, Math.min(18000, V.tune() * 5));
     set(N.vol.gain, P.vol * 0.4);                   // 四角い波は大きいので、最大でも割れないところまで
@@ -151,10 +162,16 @@
   [115, 235, 355, 475].forEach((x, i) => {
     const bx = add(panel, '<div class="lab one"><svg viewBox="0 0 66 16"><path d="' + ICONS[i] + '"/></svg></div><div class="pad"></div>', x, 570, 'padbox');
     const pad = bx.querySelector('.pad'); let pid = null;
-    pad.addEventListener('pointerdown', (e) => { e.preventDefault(); try { pad.setPointerCapture(e.pointerId); } catch (er) {} pid = e.pointerId; held = i; boxes.forEach((b) => b.classList.remove('on')); pad.classList.add('on'); press(i); });
+    pad.addEventListener('pointerdown', (e) => { e.preventDefault(); try { pad.setPointerCapture(e.pointerId); } catch (er) {} pid = e.pointerId; held = i; boxes.forEach((b) => b.classList.remove('on')); pad.classList.add('on'); selectPad(i); press(i); });
     ['pointerup', 'pointercancel', 'lostpointercapture'].forEach((ev) => pad.addEventListener(ev, (e) => { if (pid !== e.pointerId) return; pid = null; pad.classList.remove('on'); if (held === i) { held = null; release(); } }));
     boxes.push(pad);
   });
+  // ボタンを押すと、そのボタンの設定をつまみに出す。選んでいるボタンは枠が光る
+  function selectPad(i) {
+    if (P.sel !== i) { P.sel = i; PADKEYS.forEach((k) => { P[k] = P.pre[i][k]; if (knobs[k]) knobs[k](); }); fdraw(); apply(); save(); }
+    panel.querySelectorAll('.padbox').forEach((b, j) => b.classList.toggle('sel', j === P.sel));
+  }
+  panel.querySelectorAll('.padbox').forEach((b, j) => b.classList.toggle('sel', j === P.sel));
   // いまの形: DECAY は、押して離したあとの音の大きさ。SWEEP は、押してからの高さの動き。箱の外(上の帯)に置く
   const scr = document.createElement('div'); scr.className = 'scr'; scr.innerHTML = '<canvas width="240" height="80"></canvas><span>白=大きさ 緑=高さ(点線で離す)</span>';
   document.querySelector('header').insertBefore(scr, document.querySelector('header a'));
