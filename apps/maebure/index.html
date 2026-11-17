@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>前ぶれシーケンサー | kimpilla</title>
+<script src="../../audio-unlock.js?v=5"></script>
+<style>
+html,body { touch-action:pan-y; }
+/* 横に流れる小節のグリッド(横スクロール)。打つ音のマスの左に、前ぶれが帯で伸びて、打つ瞬間にちょうど終わる */
+:root {
+  --bg: #f3f2ee; --panel: #ffffff; --fg: #1d1f22; --muted: #6b6f76; --line: #d6d4ce; --barline: #8c8a84;
+  --hit: #1d1f22; --pre: #c4572e; --pre-soft: rgba(196, 87, 46, 0.22); --now: #2c6fb3; --del: #b3261e;
+  --sans: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic", system-ui, sans-serif;
+  --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #15161a; --panel: #1e2026; --fg: #e9e8e4; --muted: #9a9ea6; --line: #33363e; --barline: #6d717a;
+  --hit: #e9e8e4; --pre: #e07a4f; --pre-soft: rgba(224, 122, 79, 0.28); --now: #6aa6e6; --del: #ef6b62; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #15161a; --panel: #1e2026; --fg: #e9e8e4; --muted: #9a9ea6; --line: #33363e; --barline: #6d717a;
+  --hit: #e9e8e4; --pre: #e07a4f; --pre-soft: rgba(224, 122, 79, 0.28); --now: #6aa6e6; --del: #ef6b62; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font: 15px/1.6 var(--sans); }
+.wrap { max-width: 900px; margin: 0 auto; padding-block: 16px 40px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: flex; flex-direction: column; gap: 14px; }
+h1 { font-size: 20px; margin: 0; letter-spacing: .02em; text-wrap: balance; }
+h2 { font-size: 15px; margin: 6px 0 0; }
+.lead, .how { margin: 0; color: var(--muted); font-size: 13px; }
+.how b { color: var(--fg); font-weight: 600; }
+.bar { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
+button, select, input { font: inherit; color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; }
+button { cursor: pointer; touch-action: manipulation; }
+button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--now); outline-offset: 2px; }
+button.main { background: var(--fg); color: var(--bg); border-color: var(--fg); font-weight: 600; }
+button.small { padding: 4px 10px; font-size: 13px; }
+.seg { display: flex; flex-wrap: wrap; max-width: 100%; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg button { flex: 1 1 auto; white-space: nowrap; border: 0; border-radius: 0; background: var(--panel); }
+.seg button.put[aria-pressed="true"] { background: var(--fg); color: var(--bg); }
+.seg button.pre[aria-pressed="true"] { background: var(--pre); color: #fff; }
+.seg button.del[aria-pressed="true"] { background: var(--del); color: #fff; }
+label { display: inline-flex; gap: 6px; align-items: center; font-size: 14px; }
+input[type=number] { width: 4.5em; font-variant-numeric: tabular-nums; }
+.gridbox { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 8px; }
+.lab { position: sticky; left: 0; z-index: 5; isolation: isolate; background: var(--panel); font-size: 11px; color: var(--muted); align-self: stretch; display: flex; align-items: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: 4px; }
+.scroll { overflow-x: auto; }
+.grid { position: relative; display: grid; gap: 3px; grid-auto-rows: 40px; }
+.grid .cnt { height: 19px; font: 11px var(--mono); color: var(--muted); text-align: center; white-space: nowrap; }
+.grid .cnt.b { color: var(--fg); }
+.grid .cnt.m { color: var(--fg); font-weight: 700; }
+.cell { position: relative; height: 40px; border-radius: 5px; border: 1px solid var(--line); background: transparent; padding: 0; z-index: 1; }
+.cell.beat { border-color: color-mix(in srgb, var(--line) 50%, var(--fg)); }
+.cell.bar1 { border-left: 3px solid var(--barline); }
+.cell.on { background: var(--hit); border-color: var(--hit); }
+.cell.now { box-shadow: 0 0 0 2px var(--now); }
+.cell.on.has { box-shadow: inset 0 -5px 0 var(--pre); }
+.band { position: absolute; height: 14px; border-radius: 4px; background: linear-gradient(90deg, var(--pre-soft), var(--pre)); pointer-events: none; z-index: 2; }
+.band span { position: absolute; right: 4px; top: -1px; font-size: 10px; color: #fff; white-space: nowrap; }
+.sounds { display: grid; gap: 8px; }
+.snd { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); font-size: 14px; }
+.snd .nm { font-weight: 600; min-width: 6em; }
+.snd .st { color: var(--muted); font-size: 12px; min-width: 0; overflow-wrap: anywhere; }
+.status { font: 12px var(--mono); color: var(--muted); min-height: 1.4em; margin: 0; }
+input[type=file] { max-width: 100%; font-size: 13px; padding: 4px; }
+</style>
+</head>
+<body>
+<p style="margin:8px 16px;font:12px system-ui,sans-serif"><a href="../../apps.html" style="color:inherit">アプリ一覧へ</a></p>
+
+
+<div class="wrap">
+  <h1>前ぶれシーケンサー</h1>
+  <p class="lead">打つ音のマスに「前ぶれ」の効果音をつけると、その音の前から鳴りはじめて、打つ瞬間にちょうど終わります。</p>
+
+  <div class="bar">
+    <button id="play" class="main" type="button">▶ 再生</button>
+    <button id="stop" type="button">■ 止める</button>
+    <label for="bpm">BPM <input id="bpm" type="number" min="40" max="240" value="90" inputmode="numeric"></label>
+    <label for="bars">小節 <select id="bars"><option>1</option><option selected>2</option><option>3</option><option>4</option><option>6</option><option>8</option></select></label>
+  </div>
+
+  <div class="bar">
+    <div class="seg" role="group" aria-label="マスを押したときにすること">
+      <button id="mPut" class="put" type="button" aria-pressed="true">音を置く</button>
+      <button id="mPre" class="pre" type="button" aria-pressed="false">前ぶれをつける</button>
+      <button id="mDel" class="del" type="button" aria-pressed="false">前ぶれを消す</button>
+    </div>
+    <label for="kind">前ぶれ <select id="kind"></select></label>
+    <label for="len">長さ <select id="len"><option value="2">半拍</option><option value="4" selected>1拍</option><option value="8">2拍</option><option value="16">1小節</option></select></label>
+  </div>
+
+  <div class="gridbox"><div class="scroll" id="scroll"><div class="grid" id="grid"></div></div></div>
+  <div class="bar"><button id="clearPre" class="small" type="button">前ぶれを全部消す</button><button id="clearAll" class="small" type="button">全部消す</button><span class="status" id="confirm"></span></div>
+  <p class="how"><b>音を置く</b>: マスを押すと、鳴る/休みが切り替わる。<b>前ぶれをつける</b>: 鳴っているマスを押すと、選んだ前ぶれと長さがつく(ついていれば付け替わる)。<b>前ぶれを消す</b>: 前ぶれのついたマスを押すと、前ぶれだけが外れる(音は残る)。曲の頭より前にはみ出す前ぶれは、最後の小節の終わりから鳴る(くり返しの2周目から聞こえる)。</p>
+
+  <h2>書き出す</h2>
+  <div class="bar" id="exBar"><button id="exLoop" class="small" type="button">ループ全体を保存</button><button id="exEach" class="small" type="button">前ぶれつきの音を1つずつ保存</button></div>
+  <p class="how" id="exHow">どちらも WAV(モノラル・44.1kHz)を zip にまとめて保存します。「ループ全体」は、くり返したときにつながる形(頭の前ぶれも入る)。「1つずつ」は、前ぶれのついた音ごとに、前ぶれ+その音を1ファイルにします。音の頭は、前ぶれの長さのぶん後ろにあります(ファイル名に長さを書きます)。</p>
+
+  <h2>音</h2>
+  <p class="how">行は、決まった楽器ではなく、ただの「音」です。行ごとに名前を変えたり、自分のファイル(WAV・MP3など)を入れたり、消したりできます。最初の3行は、試しの合成音です。前ぶれも、自分のファイルを足せます(そのままか、逆さにして)。足した音は、このページを閉じると消えます(並べたマスは、このブラウザに残ります)。</p>
+  <div class="sounds" id="rowsnd"></div>
+  <div class="snd"><span class="nm">行を足す</span><input id="addRow" type="file" accept="audio/*"><span class="st">ファイル名が行の名前になる</span></div>
+  <div class="snd"><span class="nm">前ぶれを足す</span><label><input id="preRev" type="checkbox" checked> 逆さにして使う</label><input id="addPre" type="file" accept="audio/*"><span class="st">音の終わりが打つ瞬間に合う。「長さ」の分だけ、音の後ろから使う</span></div>
+  <p class="status" id="status"></p>
+</div>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const KEY = 'maebure-seq-v2';
+  // 行は、楽器の分類なしの「音」。synth は試しの合成音(low・noise・tick)。ファイルを入れたら、そちらが鳴る
+  let ROWS = [{ id: 'r1', name: '音1', synth: 'low' }, { id: 'r2', name: '音2', synth: 'noise' }, { id: 'r3', name: '音3', synth: 'tick' }];
+  const PRE = [{ id: 'revCym', name: '逆再生シンバル', short: '逆シンバル' }, { id: 'revSnare', name: '逆再生スネア', short: '逆スネア' }, { id: 'riser', name: 'ライザー(上がるノイズ)', short: 'ライザー' }, { id: 'revKick', name: '逆再生キック', short: '逆キック' }];
+  const user = { row: {}, pre: {} };
+  const S = {
+    bars: 2,
+    hits: { r1: [0, 8, 16, 24, 26], r2: [4, 12, 20, 28], r3: [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30] },
+    pre: { 'r1:8': { kind: 'revCym', len: 4 }, 'r1:16': { kind: 'riser', len: 8 }, 'r2:28': { kind: 'revSnare', len: 2 } },
+    mode: 'put',
+  };
+  try { const o = JSON.parse(localStorage.getItem(KEY) || 'null'); if (o && o.hits && Array.isArray(o.rows)) { ROWS = o.rows; S.bars = o.bars || 2; S.hits = o.hits; S.pre = o.pre || {}; if (o.bpm) $('bpm').value = o.bpm; } } catch (e) { /* 読めなければ例のまま */ }
+  ROWS.forEach((r) => { S.hits[r.id] = S.hits[r.id] || []; });
+  $('bars').value = String(S.bars);
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify({ rows: ROWS.map((r) => ({ id: r.id, name: r.name, synth: r.synth || '' })), bars: S.bars, hits: S.hits, pre: Object.fromEntries(Object.entries(S.pre).filter(([k, p]) => !user.pre[p.kind])), bpm: +$('bpm').value })); } catch (e) { /* 保存できなくても動く */ } };
+  const N = () => S.bars * 16;
+  const on = (r, i) => (S.hits[r] || []).includes(i);
+  const preName = (id) => (PRE.find((p) => p.id === id) || {}).short || id;
+  const msg = (t) => { $('status').textContent = t; };
+
+  function fillKinds() {
+    const cur = $('kind').value; $('kind').innerHTML = '';
+    PRE.forEach((p) => { const o = document.createElement('option'); o.value = p.id; o.textContent = p.name; $('kind').appendChild(o); });
+    if (cur && PRE.some((p) => p.id === cur)) $('kind').value = cur;
+  }
+
+  // ---- 表 ----
+  const grid = $('grid'), cells = {};
+  function build() {
+    grid.innerHTML = '';
+    grid.style.gridTemplateColumns = '58px repeat(' + N() + ', 22px)';
+    const corner = document.createElement('div'); corner.className = 'lab'; grid.appendChild(corner);
+    for (let i = 0; i < N(); i++) { const c = document.createElement('div'); const st = i % 16; c.className = 'cnt' + (st === 0 ? ' m' : st % 4 === 0 ? ' b' : ''); c.textContent = st === 0 ? (i / 16 + 1) + '小' : st % 4 === 0 ? String(st / 4 + 1) : '·'; grid.appendChild(c); }
+    ROWS.forEach((r) => {
+      const l = document.createElement('div'); l.className = 'lab'; l.textContent = r.name; l.title = r.name; grid.appendChild(l);
+      cells[r.id] = [];
+      for (let i = 0; i < N(); i++) {
+        const b = document.createElement('button'); b.type = 'button'; b.className = 'cell' + (i % 4 === 0 ? ' beat' : '') + (i % 16 === 0 && i ? ' bar1' : '');
+        b.setAttribute('aria-label', r.name + ' ' + (Math.floor(i / 16) + 1) + '小節 ' + (Math.floor(i % 16 / 4) + 1) + '拍目の' + ['頭', 'e', '&', 'a'][i % 4]);
+        b.onclick = () => tap(r.id, i);
+        grid.appendChild(b); cells[r.id].push(b);
+      }
+    });
+    paint(); buildSounds();
+  }
+  function paint() {
+    grid.querySelectorAll('.band').forEach((x) => x.remove());
+    ROWS.forEach((r) => cells[r.id].forEach((b, i) => { b.classList.toggle('on', on(r.id, i)); b.classList.toggle('has', !!S.pre[r.id + ':' + i]); b.setAttribute('aria-pressed', on(r.id, i) ? 'true' : 'false'); }));
+    const g = grid.getBoundingClientRect();
+    Object.entries(S.pre).forEach(([key, p]) => {
+      const [r, si] = key.split(':'), i = +si; if (!cells[r] || !on(r, i)) return;
+      const cell = cells[r][i].getBoundingClientRect(), first = cells[r][0].getBoundingClientRect(), last = cells[r][N() - 1].getBoundingClientRect();
+      const stepW = (last.right - first.left) / N(), endX = cell.left - g.left, y = cell.top - g.top + 3;
+      const draw = (x0, x1, label) => { const d = document.createElement('div'); d.className = 'band'; d.style.left = x0 + 'px'; d.style.width = Math.max(4, x1 - x0) + 'px'; d.style.top = y + 'px'; if (label) { const s = document.createElement('span'); s.textContent = label; d.appendChild(s); } grid.appendChild(d); };
+      const startX = endX - p.len * stepW, x0 = first.left - g.left, x1 = last.right - g.left;
+      if (startX >= x0) draw(startX, endX, p.len * stepW > 52 ? preName(p.kind) : '');
+      else { draw(x0, endX, endX - x0 > 52 ? preName(p.kind) : ''); draw(x1 - (x0 - startX), x1, (x0 - startX) > 52 ? preName(p.kind) : ''); }
+    });
+  }
+  function tap(r, i) {
+    const k = r + ':' + i;
+    if (S.mode === 'put') {
+      const a = S.hits[r]; if (on(r, i)) { a.splice(a.indexOf(i), 1); delete S.pre[k]; } else { a.push(i); if (ctx && ctx.state === 'running') playHit(r, ctx.currentTime + 0.01); }
+      msg('');
+    } else if (S.mode === 'pre') {
+      if (!on(r, i)) { msg('前ぶれは、鳴っているマスにつけます(先に「音を置く」で置く)'); return; }
+      S.pre[k] = { kind: $('kind').value, len: +$('len').value }; msg('');
+    } else {
+      if (!S.pre[k]) { msg('このマスには、前ぶれがついていません'); return; }
+      delete S.pre[k]; msg('');
+    }
+    paint(); save();
+  }
+  const setMode = (m) => { S.mode = m; $('mPut').setAttribute('aria-pressed', m === 'put'); $('mPre').setAttribute('aria-pressed', m === 'pre'); $('mDel').setAttribute('aria-pressed', m === 'del'); msg(''); };
+  $('mPut').onclick = () => setMode('put'); $('mPre').onclick = () => setMode('pre'); $('mDel').onclick = () => setMode('del');
+  $('bars').addEventListener('change', () => {
+    S.bars = +$('bars').value;
+    Object.keys(S.hits).forEach((r) => { S.hits[r] = S.hits[r].filter((i) => i < N()); });
+    Object.keys(S.pre).forEach((k) => { if (+k.split(':')[1] >= N()) delete S.pre[k]; });
+    build(); save(); if (playing) { stop(); start(); }
+  });
+  $('bpm').addEventListener('change', () => { $('bpm').value = Math.max(40, Math.min(240, Math.round(+$('bpm').value || 90))); save(); if (playing) { stop(); start(); } });
+  // 消すボタンは、2回押して確かめる(このページでは確認の窓が出ないため)
+  let armed = null, armT = 0;
+  const twice = (id, label, fn) => { $(id).onclick = () => { if (armed === id) { clearTimeout(armT); armed = null; $('confirm').textContent = ''; fn(); paint(); save(); return; } armed = id; $('confirm').textContent = label + 'もう一度押すと消えます'; clearTimeout(armT); armT = setTimeout(() => { armed = null; $('confirm').textContent = ''; }, 3000); }; };
+  twice('clearPre', '前ぶれを全部消す: ', () => { S.pre = {}; });
+  twice('clearAll', 'マスと前ぶれを全部消す: ', () => { Object.keys(S.hits).forEach((r) => { S.hits[r] = []; }); S.pre = {}; });
+  window.addEventListener('resize', paint);
+
+  // ---- 音(合成 + 自分のファイル) ----
+  let ctx = null, out = null;
+  const ensureCtx = async () => {
+    if (!ctx || ctx.state === 'closed') { ctx = new (window.AudioContext || window.webkitAudioContext)(); out = ctx.createGain(); out.gain.value = 0.8; out.connect(ctx.destination); }
+    if (ctx.state !== 'running') { try { await ctx.resume(); } catch (e) { /* 次の操作で */ } }
+  };
+  const noiseBuf = (sec, fn) => { const n = Math.max(1, Math.round(sec * ctx.sampleRate)), b = ctx.createBuffer(1, n, ctx.sampleRate), d = b.getChannelData(0); let s = 22222; for (let i = 0; i < n; i++) { s = (s * 16807) % 2147483647; d[i] = fn(i / ctx.sampleRate, (s / 2147483647) * 2 - 1); } return b; };
+  const reverse = (b) => { const r = new AudioBuffer({ length: b.length, numberOfChannels: b.numberOfChannels, sampleRate: b.sampleRate }); for (let c = 0; c < b.numberOfChannels; c++) { const s = b.getChannelData(c), d = r.getChannelData(c); for (let i = 0; i < b.length; i++) d[i] = s[b.length - 1 - i]; } return r; };
+  const cache = {};
+  function preBuf(kind, sec) {
+    const key = kind + ':' + sec.toFixed(3); if (cache[key]) return cache[key];
+    let b;
+    if (kind === 'revCym') b = reverse(noiseBuf(sec, (t, n) => n * Math.exp(-t * 3.2 / sec) * (0.55 + 0.45 * Math.sin(t * 2 * Math.PI * 4370) * Math.sin(t * 2 * Math.PI * 6260))));
+    else if (kind === 'revSnare') b = reverse(noiseBuf(sec, (t, n) => (n * 0.8 + Math.sin(t * 2 * Math.PI * 190) * 0.5) * Math.exp(-t * 4.5 / sec)));
+    else if (kind === 'revKick') b = reverse(noiseBuf(sec, (t) => Math.sin(2 * Math.PI * (48 * t + 60 * (1 - Math.exp(-t * 9 / sec)) * sec / 9)) * Math.exp(-t * 3.5 / sec)));
+    else b = noiseBuf(sec, (t, n) => n * Math.pow(t / sec, 2));
+    return (cache[key] = b);
+  }
+  function playPre(kind, t, sec) {
+    const src = ctx.createBufferSource(), g = ctx.createGain();
+    if (user.pre[kind]) {   // 自分の前ぶれ: 音の後ろから sec 秒ぶんを使い、終わりを打つ瞬間に合わせる
+      const b = user.pre[kind]; src.buffer = b; g.gain.value = 0.8; src.connect(g); g.connect(out);
+      const use = Math.min(sec, b.duration); src.start(t + (sec - use), b.duration - use); return;
+    }
+    src.buffer = preBuf(kind, sec); g.gain.value = kind === 'riser' ? 0.5 : 0.7;
+    if (kind === 'riser') { const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.Q.value = 2.5; f.frequency.setValueAtTime(300, t); f.frequency.exponentialRampToValueAtTime(7000, t + sec); src.connect(f); f.connect(g); } else src.connect(g);
+    g.connect(out); src.start(t); src.stop(t + sec);
+  }
+  function playHit(id, t) {
+    const g = ctx.createGain(); g.connect(out);
+    if (user.row[id]) { const s = ctx.createBufferSource(); s.buffer = user.row[id]; g.gain.value = 0.9; s.connect(g); s.start(t); return; }
+    const row = ROWS.find((x) => x.id === id), r = { low: 'kick', noise: 'snare', tick: 'hat' }[row && row.synth];
+    if (r === 'kick') { const o = ctx.createOscillator(); o.frequency.setValueAtTime(130, t); o.frequency.exponentialRampToValueAtTime(45, t + 0.12); g.gain.setValueAtTime(1, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.4); o.connect(g); o.start(t); o.stop(t + 0.42); return; }
+    if (r !== 'snare' && r !== 'hat') return;
+    const sec = r === 'snare' ? 0.2 : 0.05, src = ctx.createBufferSource(); src.buffer = cache['n:' + r] || (cache['n:' + r] = noiseBuf(0.3, (tt, n) => n));
+    const f = ctx.createBiquadFilter(); f.type = r === 'snare' ? 'bandpass' : 'highpass'; f.frequency.value = r === 'snare' ? 1800 : 8000;
+    g.gain.setValueAtTime(r === 'snare' ? 0.8 : 0.35, t); g.gain.exponentialRampToValueAtTime(0.001, t + sec); src.connect(f); f.connect(g); src.start(t); src.stop(t + sec + 0.02);
+    if (r === 'snare') { const o = ctx.createOscillator(), og = ctx.createGain(); o.frequency.value = 190; og.gain.setValueAtTime(0.4, t); og.gain.exponentialRampToValueAtTime(0.001, t + 0.1); o.connect(og); og.connect(out); o.start(t); o.stop(t + 0.12); }
+  }
+  async function decodeFile(file) { await ensureCtx(); const ab = await file.arrayBuffer(); return await ctx.decodeAudioData(ab); }
+  const badFile = () => msg('このファイルは読めませんでした(WAV・MP3などの音のファイルを選んでください)');
+
+  // ---- 音の欄 ----
+  function buildSounds() {
+    const box = $('rowsnd'); box.innerHTML = '';
+    ROWS.forEach((r) => {
+      const d = document.createElement('div'); d.className = 'snd';
+      const nm = document.createElement('input'); nm.type = 'text'; nm.value = r.name; nm.maxLength = 16; nm.size = 8; nm.setAttribute('aria-label', '行の名前');
+      nm.onchange = () => { r.name = nm.value.trim() || r.name; nm.value = r.name; build(); save(); };
+      const fi = document.createElement('input'); fi.type = 'file'; fi.accept = 'audio/*'; fi.setAttribute('aria-label', r.name + 'の音のファイル');
+      const st = document.createElement('span'); st.className = 'st'; st.textContent = user.row[r.id] ? '自分の音: ' + (user.row[r.id].label || '') : r.synth ? '試しの合成音' : '音がありません(ファイルを選ぶ)';
+      const try1 = document.createElement('button'); try1.type = 'button'; try1.className = 'small'; try1.textContent = '聞く'; try1.onclick = async () => { await ensureCtx(); playHit(r.id, ctx.currentTime + 0.02); };
+      const back = document.createElement('button'); back.type = 'button'; back.className = 'small';
+      back.textContent = '行を消す'; back.onclick = () => { ROWS.splice(ROWS.indexOf(r), 1); delete S.hits[r.id]; delete user.row[r.id]; Object.keys(S.pre).forEach((k) => { if (k.startsWith(r.id + ':')) delete S.pre[k]; }); build(); save(); };
+      fi.onchange = async () => { const f = fi.files[0]; if (!f) return; try { const b = await decodeFile(f); b.label = f.name; user.row[r.id] = b; msg(r.name + 'の音を「' + f.name + '」にしました'); buildSounds(); } catch (e) { badFile(); } };
+      d.append(nm, fi, try1, back, st); box.appendChild(d);
+    });
+  }
+  $('addRow').onchange = async () => {
+    const f = $('addRow').files[0]; if (!f) return;
+    try {
+      const b = await decodeFile(f); b.label = f.name;
+      const id = 'u' + Date.now().toString(36), name = f.name.replace(/\.[^.]+$/, '').slice(0, 16);
+      ROWS.push({ id, name }); S.hits[id] = []; user.row[id] = b; $('addRow').value = ''; build(); save(); msg('行「' + name + '」を足しました');
+    } catch (e) { badFile(); }
+  };
+  $('addPre').onchange = async () => {
+    const f = $('addPre').files[0]; if (!f) return;
+    try {
+      let b = await decodeFile(f); if ($('preRev').checked) b = reverse(b);
+      const id = 'p' + Date.now().toString(36), name = f.name.replace(/\.[^.]+$/, '').slice(0, 14) + ($('preRev').checked ? '(逆)' : '');
+      user.pre[id] = b; PRE.push({ id, name: '自分の: ' + name, short: name }); fillKinds(); $('kind').value = id; $('addPre').value = ''; msg('前ぶれ「' + name + '」を足しました(「前ぶれをつける」で使えます)');
+    } catch (e) { badFile(); }
+  };
+
+  // ---- 再生(先読みで予約。前ぶれは、打つ時刻から長さぶん前に始める) ----
+  const stepDur = () => 60 / Math.max(40, Math.min(240, +$('bpm').value || 90)) / 4;
+  let playing = false, timer = 0, t0 = 0, loop = 0, nowStep = -1;
+  function events() {
+    const sd = stepDur(), dur = N() * sd, ev = [];
+    ROWS.forEach((r) => (S.hits[r.id] || []).forEach((i) => {
+      ev.push({ at: i * sd, r: r.id });
+      const p = S.pre[r.id + ':' + i];
+      if (p && PRE.some((x) => x.id === p.kind)) { const sec = p.len * sd; ev.push({ at: ((i * sd - sec) % dur + dur) % dur, pre: p.kind, sec }); }
+    }));
+    return ev;
+  }
+  function tick() {
+    const sd = stepDur(), dur = N() * sd, ahead = ctx.currentTime + 0.2;
+    while (t0 + loop * dur < ahead) {
+      const base = t0 + loop * dur;
+      events().forEach((e) => { const t = base + e.at; if (t < ctx.currentTime - 0.01) return; if (e.pre) { if (loop === 0 && e.at + e.sec > dur + 1e-6) return; playPre(e.pre, t, e.sec); } else playHit(e.r, t); });
+      loop++;
+    }
+    const pos = Math.floor(((ctx.currentTime - t0) / sd) % N());
+    if (pos !== nowStep && pos >= 0) { ROWS.forEach((r) => { if (cells[r.id][nowStep]) cells[r.id][nowStep].classList.remove('now'); if (cells[r.id][pos]) cells[r.id][pos].classList.add('now'); }); nowStep = pos; }
+  }
+  const start = async () => { await ensureCtx(); if (playing) return; playing = true; t0 = ctx.currentTime + 0.1; loop = 0; timer = setInterval(tick, 25); tick(); };
+  const stop = () => { playing = false; clearInterval(timer); ROWS.forEach((r) => (cells[r.id] || []).forEach((b) => b.classList.remove('now'))); nowStep = -1; };
+  $('play').onclick = start;
+  $('stop').onclick = stop;
+  document.addEventListener('visibilitychange', () => { if (document.hidden) { stop(); if (ctx) { ctx.close(); ctx = null; for (const k in cache) delete cache[k]; } } });
+
+  // ---- 書き出し(OfflineAudioContext で作り、WAV を zip にまとめる) ----
+  const SR = 44100;
+  async function renderWith(sec, schedule) {
+    const live = [ctx, out], saved = Object.assign({}, cache);
+    const oc = new OfflineAudioContext(1, Math.ceil(sec * SR), SR);
+    ctx = oc; out = oc.createGain(); out.gain.value = 0.8; out.connect(oc.destination);
+    for (const k in cache) delete cache[k];
+    try { schedule(); return await oc.startRendering(); }
+    finally { ctx = live[0]; out = live[1]; for (const k in cache) delete cache[k]; Object.assign(cache, saved); }
+  }
+  function wav(buf, from, len) {
+    const d = buf.getChannelData(0), n = Math.max(0, Math.min(len, d.length - from)), ab = new ArrayBuffer(44 + n * 2), v = new DataView(ab);
+    const w = (o, t) => { for (let i = 0; i < t.length; i++) v.setUint8(o + i, t.charCodeAt(i)); };
+    w(0, 'RIFF'); v.setUint32(4, 36 + n * 2, true); w(8, 'WAVEfmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+    v.setUint32(24, SR, true); v.setUint32(28, SR * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); w(36, 'data'); v.setUint32(40, n * 2, true);
+    let pk = 0; for (let i = 0; i < n; i++) pk = Math.max(pk, Math.abs(d[from + i]));
+    const g = pk > 0.95 ? 0.95 / pk : 1;   // 割れるときだけ下げる
+    for (let i = 0; i < n; i++) v.setInt16(44 + i * 2, Math.max(-1, Math.min(1, d[from + i] * g)) * 32767, true);
+    return new Uint8Array(ab);
+  }
+  const CRC = (() => { const t = new Uint32Array(256); for (let i = 0; i < 256; i++) { let c = i; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[i] = c >>> 0; } return t; })();
+  const crc32 = (u) => { let c = 0xFFFFFFFF; for (let i = 0; i < u.length; i++) c = CRC[(c ^ u[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
+  function zip(files) {   // 圧縮なし(store)。名前は UTF-8
+    const enc = new TextEncoder(), parts = [], cen = []; let off = 0;
+    files.forEach(({ name, data }) => {
+      const nm = enc.encode(name), crc = crc32(data), h = new DataView(new ArrayBuffer(30));
+      h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint16(6, 0x0800, true); h.setUint32(14, crc, true); h.setUint32(18, data.length, true); h.setUint32(22, data.length, true); h.setUint16(26, nm.length, true);
+      parts.push(new Uint8Array(h.buffer), nm, data);
+      const c = new DataView(new ArrayBuffer(46));
+      c.setUint32(0, 0x02014b50, true); c.setUint16(4, 20, true); c.setUint16(6, 20, true); c.setUint16(8, 0x0800, true); c.setUint32(16, crc, true); c.setUint32(20, data.length, true); c.setUint32(24, data.length, true); c.setUint16(28, nm.length, true); c.setUint32(42, off, true);
+      cen.push(new Uint8Array(c.buffer), nm); off += 30 + nm.length + data.length;
+    });
+    const size = cen.reduce((a, u) => a + u.length, 0), e = new DataView(new ArrayBuffer(22));
+    e.setUint32(0, 0x06054b50, true); e.setUint16(8, files.length, true); e.setUint16(10, files.length, true); e.setUint32(12, size, true); e.setUint32(16, off, true);
+    return new Blob([...parts, ...cen, new Uint8Array(e.buffer)]);
+  }
+  const safe = (t) => String(t).replace(/[\\/:*?"<>|\s]+/g, '_');
+  // 保存: ブラウザのダウンロードで zip を保存する(サイト版。claude.ai の試し版は、ページの保存の仕組みを使っていた)
+  async function offer(filename, blob) {
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    msg('「' + filename + '」を保存しました');
+  }
+  const lenName = { 2: '半拍', 4: '1拍', 8: '2拍', 16: '1小節' };
+  $('exLoop').onclick = async () => {
+    stop(); msg('書き出し中…');
+    const sd = stepDur(), dur = N() * sd;
+    const buf = await renderWith(dur * 2 + 0.1, () => {   // 2周ぶん鳴らして、2周目だけを切り出す(頭の前ぶれと、前の周の余韻が入る)
+      for (let L = 0; L < 2; L++) events().forEach((e) => { const t = L * dur + e.at; if (e.pre) playPre(e.pre, t, e.sec); else playHit(e.r, t); });
+    });
+    const name = '前ぶれ_' + $('bpm').value + 'BPM_' + S.bars + '小節';
+    await offer(name + '.zip', zip([{ name: name + '.wav', data: wav(buf, Math.round(dur * SR), Math.round(dur * SR)) }]));
+  };
+  $('exEach').onclick = async () => {
+    stop(); const sd = stepDur(), seen = new Set(), files = [];
+    const list = Object.entries(S.pre).filter(([k, p]) => on(k.split(':')[0], +k.split(':')[1]) && PRE.some((x) => x.id === p.kind));
+    if (!list.length) { msg('前ぶれのついた音がありません'); return; }
+    msg('書き出し中…');
+    for (const [k, p] of list) {
+      const r = k.split(':')[0], row = ROWS.find((x) => x.id === r), sig = r + '|' + p.kind + '|' + p.len; if (!row || seen.has(sig)) continue; seen.add(sig);
+      const sec = p.len * sd, tail = user.row[r] ? user.row[r].duration : 0.5;
+      const buf = await renderWith(sec + tail, () => { playPre(p.kind, 0, sec); playHit(r, sec); });
+      files.push({ name: safe(row.name + '_' + preName(p.kind) + '_' + lenName[p.len] + '前_' + $('bpm').value + 'BPM') + '.wav', data: wav(buf, 0, buf.length) });
+    }
+    await offer('前ぶれつきの音_' + $('bpm').value + 'BPM.zip', zip(files));
+  };
+  fillKinds(); build();
+})();
+</script>
+
+</body>
+</html>
