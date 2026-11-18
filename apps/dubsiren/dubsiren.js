@@ -162,6 +162,10 @@
   [115, 235, 355, 475].forEach((x, i) => {
     const bx = add(panel, '<div class="lab one"><svg viewBox="0 0 66 16"><path d="' + ICONS[i] + '"/></svg></div><div class="pad"></div>', x, 570, 'padbox');
     const pad = bx.querySelector('.pad'); let pid = null;
+    // 波のマーク(上の帯)を押すと、音を出さずにそのボタンを選ぶ。つまみをそのボタンの設定にしてから鳴らせる(本人「出す前に切り替え」2026-11-18)
+    const lab = bx.querySelector('.lab'); lab.setAttribute('role', 'button'); lab.tabIndex = 0; lab.setAttribute('aria-label', (i + 1) + '番のボタンを選ぶ(音は出ない)');
+    lab.addEventListener('click', () => selectPad(i));
+    lab.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectPad(i); } });
     pad.addEventListener('pointerdown', (e) => { e.preventDefault(); try { pad.setPointerCapture(e.pointerId); } catch (er) {} pid = e.pointerId; held = i; boxes.forEach((b) => b.classList.remove('on')); pad.classList.add('on'); selectPad(i); press(i); });
     ['pointerup', 'pointercancel', 'lostpointercapture'].forEach((ev) => pad.addEventListener(ev, (e) => { if (pid !== e.pointerId) return; pid = null; pad.classList.remove('on'); if (held === i) { held = null; release(); } }));
     boxes.push(pad);
