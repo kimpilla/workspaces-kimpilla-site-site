@@ -60,3 +60,15 @@
   }, { passive: false });
   on('touchend', () => { edge = null; }, { passive: true });
 })();
+
+// ながおしで でる「コピー・共有」の ふきだしと、もじの かくだい(むしめがね)を とめる(2026-11-18、「長押ししてたら共有って吹き出しが出た」「虫眼鏡で文字がクローズアップされる」)
+// もじを いれる らん(input・textarea)だけは、ふつうに えらべる ままに する
+(() => {
+  const css = 'html,body,body *{-webkit-touch-callout:none!important;-webkit-user-select:none!important;user-select:none!important}'
+    + 'input:not([type=range]):not([type=button]):not([type=checkbox]):not([type=radio]),textarea,[contenteditable]{-webkit-user-select:text!important;user-select:text!important}';
+  const add = () => { if (document.getElementById('nocallout')) return; const st = document.createElement('style'); st.id = 'nocallout'; st.textContent = css; (document.head || document.documentElement).appendChild(st); };
+  if (document.head) add(); else document.addEventListener('DOMContentLoaded', add);
+  const editable = (t) => t && t.closest && t.closest('textarea, [contenteditable], input:not([type=range]):not([type=button]):not([type=checkbox]):not([type=radio])');
+  document.addEventListener('contextmenu', (e) => { if (!editable(e.target)) e.preventDefault(); });
+  document.addEventListener('selectstart', (e) => { if (!editable(e.target)) e.preventDefault(); });
+})();
