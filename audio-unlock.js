@@ -35,8 +35,10 @@
 (() => {
   const hasUI = () => !!document.querySelector('button, canvas, input[type=range]');
   const on = (t, f, o) => document.addEventListener(t, f, o);
-  ['gesturestart', 'gesturechange', 'gestureend'].forEach((t) => on(t, (e) => { if (hasUI()) e.preventDefault(); }, { passive: false }));   // Safariの ピンチ
-  on('touchmove', (e) => { if (e.touches && e.touches.length > 1 && hasUI()) e.preventDefault(); }, { passive: false });                     // 2ほんゆびの ズーム・スクロール
+  // もし かくだいされて しまったら(ダブルタップなど)、ピンチで もどせるように、かくだい中は とめない(2026-11-18、「拡大されて戻らない」)
+  const zoomed = () => !!(window.visualViewport && window.visualViewport.scale > 1.01);
+  ['gesturestart', 'gesturechange', 'gestureend'].forEach((t) => on(t, (e) => { if (hasUI() && !zoomed()) e.preventDefault(); }, { passive: false }));   // Safariの ピンチ
+  on('touchmove', (e) => { if (e.touches && e.touches.length > 1 && hasUI() && !zoomed()) e.preventDefault(); }, { passive: false });                     // 2ほんゆびの ズーム・スクロール
   // がめんの ふちから はじまる スワイプ(もどる・すすむ)を とめる。ただし、たての うごきは ページの スクロールに する(2026-11-10)
   // (ふちで ゆびを おくと スクロールまで とまって いたため。ボタンなどの 上なら、ふつうに おせるように なにも しない)
   let edge = null;

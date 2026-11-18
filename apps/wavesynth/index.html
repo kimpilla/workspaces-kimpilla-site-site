@@ -22,11 +22,9 @@
   .cap { left:10px; top:8px; } .cap2 { right:8px; bottom:6px; text-align:right; background:#04100acc; padding:1px 5px; border-radius:3px; }
   .row { display:flex; justify-content:space-between; color:#4dff9f; font-size:10px; margin:8px 4px 0; text-shadow:0 0 6px #4dff9f88; }
   .tabs { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-top:14px; }
-  .tabs button { background:none; border:0; box-shadow:none; padding:0; min-height:0; color:var(--tx); text-align:center; }
-  .tabs .d { display:block; width:58px; height:58px; margin:0 auto 6px; border-radius:50%; background:radial-gradient(circle at 35% 30%,#555,#111); box-shadow:0 3px 4px #0007,inset 0 1px 0 #fff3; position:relative; }
-  .tabs .d:after { content:""; position:absolute; left:50%; top:5px; width:3px; height:20px; margin-left:-1.5px; background:#fff; border-radius:2px; transform-origin:50% 24px; transform:rotate(var(--r)); }
-  .tabs button.on .d { outline:3px solid var(--am); outline-offset:3px; }
-  .tabs b { display:block; font-size:11px; letter-spacing:.04em; } .tabs small { display:block; color:#666; font-size:9px; }
+  .tabs button { font:inherit; color:var(--tx); background:linear-gradient(#eceee4,#b9bcae); border:0; border-radius:6px; padding:8px 4px; min-height:52px; box-shadow:0 3px 0 #7c7f73,0 4px 4px #0005; cursor:pointer; text-align:center; touch-action:manipulation; }
+  .tabs button.on { background:linear-gradient(#ffd08a,#ff9d1a); box-shadow:0 1px 0 #7c7f73; transform:translateY(2px); }
+  .tabs b { display:block; font-size:12px; letter-spacing:0; white-space:nowrap; } @media (max-width:430px) { .tabs { gap:6px; } .tabs button { padding:8px 2px; } .tabs b { font-size:10.5px; } } .tabs small { display:block; color:#555; font-size:9px; letter-spacing:.08em; }
   .hint { color:#444; font-size:12px; margin:12px 0 8px; min-height:2.9em; }
   .pb { display:flex; gap:8px; overflow-x:auto; padding:2px 2px 8px; -webkit-overflow-scrolling:touch; }
   button.pu, .pb button, #extra button { flex:0 0 auto; font:inherit; font-weight:700; font-size:11px; color:var(--tx); background:linear-gradient(#eceee4,#b9bcae); border:0; border-radius:4px; padding:9px 13px; min-height:40px; box-shadow:0 3px 0 #7c7f73,0 4px 4px #0005; cursor:pointer; }
@@ -57,7 +55,7 @@
   .wk.dn { background:#7fe8b0; } .bk.dn { background:#1f7a52; }
   .wk span { position:absolute; bottom:4px; left:0; right:0; text-align:center; font-size:10px; color:#4a7; pointer-events:none; }
 </style>
-<script src="../../audio-unlock.js?v=5"></script>
+<script src="../../audio-unlock.js?v=6"></script>
 </head>
 <body>
 <div class="wrap"><div class="body">
@@ -65,14 +63,14 @@
 
   <div class="bez">
     <div class="crt"><canvas id="ed"></canvas><div class="cap" id="cap"></div><div class="cap2" id="cap2"></div></div>
-    <div class="row"><span id="rowL">◀ 指で波を描く ▶</span><span>f = 130.8Hz</span><span>H = 64</span></div>
+    <div class="row"><span id="rowL">◀ 指で波形を描く ▶</span><span>f = 130.8Hz</span><span>H = 64</span></div>
   </div>
 
   <div class="tabs" id="tabs">
-    <button data-m="shape" class="on" style="--r:40deg"><i class="d"></i><b>かたち</b><small>SHAPE</small></button>
-    <button data-m="filter" style="--r:-70deg"><i class="d"></i><b>ふるい</b><small>FILTER</small></button>
-    <button data-m="env" style="--r:10deg"><i class="d"></i><b>ふくらみ</b><small>ENV</small></button>
-    <button data-m="echo" style="--r:80deg"><i class="d"></i><b>エコー</b><small>DELAY</small></button>
+    <button data-m="shape" class="on"><b>波形</b><small>SHAPE</small></button>
+    <button data-m="filter"><b>フィルター</b><small>FILTER</small></button>
+    <button data-m="env"><b>エンベロープ</b><small>ENV</small></button>
+    <button data-m="echo"><b>ディレイ</b><small>DELAY</small></button>
   </div>
   <div class="hint" id="hint"></div>
   <div id="extra"></div>
@@ -87,10 +85,10 @@
 
   <details><summary>しくみ</summary>
     <ul>
-      <li><b>かたち</b>: 描いた波は「1周期分」で、くり返されて音になる。波のかたちが変わると、含まれる倍音(高い音の成分)が変わり、音色が変わる。</li>
-      <li><b>ふるい</b>: 高い音を削る(ローパスフィルター)。点を右へ動かすと明るく、上へ動かすと削る境目がとがる(クセ)。緑の棒は、フィルターを通ったあとに残る倍音。</li>
-      <li><b>ふくらみ</b>: 押してから最大になるまで(A)、そこから落ち着くまで(D)、押している間の大きさ(S)、離したあとの余韻(R)。</li>
-      <li><b>エコー</b>: 音を遅らせて重ねる。右へ動かすと間隔が長く、上へ動かすと何度も返ってくる。</li>
+      <li><b>波形</b>: 描いた波は「1周期分」で、くり返されて音になる。形が変わると、含まれる倍音(高い音の成分)が変わり、音色が変わる。フィルターを閉じていると、描き替えた差は小さくなる(高い倍音が削られるため)。</li>
+      <li><b>フィルター</b>: ローパスフィルター。点を右へ動かすとカットオフが上がって明るく、上へ動かすとレゾナンス(クセ)が強くなる。緑の棒は、フィルターを通ったあとに残る倍音。</li>
+      <li><b>エンベロープ</b>: 押してから最大になるまで(A)、そこから落ち着くまで(D)、押している間の大きさ(S)、離したあとの余韻(R)。</li>
+      <li><b>ディレイ</b>: 音を遅らせて重ねる。右へ動かすとディレイタイムが長く、上へ動かすとフィードバックが増える。</li>
       <li>鍵盤は、指でなぞってすべらせても弾ける。パソコンのキーボードは A S D F G H J K(黒鍵は W E T Y U)。音が大きいので、最初は音量を下げてから。</li>
     </ul>
   </details>
@@ -100,6 +98,6 @@
   <div class="oct"><button class="pu" id="octdn">◀ 低く</button><label><span>VOL</span><input type="range" id="vol" min="0" max="100" value="60"></label><button class="pu" id="octup">高く ▶</button></div>
   <div id="kb"></div>
 </div></div>
-<script src="wavesynth.js"></script>
+<script src="wavesynth.js?v=20261118a"></script>
 </body>
 </html>

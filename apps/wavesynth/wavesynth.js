@@ -250,12 +250,12 @@
 
   // ---------- ボタン類 ----------
   const MODE = {
-    shape: ['指で波をなぞって描く。描いた形がそのまま音になる。', '1周期分の波(指で描き替える)', '緑=いまの音 / 橙=元の形'],
-    filter: ['点を指で動かす。右ほど明るく、上ほど削る境目がとがる(クセが強い)。', 'フィルター(右=明るい / 上=クセが強い)', '橙=元の倍音 / 緑=通った倍音'],
-    env: ['3つの点を動かす。1つ目=立ち上がり(A)、2つ目=落ち着く大きさ(D・S)、3つ目=余韻(R)。', 'エンベロープ(音量の変化)', '時間 →'],
-    echo: ['点を指で動かす。右ほど間隔が長く、上ほど何度も返ってくる。', 'ディレイ(橙=原音 / 緑=返ってくる音)', ''],
+    shape: ['指で波をなぞって描く。描いた形がそのまま音になる。', '波形: 1周期分(指で描き替える)', '緑=いまの波形 / 橙=元の形'],
+    filter: ['点を指で動かす。右ほどカットオフが高く(明るく)、上ほどレゾナンス(クセ)が強い。', 'ローパスフィルター(右=カットオフ / 上=レゾナンス)', '橙=元の倍音 / 緑=通った倍音'],
+    env: ['3つの点を動かす。1つ目=アタック(A)、2つ目=ディケイとサステイン(D・S)、3つ目=リリース(R)。', 'エンベロープ(音量の変化)', '時間 →'],
+    echo: ['点を指で動かす。右ほどディレイタイムが長く、上ほどフィードバックが多い(何度も返ってくる)。', 'ディレイ(橙=原音 / 緑=返ってくる音)', ''],
   };
-  function updateCaps() { $('cap').textContent = MODE[mode][1]; $('cap2').textContent = MODE[mode][2]; $('hint').textContent = MODE[mode][0]; $('splab').textContent = mode === 'filter' ? '↑ フィルターを通ったあとの倍音の強さ' : '↑ この波に含まれる倍音の強さ'; }
+  function updateCaps() { $('cap').textContent = MODE[mode][1]; $('cap2').textContent = MODE[mode][2]; $('hint').textContent = MODE[mode][0] + (mode === 'shape' && (p.cutoff < 4000 || p.q > 3) ? ' いまはフィルター(' + Math.round(p.cutoff) + 'Hz・クセ ' + p.q.toFixed(1) + ')で高い倍音が削られているので、描き替えた差は小さく聞こえる。プリセットの「そのまま」で、差がそのまま出る。' : ''); $('splab').textContent = mode === 'filter' ? '↑ フィルターを通ったあとの倍音の強さ' : '↑ この波に含まれる倍音の強さ'; }
   function slider(label, key, min, max, step, fmt) {
     const l = document.createElement('label'), s = document.createElement('span'), i = document.createElement('input');
     i.type = 'range'; i.min = min; i.max = max; i.step = step; i.value = p[key]; s.textContent = label + ' ' + fmt(p[key]);
@@ -268,10 +268,10 @@
       const defs = [['なめらか', () => fillShape('sine')], ['三角', () => fillShape('tri')], ['のこぎり', () => fillShape('saw')], ['四角', () => fillShape('square')], ['ランダム', randomSteps], ['スムーズ', () => { smoothWave(); normalize(); }]];
       defs.forEach(([n, f]) => { const b = document.createElement('button'); b.textContent = n; b.addEventListener('click', () => { ensureAudio(); f(); rebuildWave(); drawEditor(); }); x.append(b); });
       const br = document.createElement('div'); br.style.cssText = 'flex-basis:100%;height:0'; x.append(br);
-      x.append(slider('重ねる', 'osc2', 0, 1, 0.01, (v) => Math.round(v * 100) + '%'), slider('ずらし', 'detune', -50, 50, 1, (v) => v + 'セント'));
+      x.append(slider('OSC2 の量', 'osc2', 0, 1, 0.01, (v) => Math.round(v * 100) + '%'), slider('デチューン', 'detune', -50, 50, 1, (v) => v + 'セント'));
       const sv = document.createElement('button'); sv.textContent = 'この波を保存'; sv.addEventListener('click', saveMine); x.append(sv);
     } else if (mode === 'echo') {
-      x.append(slider('量', 'mix', 0, 0.8, 0.01, (v) => Math.round(v / 0.8 * 100) + '%'));
+      x.append(slider('ミックス', 'mix', 0, 0.8, 0.01, (v) => Math.round(v / 0.8 * 100) + '%'));
     }
   }
   function setMode(m) {
@@ -281,7 +281,10 @@
   document.querySelectorAll('#tabs button').forEach((b) => b.addEventListener('click', () => setMode(b.dataset.m)));
 
   // ---------- プリセット ----------
+  // 「そのまま」: フィルターを開けて、重ねもエコーもなし。描いた波の違いが、そのまま音に出る(本人「手で書いても思ったより変化が見えにくい」→「音的な変化」2026-11-18。
+  // それまでの最初の設定〈ベース: 600Hz・クセ6〉は、4〜5番目の倍音を約11dB持ち上げ、8番目より上を削るので、描き替えた差がほとんど聞こえなかった)
   const PRE = [
+    ['そのまま', { cutoff: 12000, q: 0.7, a: 0.005, d: 0.3, s: 0.8, r: 0.2, osc2: 0, detune: 0, mix: 0, delay: 0.3, fb: 0.3 }],
     ['ベース', { shape: 'saw', cutoff: 600, q: 6, a: 0.005, d: 0.25, s: 0.5, r: 0.15, osc2: 0.5, detune: 8, mix: 0, delay: 0.3, fb: 0.3 }],
     ['リード', { shape: 'pulse', cutoff: 3500, q: 4, a: 0.01, d: 0.2, s: 0.7, r: 0.25, osc2: 0.4, detune: 10, mix: 0.25, delay: 0.3, fb: 0.35 }],
     ['ベル', { shape: 'bell', cutoff: 9000, q: 1, a: 0.003, d: 1.2, s: 0, r: 1.2, osc2: 0.2, detune: 6, mix: 0.35, delay: 0.4, fb: 0.5 }],
@@ -378,7 +381,7 @@
   setInterval(lcd, 150);
 
   // ---------- はじめ ----------
-  fillShape('saw'); applyPreset(PRE[0][1]);
+  fillShape('saw'); applyPreset(PRE[0][1]);   // そのまま(のこぎりの波のまま)
   preEl.querySelector('button').classList.add('on');
   showMine(false); buildKeys(); setMode('shape'); scope();
   window.addEventListener('resize', drawEditor);
