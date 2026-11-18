@@ -64,6 +64,7 @@
   .padbox .lab.one { grid-template-rows:1fr; } .padbox .lab.one svg { width:84px; height:24px; stroke-width:2.4; }
   .padbox.sel { border-color:var(--ledg); box-shadow:0 0 0 2px var(--ledg), 0 0 14px #48ff7a55; }
   .padbox.sel .lab { background:#dff7e4; }
+  .padbox .lab { cursor:pointer; } .padbox .lab:focus-visible { outline:3px solid var(--ledg); outline-offset:-3px; }
   .pad { position:absolute; left:12px; right:12px; top:56px; height:58px; background:linear-gradient(#33363a,#17181a); border:3px solid #0a0a0a; border-radius:6px; box-shadow:0 6px 0 #000; cursor:pointer; touch-action:none; }
   .pad.on { transform:translateY(4px); box-shadow:0 2px 0 #000; background:linear-gradient(#3e4146,#1c1d20); }
   .name { position:absolute; transform:translate(-50%,-50%); color:var(--ink); font-weight:900; font-size:19px; letter-spacing:.06em; line-height:1; white-space:nowrap; }
@@ -76,6 +77,6 @@
 <body>
 <header><span>ピュンピュンマシーン</span><a href="../../apps.html">アプリ一覧へ</a></header>
 <div class="stage" id="stage"><div class="scaler" id="scaler"><div class="panel" id="panel"></div><div class="panel" id="mod"></div><div class="panel" id="echo"></div></div></div>
-<script src="dubsiren.js?v=20261117e"></script>
+<script src="dubsiren.js?v=20261118a"></script>
 </body>
 </html>
