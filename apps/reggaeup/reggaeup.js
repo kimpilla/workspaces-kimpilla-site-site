@@ -198,7 +198,7 @@
   $('prev').onclick = () => { S.page = (S.page - 1 + S.bars) % S.bars; save(); drawRoll(); };
   $('next').onclick = () => { S.page = (S.page + 1) % S.bars; save(); drawRoll(); };
   function mark(bar, st) { rollCells.forEach((c) => c.classList.toggle('now', bar === S.page && +c.dataset.s === st)); }
-  $('bpm').value = S.bpm; $('bpm').onchange = () => { S.bpm = Math.max(50, Math.min(140, Math.round(+$('bpm').value || 76))); $('bpm').value = S.bpm; save(); };
+  $('bpm').value = S.bpm; $('bpm').onchange = () => { S.bpm = Math.max(40, Math.min(240, Math.round(+$('bpm').value || 76))); $('bpm').value = S.bpm; save(); };
   $('bars').value = String(S.bars); $('bars').onchange = () => { S.bars = +$('bars').value; if (S.page >= S.bars) S.page = 0; if (S.sel >= S.bars) S.sel = -1; save(); drawAll(); };
   function drawAll() { drawChords(); drawTabs(); drawRoll(); }
 

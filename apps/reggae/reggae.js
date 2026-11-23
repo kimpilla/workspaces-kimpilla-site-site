@@ -761,7 +761,7 @@
   hs.onchange = () => { S.song.hat = hs.value === 'gu' ? 'gu' : Number(hs.value); applyHat(); changed(true); drawSongGrid(); };
   const ps = $('pat'); Object.keys(PATTERNS).forEach((k) => { const o = el('option', { textContent: k }); if (k === S.song.pat) o.selected = true; ps.appendChild(o); });
   ps.onchange = () => { S.song.pat = ps.value; S.song.rows = PATTERNS[ps.value](); if ((S.song.hat || 12) !== 12) applyHat(); changed(true); };
-  $('bpm').value = S.song.bpm; $('bpm').onchange = () => { const v = Math.max(50, Math.min(140, Math.round(+$('bpm').value || 76))); $('bpm').value = v; S.song.bpm = v; changed(false); };
+  $('bpm').value = S.song.bpm; $('bpm').onchange = () => { const v = Math.max(40, Math.min(240, Math.round(+$('bpm').value || 76))); $('bpm').value = v; S.song.bpm = v; changed(false); };
   drawParts(); drawBlockExports(); drawSongGrid(); drawSeq(); drawSheet(); updateTotal();
   $('tabR').onclick = () => showTab('r'); $('tabS').onclick = () => showTab('s'); $('tabO').onclick = () => showTab('o');
   showTab('s');
