@@ -803,7 +803,7 @@
   async function exportBlkZip() {
     if (!S.blocks.length) { $('status').textContent = 'ブロックがまだない。'; return; }
     $('status').textContent = '書き出し中…';
-    try { const files = []; for (let i = 0; i < S.blocks.length; i++) { const r = await wavBlob(null, blkQ(i)); files.push({ name: 'reggae_block' + (i + 1) + '.wav', data: new Uint8Array(await r.blob.arrayBuffer()) }); } saveBlob(makeZip(files), 'reggae_blocks.zip', $('status')); if (!window.claude) $('status').textContent = '書き出した: reggae_blocks.zip(WAV ' + files.length + 'つ)'; }
+    try { const files = []; for (let i = 0; i < S.blocks.length; i++) { const r = await wavBlob(null, blkQ(i)); files.push({ name: 'reggae_block' + (i + 1) + '.wav', data: new Uint8Array(await r.blob.arrayBuffer()) }); } saveBlob(makeZip(files), 'reggae_blocks.zip', $('status')); if (!window.claude) $('status').textContent = '書き出した: reggae_blocks.zip(WAV ' + files.length + '個)'; }
     catch (e) { $('status').textContent = '書き出せませんでした: ' + e.message; }
   }
   // パートごとのボタン: 1回押すと、そのパートのWAVが1つ保存される(まとめて連続で保存すると、iPhone・iPadでは1つしか残らないため。2026-11-24)
@@ -817,7 +817,7 @@
     const ks = PARTS.map(([k]) => k).filter((k) => !S.mute[k]);
     if (!S.blocks.length || !ks.length) { $('status').textContent = !S.blocks.length ? 'ブロックがまだない。' : 'チェックしたパートがない。'; return; }
     try { const files = []; for (let i = 0; i < S.blocks.length; i++) for (const k of ks) { $('status').textContent = '書き出し中… ' + (files.length + 1) + ' / ' + S.blocks.length * ks.length; const q = blkQ(i), r = await wavBlob(k, q); files.push({ name: 'block' + (i + 1) + '/reggae_' + k + q.sfx + '.wav', data: new Uint8Array(await r.blob.arrayBuffer()) }); }
-      saveBlob(makeZip(files), 'reggae_blocks_parts.zip', $('status')); if (!window.claude) $('status').textContent = '書き出した: reggae_blocks_parts.zip(WAV ' + files.length + 'つ。ブロックごとのフォルダ)'; }
+      saveBlob(makeZip(files), 'reggae_blocks_parts.zip', $('status')); if (!window.claude) $('status').textContent = '書き出した: reggae_blocks_parts.zip(WAV ' + files.length + '個。ブロックごとのフォルダ)'; }
     catch (e) { $('status').textContent = '書き出せませんでした: ' + e.message; }
   }
   // 全パートを1つのzipに(圧縮なし)
@@ -840,7 +840,7 @@
     const q = expRange(), ks = PARTS.map(([k]) => k).filter((k) => !S.mute[k]);
     if (!S.blocks.length || !ks.length) { $('status').textContent = !S.blocks.length ? 'ブロックがまだない。' : 'チェックしたパートがない。'; return; }
     $('status').textContent = '書き出し中…';
-    try { const files = []; for (const k of ks) { const r = await wavBlob(k, q); files.push({ name: 'reggae_' + k + q.sfx + '.wav', data: new Uint8Array(await r.blob.arrayBuffer()) }); } saveBlob(makeZip(files), 'reggae_parts' + q.sfx + '.zip', $('status')); if (!window.claude) $('status').textContent = '書き出した: reggae_parts' + q.sfx + '.zip(WAV ' + files.length + 'つ)'; }
+    try { const files = []; for (const k of ks) { const r = await wavBlob(k, q); files.push({ name: 'reggae_' + k + q.sfx + '.wav', data: new Uint8Array(await r.blob.arrayBuffer()) }); } saveBlob(makeZip(files), 'reggae_parts' + q.sfx + '.zip', $('status')); if (!window.claude) $('status').textContent = '書き出した: reggae_parts' + q.sfx + '.zip(WAV ' + files.length + '個)'; }
     catch (e) { $('status').textContent = '書き出せませんでした: ' + e.message; }
   }
   const origChanged = changed;
