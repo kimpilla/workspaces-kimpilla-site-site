@@ -70,6 +70,7 @@
   .tabs button.on:hover:not(:disabled) { background: var(--fg); color: var(--bg); }
   .sheet { position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; max-height: 64vh; overflow-y: auto; background: var(--bg); border-top: 2px solid var(--fg); padding: 8px max(16px, env(safe-area-inset-left, 0px)) max(10px, env(safe-area-inset-bottom, 0px)); }
   .sheet[hidden] { display: none; }
+  body.dnd .sheet { visibility: hidden; }
   body.onS header, body.onS h1 { display: none; }
   body.onS main { padding-bottom: 64vh; }
   .sheet .row { margin: 4px 0; }
@@ -102,6 +103,9 @@
   .bar.play { filter: invert(1); }
   .bar i { font-style: normal; overflow: hidden; white-space: nowrap; }
   .bar.intro { cursor: default; }
+  .bar.dragsrc { outline: 3px dashed var(--accent); outline-offset: 2px; }
+  .bar.droptgt { outline: 4px solid var(--accent); outline-offset: 2px; }
+  .dragghost { position: fixed; z-index: 60; transform: translateX(-50%); pointer-events: none; background: var(--fg); color: var(--bg); padding: 6px 10px; font-size: 13px; white-space: nowrap; }
   .bar:hover:not(:disabled) { background: var(--bg); color: var(--fg); }
   .bar.fl:hover:not(:disabled) { background: var(--accent); color: #fff; }
   .bar.ex:hover:not(:disabled) { background: var(--fg); color: var(--bg); }
@@ -189,6 +193,6 @@
 <script src="../../audio-unlock.js?v=7"></script>
 <script src="../common/wav.js"></script>
 <script src="samples.js?v=20261112"></script>
-<script src="reggae.js?v=20261124d"></script>
+<script src="reggae.js?v=20261124e"></script>
 </body>
 </html>

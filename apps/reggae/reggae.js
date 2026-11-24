@@ -427,8 +427,52 @@
     const x = el('button', { type: 'button', className: 'bar' + (E.fill || (o && o.fl) ? ' fl' : E.ex ? ' ex' : '') + (isSel ? ' sel' : '') + (dirty ? ' pend' : ''), textContent: String(k + 1) });
     x.dataset.kind = kind; x.dataset.bi = bi; x.dataset.bar = k;
     x.onclick = () => { S.cur = { k: kind, bi, bar: k }; drawSeq(); drawSheet(); const q = document.querySelector('.bar.sel'); if (q) q.scrollIntoView({ block: 'nearest' }); };
+    if (kind === 'list') x.addEventListener('pointerdown', (e) => dragStart(e, x, bi, k));
     return x;
   }
+  // 小節のドラッグ&ドロップ: 長押しして、別の小節まで動かして離すと、その小節に写す(上書き)。2026-11-24、本人「作った小節をドラッグ&ドロップでペーストできると便利」「落とした先の小節を置き換える形でOK」
+  let dnd = null;
+  function dragStart(e, x, bi, k) {
+    if (e.button) return;
+    const d = { x0: e.clientX, y0: e.clientY, bi, k, src: x, on: false, over: null, ghost: null };
+    d.timer = setTimeout(() => {
+      d.on = true; lpHeld = true; x.classList.add('dragsrc'); document.body.classList.add('dnd');
+      d.ghost = el('div', { className: 'dragghost', textContent: 'ブロック' + (bi + 1) + '・' + (k + 1) + '小節目を写す' }); document.body.appendChild(d.ghost); dragMove(e);
+      try { navigator.vibrate && navigator.vibrate(15); } catch (er) {}
+    }, 350);
+    dnd = d;
+  }
+  function dragMove(e) {
+    const d = dnd; if (!d) return;
+    if (!d.on) { if (Math.abs(e.clientX - d.x0) > 10 || Math.abs(e.clientY - d.y0) > 10) { clearTimeout(d.timer); dnd = null; } return; }
+    d.ghost.style.left = e.clientX + 'px'; d.ghost.style.top = (e.clientY - 56) + 'px';
+    const t = document.elementFromPoint(e.clientX, e.clientY), c = t && t.closest('.bar[data-bar]');
+    const ok = c && c.dataset.kind === 'list' && !c.classList.contains('intro') && c !== d.src ? c : null;
+    if (d.over && d.over !== ok) d.over.classList.remove('droptgt');
+    d.over = ok; if (ok) ok.classList.add('droptgt');
+  }
+  function dragEnd() {
+    const d = dnd; dnd = null; if (!d) return; clearTimeout(d.timer);
+    if (!d.on) return;
+    d.src.classList.remove('dragsrc'); document.body.classList.remove('dnd'); if (d.ghost) d.ghost.remove();
+    const t = d.over; if (!t) return; t.classList.remove('droptgt');
+    copyBar(d.bi, d.k, +t.dataset.bi, +t.dataset.bar);
+  }
+  function copyBar(sbi, sk, tbi, tk) {
+    commitDirty();
+    const sb = S.blocks[sbi], tb = S.blocks[tbi]; if (!sb || !tb) return;
+    const E = barEff(sb, sk), o = sb.ov && sb.ov[sk];
+    (tb.ov || (tb.ov = {}))[tk] = { rows: baseRows(sb, sbi, sk), fl: !!(E.fill || (o && o.fl)), crashAt: 0 };
+    S.works = {}; S.work = null; S.cur = { k: 'list', bi: tbi, bar: tk };
+    changed(true);
+  }
+  document.addEventListener('pointermove', dragMove, true);
+  document.addEventListener('pointerup', dragEnd, true);
+  document.addEventListener('pointercancel', () => { if (dnd && !dnd.on) { clearTimeout(dnd.timer); dnd = null; } }, true);
+  // 指の場合、ブラウザがスクロールを始めると pointermove が止まるので、タッチの位置で追う
+  document.addEventListener('touchmove', (e) => { if (!dnd) return; const t = e.touches[0]; if (dnd.on) e.preventDefault(); if (t) dragMove({ clientX: t.clientX, clientY: t.clientY }); }, { passive: false });
+  document.addEventListener('touchend', () => { if (dnd && dnd.on) dragEnd(); }, true);
+  document.addEventListener('touchcancel', () => { if (dnd) { clearTimeout(dnd.timer); if (dnd.on) { dnd.src.classList.remove('dragsrc'); document.body.classList.remove('dnd'); if (dnd.ghost) dnd.ghost.remove(); if (dnd.over) dnd.over.classList.remove('droptgt'); } dnd = null; } }, true);
   function playOnly(b, kind, bi, btn) {
     if (playing && previewBlocks && previewBlocks[0] === b) { stopAll(); return; }
     if (playing) stopAll();
@@ -480,7 +524,7 @@
     if (S.askLen) { bt.appendChild(el('span', { className: 'small', textContent: '長さ: ' })); [1, 4, 8].forEach((n) => { const x = el('button', { type: 'button', className: 'sbtn', textContent: n + '小節' }); x.onclick = () => { S.askLen = false; addB(n); }; bt.appendChild(x); }); }
     else { const ab = el('button', { type: 'button', className: 'sbtn', textContent: '＋ ブロック' }); ab.onclick = () => { S.askLen = true; drawSeq(); }; bt.appendChild(ab); }
     box.appendChild(bt);
-    box.appendChild(el('p', { className: 'small', textContent: '白=標準　黒=変えた小節　赤=フィル　点線=まだ保存していない　点滅=いま鳴っている小節' }));
+    box.appendChild(el('p', { className: 'small', textContent: '白=標準　黒=変えた小節　赤=フィル　点線=まだ保存していない　点滅=いま鳴っている小節。小節を長押しして、別の小節まで動かして離すと、その小節に写す(上書き)。' }));
     if (S.blocks.length) {
       const dz = el('details', { className: 'fold' }); dz.style.marginTop = '48px';
       dz.appendChild(el('summary', { textContent: '全部消す(ひらくと、消すボタンが出る)' }));
