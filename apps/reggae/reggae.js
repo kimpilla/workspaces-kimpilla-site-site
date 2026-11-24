@@ -791,7 +791,20 @@
     sel.appendChild(el('option', { value: '', textContent: '全体(並べた順に、全部)' }));
     S.blocks.forEach((b, i) => { sel.appendChild(el('option', { value: String(i), textContent: 'ブロック ' + (i + 1) + '(' + b.bars + '小節' + (b.reps > 1 ? '×' + b.reps + '回' : '') + (b.lead ? '・曲頭フィルあり(+1小節)' : '') + ')' })); if (b.lead) sel.appendChild(el('option', { value: 'L' + i, textContent: 'ブロック ' + (i + 1) + 'の曲頭フィルだけ(1小節)' })); });
     if (cur && [...sel.options].some((o) => o.value === cur)) sel.value = cur;
-    drawPartBtns();
+    drawPartBtns(); drawBlkBtns();
+  }
+  // ブロックごとのボタン: 1回押すと、そのブロックのWAV(鳴らすパートをまとめた音)が1つ(2026-11-24、本人「ブロックごとのボタンがほしい」)
+  const blkQ = (i) => ({ blk: i, sfx: '_block' + (i + 1), mix: 'block' + (i + 1) });
+  function drawBlkBtns() {
+    const box = $('blkBtns'); if (!box) return; box.innerHTML = '';
+    S.blocks.forEach((b, i) => { const x = el('button', { type: 'button', textContent: 'ブロック ' + (i + 1) }); x.onclick = () => { const q = blkQ(i); exportWav(null, q.mix, q.blk, q); }; box.appendChild(x); });
+    if (!box.children.length) box.appendChild(el('span', { className: 'small', textContent: 'ブロックがまだない。' }));
+  }
+  async function exportBlkZip() {
+    if (!S.blocks.length) { $('status').textContent = 'ブロックがまだない。'; return; }
+    $('status').textContent = '書き出し中…';
+    try { const files = []; for (let i = 0; i < S.blocks.length; i++) { const r = await wavBlob(null, blkQ(i)); files.push({ name: 'reggae_block' + (i + 1) + '.wav', data: new Uint8Array(await r.blob.arrayBuffer()) }); } saveBlob(makeZip(files), 'reggae_blocks.zip', $('status')); if (!window.claude) $('status').textContent = '書き出した: reggae_blocks.zip(WAV ' + files.length + 'つ)'; }
+    catch (e) { $('status').textContent = '書き出せませんでした: ' + e.message; }
   }
   // パートごとのボタン: 1回押すと、そのパートのWAVが1つ保存される(まとめて連続で保存すると、iPhone・iPadでは1つしか残らないため。2026-11-24)
   function drawPartBtns() {
@@ -858,6 +871,7 @@
   $('land').onchange = updateTotal;
   $('saveMix').onclick = () => { const q = expRange(); exportWav(null, q.mix, q.blk, q); };
   $('expBlk').onchange = drawPartBtns;
+  $('saveBlks').onclick = exportBlkZip;
   $('saveParts').onclick = exportZip;
   // ---- 曲データのテキスト ----
   const dmsg = (t) => { $('dataMsg').textContent = t; };
