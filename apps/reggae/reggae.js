@@ -812,6 +812,14 @@
     PARTS.forEach(([k, n]) => { if (S.mute[k]) return; const x = el('button', { type: 'button', textContent: n }); x.onclick = () => { const q = expRange(); exportWav(k, k + q.sfx, q.blk, q); }; box.appendChild(x); });
     if (!box.children.length) box.appendChild(el('span', { className: 'small', textContent: '鳴らすパートがない(「並び」タブの上のチェック)。' }));
   }
+  // ブロック×パート: 全ブロックの、パートごとのWAVを1つのzipに(2026-11-24、本人「ブロック×パートも欲しい」)
+  async function exportBxP() {
+    const ks = PARTS.map(([k]) => k).filter((k) => !S.mute[k]);
+    if (!S.blocks.length || !ks.length) { $('status').textContent = !S.blocks.length ? 'ブロックがまだない。' : 'チェックしたパートがない。'; return; }
+    try { const files = []; for (let i = 0; i < S.blocks.length; i++) for (const k of ks) { $('status').textContent = '書き出し中… ' + (files.length + 1) + ' / ' + S.blocks.length * ks.length; const q = blkQ(i), r = await wavBlob(k, q); files.push({ name: 'block' + (i + 1) + '/reggae_' + k + q.sfx + '.wav', data: new Uint8Array(await r.blob.arrayBuffer()) }); }
+      saveBlob(makeZip(files), 'reggae_blocks_parts.zip', $('status')); if (!window.claude) $('status').textContent = '書き出した: reggae_blocks_parts.zip(WAV ' + files.length + 'つ。ブロックごとのフォルダ)'; }
+    catch (e) { $('status').textContent = '書き出せませんでした: ' + e.message; }
+  }
   // 全パートを1つのzipに(圧縮なし)
   const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
   const crc32 = (u) => { let c = 0xFFFFFFFF; for (let i = 0; i < u.length; i++) c = CRC[(c ^ u[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
@@ -872,6 +880,7 @@
   $('saveMix').onclick = () => { const q = expRange(); exportWav(null, q.mix, q.blk, q); };
   $('expBlk').onchange = drawPartBtns;
   $('saveBlks').onclick = exportBlkZip;
+  $('saveBxP').onclick = exportBxP;
   $('saveParts').onclick = exportZip;
   // ---- 曲データのテキスト ----
   const dmsg = (t) => { $('dataMsg').textContent = t; };
