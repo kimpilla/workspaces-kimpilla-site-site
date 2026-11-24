@@ -151,12 +151,12 @@
     const BL = list || S.blocks;
     const ev = []; let t = 0; const s = S.p.shuffle / 100; let landNext = false; const spb = 60 / S.song.bpm; const spans = [];
     BL.forEach((b, i0) => {
-      const bi = i0 + (off0 || 0), tb = t;
+      const bi = i0 + (off0 || 0), tb = t; let lead = null;
       if (b.lead && !S.noHead) {      // 曲頭フィル: ブロックの前に、導入の1小節を足す(ブロックの小節は、そのまま残る)
         const rows = b.lead.rows, t0 = t, seedBar = bi * 1000 - 1;
         ROWS.forEach((n) => { for (let i = 0; i < NS; i++) { const v = rows[n][i]; if (!v) continue; const beat = i / SL, frac = beat - Math.floor(beat); let tt = t0 + (Math.floor(beat) + (i % U16 === 0 ? warp(frac, s) : frac)) * spb, vel; if (n === 'HAT') { vel = (i % 24 === 0 ? 0.62 : i % 12 === 0 ? 0.42 : 0.34) * (v === 2 ? 1.45 : v === 3 ? 0.45 : 1) * hatFactor(bi, i); tt += (rnd(seedBar * 17 + i * 5 + 11) - 0.5) * 2 * (S.p.sway / 100) * 0.02; } else vel = BASE_VEL[n] * (v === 2 ? 1.25 : v === 3 ? 0.4 : 1); ev.push({ t: Math.max(0, tt), row: n, vel, bi }); } });
         OFFS.forEach(([k]) => { if (b.off && b.off[k]) { const rm = new Set(OFF_ROWS[k]); for (let q = ev.length - 1; q >= 0 && ev[q].t >= t0; q--) if (ev[q].bi === bi && rm.has(ev[q].row)) ev.splice(q, 1); } });
-        landNext = true; t += 4 * spb;
+        landNext = true; t += 4 * spb; lead = { t0: tb, t1: t };
       }
       for (let rep = 0; rep < b.reps; rep++) {
         for (let bar = 0; bar < b.bars; bar++) {
@@ -183,7 +183,7 @@
           t += 4 * spb;
         }
       }
-      spans.push({ t0: tb, t1: t });
+      spans.push({ t0: tb, t1: t, lead });
     });
     return { ev, dur: t, spans };
   }
@@ -316,7 +316,7 @@
     run();
   }
   function stopAll() {
-    const wasAud = S.audition; playing = false; session++; clearTimeout(timer); cancelAnimationFrame(raf); segs = []; document.querySelectorAll('.bar.play').forEach((x) => x.classList.remove('play')); $('play').textContent = '▶ 再生'; previewBlocks = null; S.audition = false; nodesUntil = 0; document.querySelectorAll('.bplay').forEach((x) => { x.textContent = '▶'; });
+    const wasAud = S.audition; playing = false; session++; clearTimeout(timer); cancelAnimationFrame(raf); segs = []; document.querySelectorAll('.bar.play').forEach((x) => x.classList.remove('play')); $('play').textContent = '▶ 再生'; previewBlocks = null; S.audition = false; nodesUntil = 0; document.querySelectorAll('.bplay').forEach((x) => { x.textContent = '▶'; }); if (S.pvBtn) S.pvBtn.textContent = '▶';
     if (ctx) {      // 予約済みの音を、まとめて止める(出力を作り直す)
       master.disconnect(); master = ctx.createGain(); master.gain.value = 0.9; master.connect(ctx.destination);
       PARTS.forEach(([k]) => { partGain[k].disconnect(); const g = ctx.createGain(); g.connect(master); partGain[k] = g; });
@@ -327,11 +327,14 @@
 
   // ---- 書き出し ----
   // only: パート名(そのパートだけ) / blk: ブロック番号(そのブロックだけ。nullで全体) / unify: ブロックの長さを、いちばん長いものにそろえる
-  async function render(only, blk, unify) {
+  async function render(only, blk, unify, leadOnly) {
     await ensure(); await loading;
     const { ev, dur, spans } = timeline(), rate = 44100, tail = 2.0, wrap = $('wrap').checked;
     let list = ev, len = dur, shift = 0;
-    if (blk != null) {
+    if (blk != null && leadOnly) {      // 曲頭フィルの1小節だけ(2026-11-24、本人「冒頭フィルだけを分割でダウンロードできない」)
+      const ld = spans[blk].lead; if (!ld) throw new Error('このブロックには曲頭フィルがない');
+      shift = ld.t0; len = ld.t1 - ld.t0; list = ev.filter((e) => e.bi === blk && e.t < ld.t1 - 1e-6);
+    } else if (blk != null) {
       const sp = spans[blk]; shift = sp.t0; list = ev.filter((e) => e.bi === blk);
       const own = sp.t1 - sp.t0, ub = Math.round(+$('unifyBars').value || 0); len = unify ? (ub > 0 ? ub * 4 * 60 / S.song.bpm : Math.max(...spans.map((x) => x.t1 - x.t0))) : own;
       if (unify && Math.abs(len - own) > 0.001) {       // 足りない分は、くり返して、長さをそろえる
@@ -347,7 +350,19 @@
     for (let i = 0; i < d.length; i++) od[i % n] += d[i];
     return o;
   }
-  async function exportWav(only, label, blk) {
+  async function wavBlob(only, q) {
+    S.noHead = !q.lead && !$('headIn').checked;
+    try { const buf = await render(only, q.blk, !q.lead && $('unify').checked, q.lead); return { blob: audioBufferToWav(buf), sec: buf.length / buf.sampleRate }; }
+    finally { S.noHead = false; }
+  }
+  async function exportWav(only, label, blk, q) {
+    if (q) {
+      if (!S.blocks.length) { $('status').textContent = 'ブロックがまだない。'; return; }
+      $('status').textContent = '書き出し中…';
+      try { const r = await wavBlob(only, q); saveBlob(r.blob, 'reggae_' + label + '.wav', $('status')); if (!window.claude) $('status').textContent = '書き出した: reggae_' + label + '.wav(' + r.sec.toFixed(1) + '秒)'; }
+      catch (e) { $('status').textContent = '書き出せませんでした: ' + e.message; }
+      return;
+    }
     if (!S.blocks.length) { $('status').textContent = 'ブロックがまだない。'; return; }
     $('status').textContent = '書き出し中…';
     S.noHead = !$('headIn').checked;
@@ -441,10 +456,10 @@
         const bt = el('div', { className: 'btns' });
         const mk = (txt, fn) => { const x = el('button', { type: 'button', className: 'sbtn', textContent: txt }); x.onclick = fn; bt.appendChild(x); };
         const fix = (n) => { if (S.cur && S.cur.k === 'list') { if (S.cur.bi === bi) S.cur.bi = n; else if (S.cur.bi === n) S.cur.bi = bi; } };
-        mk('↑ 前へ', () => { if (bi > 0) { S.works = {}; S.work = null; [S.blocks[bi - 1], S.blocks[bi]] = [S.blocks[bi], S.blocks[bi - 1]]; fix(bi - 1); changed(true); } });
-        mk('↓ 後ろへ', () => { if (bi < S.blocks.length - 1) { S.works = {}; S.work = null; [S.blocks[bi + 1], S.blocks[bi]] = [S.blocks[bi], S.blocks[bi + 1]]; fix(bi + 1); changed(true); } });
-        mk('複製', () => { S.works = {}; S.work = null; S.blocks.splice(bi + 1, 0, JSON.parse(JSON.stringify(b))); changed(true); });
-        mk('🗑 消す', () => { S.works = {}; S.work = null; S.blocks.splice(bi, 1); S.cur = null; changed(true); });
+        mk('↑ 前へ', () => { if (bi > 0) { commitDirty(); S.works = {}; S.work = null; [S.blocks[bi - 1], S.blocks[bi]] = [S.blocks[bi], S.blocks[bi - 1]]; fix(bi - 1); changed(true); } });
+        mk('↓ 後ろへ', () => { if (bi < S.blocks.length - 1) { commitDirty(); S.works = {}; S.work = null; [S.blocks[bi + 1], S.blocks[bi]] = [S.blocks[bi], S.blocks[bi + 1]]; fix(bi + 1); changed(true); } });
+        mk('複製', () => { commitDirty(); S.works = {}; S.work = null; S.blocks.splice(bi + 1, 0, JSON.parse(JSON.stringify(b))); changed(true); });
+        mk('🗑 消す', () => { commitDirty(); S.works = {}; S.work = null; S.blocks.splice(bi, 1); S.cur = null; changed(true); });
         m.appendChild(bt);
       }
       d.appendChild(m);
@@ -456,7 +471,7 @@
     if (!S.blocks.length) {
       box.appendChild(el('p', { textContent: 'ブロックを作ると、小節の四角が出る。四角をタップして、小節を直す。曲頭の導入だけを書き出したいときは、1小節のブロックを作って、フィルのタブで導入を置く。' }));
       const r0 = el('div', { className: 'row' });
-      [8, 4, 1].forEach((n) => { const x = el('button', { type: 'button', textContent: '＋ ' + n + '小節のブロックを作る' }); x.onclick = () => { S.blocks.push(newBlock(n)); S.cur = { k: 'list', bi: 0, bar: 0 }; S.work = null; S.works = {}; changed(true); }; r0.appendChild(x); });
+      [8, 4, 1].forEach((n) => { const x = el('button', { type: 'button', textContent: '＋ ' + n + '小節のブロックを作る' }); x.onclick = () => { commitDirty(); S.blocks.push(newBlock(n)); S.cur = { k: 'list', bi: 0, bar: 0 }; S.work = null; S.works = {}; changed(true); }; r0.appendChild(x); });
       box.appendChild(r0);
     }
     S.blocks.forEach((b, i) => box.appendChild(blockCard(b, 'list', i)));
@@ -506,6 +521,18 @@
     return (S.works[key] = { key, rows, dirty: false, fl: !!(b.ov[bar] && b.ov[bar].fl) || !!E.fill, opts: { add: Object.assign({}, E.add), accent: E.accent, crashAt: rows.CRASH[0] ? 1 : rows.CRASH[48] ? 3 : 0 } });
   }
   function getWork(b, bi, bar) { S.work = mkWork(b, bi, bar); return S.work; }
+  // まだ保存していない直し(点線の小節)を、その小節に保存する。ブロックを動かす・複製する・消す前と、フィルを一覧から入れたときに使う
+  // (2026-11-24、本人「パートを増やすと入れていたフィルインが消える」。入れたフィルが保存前のまま、ほかの操作で捨てられていた)
+  function commitDirty() {
+    Object.keys(S.works).forEach((key) => {
+      const w = S.works[key]; if (!w.dirty) return;
+      const [, bi, bar] = key.split('-').map(Number), b = S.blocks[bi]; if (!b) return;
+      const ov = b.ov || (b.ov = {}), o = ov[bar] || (ov[bar] = {});
+      o.rows = copyRows(w.rows); o.fl = !!w.fl; o.crashAt = 0; delete o.fill; delete o.off; delete o.add; delete o.accent;
+      delete S.works[key];
+    });
+    S.work = null;
+  }
   function auditionBar() {
     if (playing && S.audition) { stopAll(); drawSheet(); return; }
     if (playing) stopAll();
@@ -535,7 +562,30 @@
     fb.bars[0].hits.forEach(([n, pos, v]) => { const g = Math.round(pos * SL); if (g >= 0 && g < NS) rows[n][g] = v; });
     b.lead = { name: fb.name, rows }; save(); changed(true);
   }
-  function closePick() { const o = document.getElementById('pickPanel'); if (o) o.remove(); }
+  // フィルを入れる前に、入れたときの音を聞く(2026-11-24、本人「フィルインを入れる際にどんなフィルインかわからない」)
+  function previewFill(b, bi, fb, grp, bar0, start, btn) {
+    if (playing && S.pvBtn === btn) { stopAll(); return; }
+    if (playing) stopAll();
+    let rows;
+    if (grp === 'intro') {
+      const lead = baseRows(b, bi, 0); lead.CRASH.fill(0);
+      const g0 = Math.round(fb.at * SL), g1 = Math.min(NS, Math.round((fb.at + fb.len) * SL));
+      for (let g = g0; g < g1; g++) ROWS.forEach((n) => { if (n !== 'CRASH') lead[n][g] = 0; });
+      fb.bars[0].hits.forEach(([n, pos, v]) => { const g = Math.round(pos * SL); if (g >= 0 && g < NS) lead[n][g] = v; });
+      rows = [lead, baseRows(b, bi, 0)];
+    } else {
+      const need = Math.ceil((start + fb.len) / 4); rows = [];
+      for (let k = 0; k < need; k++) rows.push(baseRows(b, bi, bar0 + k));
+      const g0 = Math.round(start * SL), g1 = Math.round((start + fb.len) * SL);
+      for (let g = g0; g < g1; g++) ROWS.forEach((n) => { if (n !== 'CRASH') rows[Math.floor(g / NS)][n][g % NS] = 0; });
+      fb.bars[0].hits.forEach(([n, pos, v]) => { const g = Math.round((start + pos - fb.at) * SL); if (g >= 0 && g < rows.length * NS) rows[Math.floor(g / NS)][n][g % NS] = v; });
+      if (bar0 > 0) rows.unshift(baseRows(b, bi, bar0 - 1));      // 前の1小節から聞くと、入り方が分かる
+    }
+    const ov = {}; rows.forEach((r, k) => { ov[k] = { rows: r, fl: false }; });
+    previewBlocks = [{ bars: rows.length, reps: 1, ov, off: b.off, add: { open: 0, ghost: 0 }, crashAt: 0, accent: 'keep', fillType: 'none', fillFrom: 0, fillBar: 0, fillRows: zero(), alt: 0, intro: false }];
+    previewInfo = { kind: 'pv', bi }; S.pvBtn = btn; btn.textContent = '■'; play();
+  }
+  function closePick() { if (S.pvBtn) { if (playing) stopAll(); S.pvBtn = null; } const o = document.getElementById('pickPanel'); if (o) o.remove(); }
   function showPick(b, bi, grp, txt, endBar) {
     closePick();
     const pn = el('div', { id: 'pickPanel' });
@@ -543,14 +593,20 @@
     const hd = el('div', { className: 'row' }); hd.appendChild(el('strong', { textContent: txt + 'を選ぶ' }));
     const cl = el('button', { type: 'button', className: 'sbtn', textContent: '閉じる' }); cl.onclick = closePick; hd.appendChild(cl); pn.appendChild(hd);
     pn.appendChild(el('p', { className: 'small', textContent: grp === 'intro' ? '選ぶと、このブロックの1小節目に入る。' : '選ぶと、フィルの終わりが' + endBar + '小節目の終わりに着くように入る。' }));
+    pn.appendChild(el('p', { className: 'small', textContent: '▶ で、このブロックの小節に入れたときの音を聞ける(もう一度押すと止まる)。名前を押すと入る。' }));
     allFills().filter((f) => f.grp === grp).forEach((fb) => {
-      const x = el('button', { type: 'button', className: 'sbtn', textContent: fb.name + (fb.mine ? '(自分)' : '') }); x.style.cssText = 'display:block;width:100%;text-align:left;margin:0 0 6px;padding:10px';
-      x.onclick = () => {
+      const r = el('div', { className: 'row' }); r.style.cssText = 'align-items:flex-start;flex-wrap:nowrap;margin:0 0 8px';
+      const pv = el('button', { type: 'button', className: 'sbtn', textContent: '▶' }); pv.style.cssText = 'flex:none;padding:10px 12px';
+      pv.onclick = () => { const startAbs = grp === 'intro' ? fb.at : endBar * 4 - fb.len; if (startAbs < 0) return; previewFill(b, bi, fb, grp, Math.floor(startAbs / 4), startAbs - Math.floor(startAbs / 4) * 4, pv); };
+      const x = el('button', { type: 'button', className: 'sbtn' }); x.style.cssText = 'flex:1;text-align:left;padding:8px 10px';
+      x.appendChild(el('b', { textContent: fb.name + (fb.mine ? '(自分)' : '') })); x.appendChild(el('div', { className: 'small', textContent: fb.note || '' }));
+      r.appendChild(pv); r.appendChild(x);
+      x.onclick = () => { if (playing) stopAll();
         const startAbs = grp === 'intro' ? fb.at : endBar * 4 - fb.len, bar0 = Math.floor(startAbs / 4), st = startAbs - bar0 * 4;
         if (startAbs < 0) return;
-        closePick(); if (grp === 'intro') setLead(b, bi, fb); else placeFill(b, bi, fb, bar0, st);
+        closePick(); if (grp === 'intro') setLead(b, bi, fb); else { placeFill(b, bi, fb, bar0, st); commitDirty(); changed(true); }
       };
-      pn.appendChild(x);
+      pn.appendChild(r);
     });
     document.body.appendChild(pn);
   }
@@ -724,17 +780,47 @@
     t.appendChild(el('span', { className: 'small', textContent: '鳴らすパート: ' }));
     PARTS.forEach(([k, n]) => {
       const lb = el('label'), cb = el('input', { type: 'checkbox' });
-      cb.checked = !S.mute[k]; cb.onchange = () => { S.mute[k] = !cb.checked; updateGains(); };
+      cb.checked = !S.mute[k]; cb.onchange = () => { S.mute[k] = !cb.checked; updateGains(); drawPartBtns(); };
       lb.appendChild(cb); lb.appendChild(document.createTextNode(n)); lb.style.whiteSpace = 'nowrap'; t.appendChild(lb);
     });
   }
   // 書き出す範囲: 全体 / ブロック n。パートごと・まとめて、どちらもこの範囲で書き出す
-  const expRange = () => { const v = $('expBlk').value; return v === '' ? { blk: null, sfx: '', mix: 'mix' } : { blk: +v, sfx: '_block' + (+v + 1), mix: 'block' + (+v + 1) }; };
+  const expRange = () => { const v = $('expBlk').value; if (v === '') return { blk: null, sfx: '', mix: 'mix' }; if (v[0] === 'L') { const n = +v.slice(1); return { blk: n, lead: true, sfx: '_block' + (n + 1) + '_intro', mix: 'block' + (n + 1) + '_intro' }; } return { blk: +v, sfx: '_block' + (+v + 1), mix: 'block' + (+v + 1) }; };
   function drawBlockExports() {
     const sel = $('expBlk'), cur = sel.value; sel.innerHTML = '';
     sel.appendChild(el('option', { value: '', textContent: '全体(並べた順に、全部)' }));
-    S.blocks.forEach((b, i) => sel.appendChild(el('option', { value: String(i), textContent: 'ブロック ' + (i + 1) + '(' + b.bars + '小節' + (b.reps > 1 ? '×' + b.reps + '回' : '') + (b.lead ? '・曲頭フィルあり(+1小節)' : '') + ')' })));
-    if (cur && +cur < S.blocks.length) sel.value = cur;
+    S.blocks.forEach((b, i) => { sel.appendChild(el('option', { value: String(i), textContent: 'ブロック ' + (i + 1) + '(' + b.bars + '小節' + (b.reps > 1 ? '×' + b.reps + '回' : '') + (b.lead ? '・曲頭フィルあり(+1小節)' : '') + ')' })); if (b.lead) sel.appendChild(el('option', { value: 'L' + i, textContent: 'ブロック ' + (i + 1) + 'の曲頭フィルだけ(1小節)' })); });
+    if (cur && [...sel.options].some((o) => o.value === cur)) sel.value = cur;
+    drawPartBtns();
+  }
+  // パートごとのボタン: 1回押すと、そのパートのWAVが1つ保存される(まとめて連続で保存すると、iPhone・iPadでは1つしか残らないため。2026-11-24)
+  function drawPartBtns() {
+    const box = $('partBtns'); if (!box) return; box.innerHTML = '';
+    PARTS.forEach(([k, n]) => { if (S.mute[k]) return; const x = el('button', { type: 'button', textContent: n }); x.onclick = () => { const q = expRange(); exportWav(k, k + q.sfx, q.blk, q); }; box.appendChild(x); });
+    if (!box.children.length) box.appendChild(el('span', { className: 'small', textContent: '鳴らすパートがない(「並び」タブの上のチェック)。' }));
+  }
+  // 全パートを1つのzipに(圧縮なし)
+  const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+  const crc32 = (u) => { let c = 0xFFFFFFFF; for (let i = 0; i < u.length; i++) c = CRC[(c ^ u[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
+  function makeZip(files) {
+    const enc = new TextEncoder(), parts = [], cd = []; let off = 0;
+    files.forEach(({ name, data }) => {
+      const nm = enc.encode(name), crc = crc32(data), h = new DataView(new ArrayBuffer(30));
+      h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint16(6, 0x0800, true); h.setUint32(14, crc, true); h.setUint32(18, data.length, true); h.setUint32(22, data.length, true); h.setUint16(26, nm.length, true);
+      parts.push(new Uint8Array(h.buffer), nm, data);
+      const c = new DataView(new ArrayBuffer(46)); c.setUint32(0, 0x02014b50, true); c.setUint16(4, 20, true); c.setUint16(6, 20, true); c.setUint16(8, 0x0800, true); c.setUint32(16, crc, true); c.setUint32(20, data.length, true); c.setUint32(24, data.length, true); c.setUint16(28, nm.length, true); c.setUint32(42, off, true);
+      cd.push(new Uint8Array(c.buffer), nm); off += 30 + nm.length + data.length;
+    });
+    const cdLen = cd.reduce((a, x) => a + x.length, 0), e = new DataView(new ArrayBuffer(22));
+    e.setUint32(0, 0x06054b50, true); e.setUint16(8, files.length, true); e.setUint16(10, files.length, true); e.setUint32(12, cdLen, true); e.setUint32(16, off, true);
+    return new Blob(parts.concat(cd, [new Uint8Array(e.buffer)]), { type: 'application/zip' });
+  }
+  async function exportZip() {
+    const q = expRange(), ks = PARTS.map(([k]) => k).filter((k) => !S.mute[k]);
+    if (!S.blocks.length || !ks.length) { $('status').textContent = !S.blocks.length ? 'ブロックがまだない。' : 'チェックしたパートがない。'; return; }
+    $('status').textContent = '書き出し中…';
+    try { const files = []; for (const k of ks) { const r = await wavBlob(k, q); files.push({ name: 'reggae_' + k + q.sfx + '.wav', data: new Uint8Array(await r.blob.arrayBuffer()) }); } saveBlob(makeZip(files), 'reggae_parts' + q.sfx + '.zip', $('status')); if (!window.claude) $('status').textContent = '書き出した: reggae_parts' + q.sfx + '.zip(WAV ' + files.length + 'つ)'; }
+    catch (e) { $('status').textContent = '書き出せませんでした: ' + e.message; }
   }
   const origChanged = changed;
 
@@ -770,8 +856,9 @@
   $('play').onclick = () => { if (playing) stopAll(); previewBlocks = null; play(); };
   $('stop').onclick = stopAll;
   $('land').onchange = updateTotal;
-  $('saveMix').onclick = () => { const q = expRange(); exportWav(null, q.mix, q.blk); };
-  $('saveParts').onclick = async () => { const q = expRange(), ks = PARTS.map(([k]) => k).filter((k) => !S.mute[k]); if (!ks.length) { $('status').textContent = 'チェックしたパートがない。'; return; } for (const k of ks) await exportWav(k, k + q.sfx, q.blk); };
+  $('saveMix').onclick = () => { const q = expRange(); exportWav(null, q.mix, q.blk, q); };
+  $('expBlk').onchange = drawPartBtns;
+  $('saveParts').onclick = exportZip;
   // ---- 曲データのテキスト ----
   const dmsg = (t) => { $('dataMsg').textContent = t; };
   $('dataOut').onclick = () => { $('dataTxt').value = dataText(); dmsg('テキストにした(' + $('dataTxt').value.length + '文字)。「コピー」で、メモやGitHubに貼れる。'); };

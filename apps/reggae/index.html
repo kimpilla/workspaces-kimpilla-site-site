@@ -161,14 +161,16 @@
   <div class="row"><label>範囲 <select id="expBlk"></select></label></div>
   <p class="small">「全体」は、並べたブロックを順に全部。ブロックを選ぶと、そのブロックだけ。</p>
   <div class="row"><label><input id="headIn" type="checkbox" checked> 冒頭フィルを入れる</label></div>
-  <p class="small">「曲頭フィル」で選んだ、ブロックの前の導入1小節を、WAVに入れるかどうか。外すと、ブロックの小節だけを書き出す。</p>
+  <p class="small">「曲頭フィル」で選んだ、ブロックの前の導入1小節を、WAVに入れるかどうか。外すと、ブロックの小節だけを書き出す。導入の1小節だけを書き出すときは、上の「範囲」で「ブロック ○の曲頭フィルだけ」を選ぶ。</p>
   <div class="row"><label><input id="wrap" type="checkbox" checked> 余韻を頭に重ねて、そのままループできる長さにする</label></div>
   <div class="row"><label><input id="unify" type="checkbox"> ブロックの長さをそろえる(足りない分は、くり返す)</label> <label>小節数 <input id="unifyBars" type="number" min="1" max="64" inputmode="numeric" placeholder="自動" style="width:70px"></label></div>
   <p class="small">長さをそろえるのは、ブロックを選んだときだけ効く。小節数が空なら、いちばん長いブロックに合わせる。Loopy ProやKoalaに入れて、そのまま切り替えられる。</p>
   <h2>書き出す</h2>
   <div class="row"><button id="saveMix" type="button">「並び」で鳴らすことにしたパートを、1つのWAVにまとめて書き出す</button></div>
-  <div class="row"><button id="saveParts" type="button">「並び」で鳴らすことにしたパートを、パートごとに別々のWAVで書き出す</button></div>
-  <p class="small">どちらも、設定の範囲を書き出す。パートごとは、鳴らすパートの数だけファイルができる。鳴らすパートは、「並び」タブの上のチェックで選ぶ(外したパートは、再生でも書き出しでも鳴らさない)。</p>
+  <p class="small" style="margin-bottom:2px">パートごと(1回押すと、そのパートのWAVが1つ):</p>
+  <div class="row" id="partBtns"></div>
+  <div class="row"><button id="saveParts" type="button">パートごとのWAVを、1つのzipにまとめて書き出す</button></div>
+  <p class="small">どれも、上の「範囲」を書き出す。鳴らすパートは、「並び」タブの上のチェックで選ぶ(外したパートは、再生でも書き出しでも鳴らさない)。iPhone・iPad では、ファイルを続けて保存すると1つしか残らないので、パートごとのボタンを1つずつ押すか、zip にする。</p>
   <p class="small status" id="status"></p>
   <h2>曲データをテキストで残す</h2>
   <div class="row"><button id="dataOut" type="button">いまのデータをテキストにする</button> <button id="dataCopy" type="button">コピー</button></div>
@@ -183,6 +185,6 @@
 <script src="../../audio-unlock.js?v=7"></script>
 <script src="../common/wav.js"></script>
 <script src="samples.js?v=20261112"></script>
-<script src="reggae.js?v=20261123a"></script>
+<script src="reggae.js?v=20261124a"></script>
 </body>
 </html>
