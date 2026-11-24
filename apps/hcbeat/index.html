@@ -642,6 +642,7 @@ function saveBlob(blob, filename, statusEl) {
   const rowStr = (p, d, n) => fillRow(p[d] || '', n || 16);
   const clonePat = (p) => JSON.parse(JSON.stringify(p || {}));
   const copyBlock = (b) => JSON.parse(JSON.stringify(b));
+  const undoCust = new WeakMap();   // 「元の形に戻す」で消した打ち込み(ブロックごと。取り消せるように)
   const stepPage = new WeakMap();                   // ブロックごとの、編集の表のページ(8マスずつ。矢印で動く)
   const PAGE = 8;
   const stepScroll = new WeakMap();                 // ブロックごとの、編集の表の横スクロール位置
@@ -789,10 +790,15 @@ function saveBlob(blob, filename, statusEl) {
       const pc = cell(sel, 'パターン');
       if (b.cust) {                                   // 編集済みの表示と、その場で元に戻すボタン
         const e = document.createElement('div'); e.className = 'edited'; e.append('編集済み ');
-        const rv = document.createElement('button'); rv.textContent = '元に戻す'; rv.className = 'rowclear'; rv.style.margin = '0 0 0 4px';
-        rv.title = '「' + b.pat + '」の元の形に戻す';
-        rv.onclick = () => { delete b.cust; renderRows(); liveEdit(); };
+        const rv = document.createElement('button'); rv.textContent = '元の形に戻す'; rv.className = 'rowclear'; rv.style.margin = '0 0 0 4px';
+        rv.title = '「' + b.pat + '」の元の形に戻す(押したあと「取り消す」で、打ち込みを戻せる)';
+        rv.onclick = () => { undoCust.set(b, b.cust); delete b.cust; renderRows(); liveEdit(); };
         e.appendChild(rv); pc.appendChild(e);
+      } else if (undoCust.has(b)) {                   // 誤って押したとき: 打ち込みを戻す(2026-11-24、本人「元に戻すのボタン、誤操作で作ってた打ち込みが消える」)
+        const e = document.createElement('div'); e.className = 'edited'; e.append('元の形に戻した ');
+        const un = document.createElement('button'); un.textContent = '取り消す(打ち込みを戻す)'; un.className = 'rowclear'; un.style.margin = '0 0 0 4px';
+        un.onclick = () => { b.cust = undoCust.get(b); undoCust.delete(b); renderRows(); liveEdit(); };
+        e.appendChild(un); pc.appendChild(e);
       }
       const len = document.createElement('span');
       const n = num(b.n, 1, maxN(b.unit), (v) => { b.n = v; renderRows(); changed(); });
