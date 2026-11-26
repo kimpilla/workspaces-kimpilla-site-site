@@ -7,7 +7,8 @@
   // ひな形は、動画の手順どおり(クラップ: 短く・歪み強め・1kHzの少し右に山 / スネア: もっと短く・フィルターを1kHzの少し左 /
   // ハイハット: フィルターを10kHzあたり / キック: 100Hzより下に大きい山と100Hzあたりになだらかな山・コンプでアタック)
   const BASE = { ftype: 'none', cutoff: 2000, q: 1, sweep: 0, attack: 0.001, hold: 0, decay: 0.05, claps: 1, drive: 0,
-    eq1Hz: 1000, eq1Gain: 0, eq1Q: 1, eq2Hz: 100, eq2Gain: 0, eq2Q: 1, comp: 0, compAtk: 0.003, volume: 0.6 };
+    eq1Hz: 1000, eq1Gain: 0, eq1Q: 1, eq2Hz: 100, eq2Gain: 0, eq2Q: 1, comp: 0, compAtk: 0.003, volume: 0.6,
+    sine: 0, sineHz: 60, sineDrop: 4, sineDecay: 0.3 };   // サイン波は予備(ひな形ではどれも0。基本はノイズだけで作る。2026-11-26、本人)
   const PRESETS = {
     'ザーッ(素のノイズ)': { hold: 1.5, decay: 0.05, volume: 0.35 },
     'クラップ':   { decay: 0.18, claps: 4, drive: 0.6, eq1Hz: 1300, eq1Gain: 12, eq1Q: 1.5, volume: 0.35 },
@@ -36,6 +37,10 @@
     ['eq2Q', '山2の幅(小さいほど、なだらか)', 0.3, 10, (v) => 'Q ' + v.toFixed(1), true],
     ['comp', 'コンプのかかり方', 0, 1, (v) => Math.round(v * 100) + '%'],
     ['compAtk', 'コンプのアタック', 0.001, 0.05, (v) => (v * 1000).toFixed(1) + 'ミリ秒', true],
+    ['sine', 'サイン波の量', 0, 1, (v) => Math.round(v * 100) + '%'],
+    ['sineHz', 'サイン波の高さ', 30, 800, (v) => Math.round(v) + 'Hz', true],
+    ['sineDrop', 'サイン波の落ち幅(鳴った瞬間の高さ ÷ 最後の高さ)', 1, 12, (v) => '×' + v.toFixed(1)],
+    ['sineDecay', 'サイン波のディケイ(消えるまで)', 0.02, 2, (v) => v.toFixed(2) + '秒', true],
   ];
 
   let ctx = null, noiseBuf = null, analyser = null;
@@ -57,7 +62,7 @@
     for (let i = 0; i < n; i++) { const x = i / (n - 1) * 2 - 1; c[i] = k ? Math.tanh(x * (1 + k)) / Math.tanh(1 + k) : x; }
     return c;
   }
-  const len = () => p.attack + p.hold + p.decay + 0.011 * Math.round(p.claps) + 0.15;
+  const len = () => Math.max(p.attack + p.hold + p.decay + 0.011 * Math.round(p.claps), p.sine > 0 ? p.sineDecay : 0) + 0.15;
 
   // 1回分の音を、c(ふつうのAudioContextでも、書き出し用のOfflineAudioContextでも)の dest へ流す
   function render(c, dest, t0, nbuf) {
@@ -89,6 +94,15 @@
     cp.attack.value = p.compAtk; cp.release.value = 0.15;
     const vol = c.createGain(); vol.gain.value = p.volume;
     if (p.ftype === 'none') src.connect(env); else { src.connect(f); f.connect(env); }   // フィルターなし: 素のノイズのまま
+    if (p.sine > 0) {   // 予備: 高さが下がっていくサイン波を、ノイズに足す
+      const o = c.createOscillator(); o.type = 'sine';
+      o.frequency.setValueAtTime(p.sineHz * p.sineDrop, t0);
+      o.frequency.exponentialRampToValueAtTime(p.sineHz, t0 + Math.min(0.12, p.sineDecay));
+      const g = c.createGain();
+      g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(p.sine, t0 + p.attack);
+      g.gain.exponentialRampToValueAtTime(0.001, t0 + p.sineDecay);
+      o.connect(g); g.connect(shaper); o.start(t0); o.stop(t0 + len());
+    }
     env.connect(shaper); shaper.connect(e1); e1.connect(e2); e2.connect(cp); cp.connect(vol); vol.connect(dest);
     src.start(t0); src.stop(t0 + len());
   }
@@ -174,12 +188,20 @@
     ['EQ(山を2つ作る)', ['eq1Hz', 'eq1Gain', 'eq1Q', 'eq2Hz', 'eq2Gain', 'eq2Q']],
     ['コンプ', ['comp', 'compAtk']],
     ['音量', ['volume']],
+    ['予備: サイン波を足す', ['sine', 'sineHz', 'sineDrop', 'sineDecay'], null, true],
   ];
   const syncs = [];
-  for (const [title, keys, extra] of GROUPS) {
-    const h = document.createElement('h3'); h.className = 'sub'; h.textContent = title; $('knobs').appendChild(h);
-    if (extra) $('knobs').appendChild($(extra));
-    const box = document.createElement('div'); box.className = 'knobs'; $('knobs').appendChild(box);
+  for (const [title, keys, extra, fold] of GROUPS) {
+    let host = $('knobs');
+    if (fold) {   // 予備の項目は、たたんでおく(見出しを押すと開く)
+      const d = document.createElement('details'); d.style.marginTop = '22px';
+      const s = document.createElement('summary'); s.textContent = title + '(ふだんは使わない。ノイズだけで作れないときに)'; s.style.cursor = 'pointer';
+      d.appendChild(s); host.appendChild(d); host = d;
+    } else {
+      const h = document.createElement('h3'); h.className = 'sub'; h.textContent = title; host.appendChild(h);
+    }
+    if (extra) host.appendChild($(extra));
+    const box = document.createElement('div'); box.className = 'knobs'; host.appendChild(box);
     syncs.push(buildKnobs(box, keys.map((key) => KNOBS.find((k) => k[0] === key)), p, preview));
   }
   const resync = () => syncs.forEach((f) => f());
@@ -191,7 +213,7 @@
   { const b = document.createElement('button'); b.id = 'random'; b.textContent = 'でたらめにする'; $('presets').appendChild(b); }   // ひな形の並びの最後に(2026-11-26、本人)
   $('random').onclick = () => {
     for (const [key, , min, max, , log] of KNOBS) {
-      if (key === 'volume' || key === 'comp' || key === 'compAtk') continue;   // 音量とコンプは、でたらめでは変えない
+      if (key === 'volume' || key === 'comp' || key === 'compAtk' || key.startsWith('sine')) continue;   // 音量・コンプ・サイン波(予備)は、でたらめでは変えない
       const s = Math.random();
       p[key] = log ? min * Math.pow(max / min, s) : min + s * (max - min);
     }
