@@ -4,17 +4,18 @@
   'use strict';
   const $ = (id) => document.getElementById(id);
 
+  // ひな形の音量は、どれも同じくらいの大きさに聞こえるようにそろえた(短い区間の音の強さで約-20dB。ハイハットは少し小さめ。2026-11-26、本人「全体のバランスが悪い」)
   // ひな形は、動画の手順どおり(クラップ: 短く・歪み強め・1kHzの少し右に山 / スネア: もっと短く・フィルターを1kHzの少し左 /
   // ハイハット: フィルターを10kHzあたり / キック: 100Hzより下に大きい山と100Hzあたりになだらかな山・コンプでアタック)
   const BASE = { ftype: 'none', cutoff: 2000, q: 1, sweep: 0, attack: 0.001, hold: 0, decay: 0.05, claps: 1, drive: 0,
-    eq1Hz: 1000, eq1Gain: 0, eq1Q: 1, eq2Hz: 100, eq2Gain: 0, eq2Q: 1, comp: 0, compAtk: 0.003, volume: 0.6,
+    eq1Hz: 1000, eq1Gain: 0, eq1Q: 1, eq2Hz: 100, eq2Gain: 0, eq2Q: 1, comp: 0, compAtk: 0.003, volume: 0.3,
     sine: 0, sineHz: 60, sineDrop: 4, sineDecay: 0.3 };   // サイン波は予備(ひな形ではどれも0。基本はノイズだけで作る。2026-11-26、本人)
   const PRESETS = {
-    'ザーッ(素のノイズ)': { hold: 1.5, decay: 0.05, volume: 0.35 },
-    'クラップ':   { decay: 0.18, claps: 4, drive: 0.6, eq1Hz: 1300, eq1Gain: 12, eq1Q: 1.5, volume: 0.35 },
-    'スネア':     { ftype: 'bandpass', cutoff: 800, q: 0.8, decay: 0.12, drive: 0.2, eq1Hz: 900, eq1Gain: 6, eq1Q: 1 },
-    'ハイハット': { ftype: 'highpass', cutoff: 10000, q: 1, decay: 0.05, eq1Hz: 11000, eq1Gain: 12, eq1Q: 0.7, volume: 1 },
-    'キック':     { ftype: 'lowpass', cutoff: 300, q: 0.7, decay: 0.2, eq1Hz: 55, eq1Gain: 24, eq1Q: 1.2, eq2Hz: 100, eq2Gain: 9, eq2Q: 0.5, comp: 0.7, compAtk: 0.004, volume: 0.8 },
+    'ザーッ(素のノイズ)': { hold: 1.5, decay: 0.05, volume: 0.17 },
+    'クラップ':   { decay: 0.18, claps: 4, drive: 0.6, eq1Hz: 1300, eq1Gain: 12, eq1Q: 1.5, volume: 0.1 },
+    'スネア':     { ftype: 'bandpass', cutoff: 800, q: 0.8, decay: 0.12, drive: 0.2, eq1Hz: 900, eq1Gain: 6, eq1Q: 1, volume: 0.31 },
+    'ハイハット': { ftype: 'highpass', cutoff: 8000, q: 1, decay: 0.06, drive: 0.3, eq1Hz: 10000, eq1Gain: 18, eq1Q: 0.7, volume: 0.1 },
+    'キック':     { ftype: 'lowpass', cutoff: 300, q: 0.7, decay: 0.2, eq1Hz: 55, eq1Gain: 24, eq1Q: 1.2, eq2Hz: 100, eq2Gain: 9, eq2Q: 0.5, comp: 0.7, compAtk: 0.004, volume: 0.62 },
   };
   for (const k of Object.keys(PRESETS)) PRESETS[k] = Object.assign({}, BASE, PRESETS[k]);
   // 最初は、加工していない素のホワイトノイズ(ザーッ)から始める
