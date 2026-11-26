@@ -17,19 +17,19 @@
   const p = Object.assign({}, PRESETS['ザーッ(素のノイズ)']);
   const KNOBS = [
     ['volume', '音量', 0, 1, (v) => Math.round(v * 100) + '%'],
-    ['hold', '持続(ザーッと鳴り続ける長さ)', 0, 3, (v) => v.toFixed(2) + '秒'],
-    ['decay', '減衰(消えるまで)', 0.01, 2, (v) => v.toFixed(2) + '秒', true],
-    ['attack', '立ち上がり', 0.001, 0.1, (v) => (v * 1000).toFixed(0) + 'ミリ秒', true],
-    ['cutoff', 'フィルターの高さ', 40, 20000, (v) => Math.round(v) + 'Hz', true],
-    ['q', 'フィルターのクセ', 0.1, 20, (v) => v.toFixed(1), true],
-    ['sweep', 'スイープ(開く量)', 0, 4, (v) => v.toFixed(1) + 'オクターブ'],
-    ['noise', 'ノイズの量', 0, 1, (v) => Math.round(v * 100) + '%'],
-    ['body', '胴鳴りの量', 0, 1, (v) => Math.round(v * 100) + '%'],
-    ['bodyHz', '胴鳴りの高さ', 30, 800, (v) => Math.round(v) + 'Hz', true],
-    ['bodyDrop', '胴鳴りの下がり方', 1, 12, (v) => '×' + v.toFixed(1)],
-    ['bodyDecay', '胴鳴りの長さ', 0.02, 2, (v) => v.toFixed(2) + '秒', true],
+    ['hold', 'ホールド', 0, 3, (v) => v.toFixed(2) + '秒'],
+    ['decay', 'ディケイ', 0.01, 2, (v) => v.toFixed(2) + '秒', true],
+    ['attack', 'アタック', 0.001, 0.1, (v) => (v * 1000).toFixed(0) + 'ミリ秒', true],
+    ['cutoff', 'カットオフ', 40, 20000, (v) => Math.round(v) + 'Hz', true],
+    ['q', 'レゾナンス(Q)', 0.1, 20, (v) => v.toFixed(1), true],
+    ['sweep', 'フィルタースイープ', 0, 4, (v) => v.toFixed(1) + 'オクターブ'],
+    ['noise', 'ノイズ', 0, 1, (v) => Math.round(v * 100) + '%'],
+    ['body', 'ボディ(胴鳴り)', 0, 1, (v) => Math.round(v * 100) + '%'],
+    ['bodyHz', 'ボディのピッチ', 30, 800, (v) => Math.round(v) + 'Hz', true],
+    ['bodyDrop', 'ピッチの落ち幅', 1, 12, (v) => '×' + v.toFixed(1)],
+    ['bodyDecay', 'ボディのディケイ', 0.02, 2, (v) => v.toFixed(2) + '秒', true],
     ['drive', '歪み', 0, 1, (v) => Math.round(v * 100) + '%'],
-    ['claps', '連打の回数', 1, 6, (v) => Math.round(v) + '回'],
+    ['claps', 'リトリガー(連打)', 1, 6, (v) => Math.round(v) + '回'],
   ];
 
   let ctx = null, noiseBuf = null, analyser = null;
@@ -154,7 +154,7 @@
   }
 
   // ---- 画面 ----
-  const FT = [['none', 'なし(素のノイズ)'], ['lowpass', 'ローパス(低い方を残す)'], ['bandpass', 'バンドパス(ある高さだけ)'], ['highpass', 'ハイパス(高い方を残す)']];
+  const FT = [['none', 'なし'], ['lowpass', 'ローパス'], ['bandpass', 'バンドパス'], ['highpass', 'ハイパス']];
   function buildTypes() {
     $('ftype').innerHTML = '';
     for (const [t, label] of FT) {
