@@ -28,7 +28,7 @@
     ['bodyHz', '胴鳴りの高さ', 30, 800, (v) => Math.round(v) + 'Hz', true],
     ['bodyDrop', '胴鳴りの下がり方', 1, 12, (v) => '×' + v.toFixed(1)],
     ['bodyDecay', '胴鳴りの長さ', 0.02, 2, (v) => v.toFixed(2) + '秒', true],
-    ['drive', '歪み(ひずみ)', 0, 1, (v) => Math.round(v * 100) + '%'],
+    ['drive', '歪み', 0, 1, (v) => Math.round(v * 100) + '%'],
     ['claps', '連打の回数', 1, 6, (v) => Math.round(v) + '回'],
   ];
 
