@@ -15,7 +15,7 @@
     'クラップ':   { decay: 0.18, claps: 4, drive: 0.6, eq1Hz: 1300, eq1Gain: 12, eq1Q: 1.5, volume: 0.1 },
     'スネア':     { ftype: 'bandpass', cutoff: 800, q: 0.8, decay: 0.12, drive: 0.2, eq1Hz: 900, eq1Gain: 6, eq1Q: 1, volume: 0.31 },
     'ハイハット': { ftype: 'highpass', cutoff: 8000, q: 1, decay: 0.06, drive: 0.3, eq1Hz: 10000, eq1Gain: 18, eq1Q: 0.7, volume: 0.1 },
-    'キック':     { ftype: 'lowpass', cutoff: 300, q: 0.7, sweep: 3, decay: 0.18, eq1Hz: 55, eq1Gain: 24, eq1Q: 1.2, eq2Hz: 100, eq2Gain: 9, eq2Q: 0.5, comp: 0.9, compAtk: 0.03, volume: 0.165 },   // アタック: コンプのアタックを遅めにして頭を通し、フィルターを一瞬開く
+    'キック':     { ftype: 'lowpass', cutoff: 300, q: 0.7, sweep: 1.5, decay: 0.2, eq1Hz: 55, eq1Gain: 24, eq1Q: 1.2, eq2Hz: 100, eq2Gain: 9, eq2Q: 0.5, comp: 0.85, compAtk: 0.015, volume: 0.57 },   // アタック: コンプのアタックを少し遅めにして頭を通し、フィルターを少し開く(強すぎると軽くなる。2026-11-26、本人)
   };
   for (const k of Object.keys(PRESETS)) PRESETS[k] = Object.assign({}, BASE, PRESETS[k]);
   // 最初は、加工していない素のホワイトノイズ(ザーッ)から始める
