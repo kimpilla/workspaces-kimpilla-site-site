@@ -6,6 +6,12 @@
 <title>ノイズドラム | kimpilla</title>
 <link rel="stylesheet" href="../../style.css">
 <script src="../../audio-unlock.js?v=7"></script>
+<style>
+  /* ドラッグで文字が選ばれない・ダブルタップで拡大しない。ピンチの拡大縮小はできる(2026-11-26、本人) */
+  html, body, body * { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: manipulation; }
+  body textarea { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
+  input[type=range] { touch-action: pan-y pinch-zoom; }
+</style>
 </head>
 <body>
 <header>
@@ -44,13 +50,13 @@
 <li><b>フィルター</b>: 低い方だけ残す(ローパス)、高い方だけ残す(ハイパス)、ある高さだけ残す(バンドパス)。ハイハットはハイパス、スネアはバンドパスが近い。</li>
 <li><b>スイープ</b>: 鳴った瞬間だけフィルターを開いて、すぐ閉じる。アタックの「パシッ」が出る。</li>
 <li><b>胴鳴り</b>: ノイズの下に、高さが下がっていく低い音(サイン波)を足す。キックやタムの「ドン」になる。</li>
-<li><b>ゆがみ</b>: 波を押しつぶして、汚す。</li>
+<li><b>歪み(ひずみ)</b>: 波を押しつぶして、汚す。</li>
 <li><b>連打</b>: 短い間隔で何回か鳴らし直す。クラップ(手拍子)の「パラッ」になる。</li>
 </ul>
 </section>
 </main>
 <footer>kimpilla</footer>
 <script src="../common/wav.js"></script>
-<script src="noisedrum.js?v=20261126a"></script>
+<script src="noisedrum.js?v=20261126b"></script>
 </body>
 </html>
