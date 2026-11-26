@@ -124,7 +124,7 @@
 
   // 設定をテキストで(つまみ・フィルターの種類。{"v":1,"app":"noisedrum","p":{...}})
   function txtOut() {
-    const q = {}; for (const [key] of KNOBS) q[key] = +(+p[key]).toPrecision(4); q.ftype = p.ftype;
+    const q = {}; for (const [key] of KNOBS) q[key] = +(+p[key]).toPrecision(6); q.ftype = p.ftype;
     $('txtBox').value = JSON.stringify({ v: 1, app: 'noisedrum', p: q });
     $('txtNote').textContent = '書き出した。';
   }
