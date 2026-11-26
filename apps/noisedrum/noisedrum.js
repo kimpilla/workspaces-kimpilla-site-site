@@ -92,7 +92,35 @@
     }
   }
 
-  function hit() { ensure(); render(ctx, analyser, ctx.currentTime + 0.005, noiseBuf); }
+  const playing = new Set();   // 鳴っている音(止めるボタン用)
+  function hit() {
+    ensure();
+    const gate = ctx.createGain(); gate.connect(analyser); playing.add(gate);
+    render(ctx, gate, ctx.currentTime + 0.005, noiseBuf);
+    setTimeout(() => { if (playing.delete(gate)) gate.disconnect(); }, (len() + 0.2) * 1000);
+  }
+  function stopAll() {
+    if (!ctx) return;
+    const t = ctx.currentTime;
+    for (const g of playing) { g.gain.setValueAtTime(g.gain.value, t); g.gain.linearRampToValueAtTime(0, t + 0.03); setTimeout(() => g.disconnect(), 60); }
+    playing.clear();
+  }
+
+  // 設定をテキストで(つまみ・フィルターの種類。{"v":1,"app":"noisedrum","p":{...}})
+  function txtOut() {
+    const q = {}; for (const [key] of KNOBS) q[key] = +(+p[key]).toPrecision(4); q.ftype = p.ftype;
+    $('txtBox').value = JSON.stringify({ v: 1, app: 'noisedrum', p: q });
+    $('txtNote').textContent = '書き出した。';
+  }
+  function txtIn() {
+    let d; try { d = JSON.parse($('txtBox').value.trim()); } catch (e) { $('txtNote').textContent = '読み込めなかった(文字が途中で切れていないか確かめて)。'; return; }
+    const src = d && d.p ? d.p : d;
+    let n = 0;
+    for (const [key, , min, max] of KNOBS) if (typeof src[key] === 'number' && isFinite(src[key])) { p[key] = Math.min(max, Math.max(min, src[key])); n++; }
+    if (FT.some(([t]) => t === src.ftype)) p.ftype = src.ftype;
+    resync(); buildTypes(); preview();
+    $('txtNote').textContent = n ? '読み込んだ(' + n + 'こ)。' : '設定が見つからなかった。';
+  }
 
   async function save() {
     const rate = 44100, oc = new OfflineAudioContext(1, Math.ceil(len() * rate), rate);
@@ -155,6 +183,14 @@
   };
   $('hit').addEventListener('pointerdown', (e) => { e.preventDefault(); hit(); });
   $('save').onclick = save;
-  window.addEventListener('keydown', (e) => { if (e.code === 'Space' && !e.repeat) { e.preventDefault(); hit(); } });
+  $('stop').onclick = stopAll;
+  $('txtOut').onclick = txtOut;
+  $('txtIn').onclick = txtIn;
+  $('txtCopy').onclick = async () => {
+    if (!$('txtBox').value) txtOut();
+    try { await navigator.clipboard.writeText($('txtBox').value); $('txtNote').textContent = 'コピーした。'; }
+    catch (e) { $('txtBox').focus(); $('txtBox').select(); $('txtNote').textContent = '選んだので、長押しでコピー。'; }
+  };
+  window.addEventListener('keydown', (e) => { if (e.target && e.target.tagName === 'TEXTAREA') return; if (e.code === 'Space' && !e.repeat) { e.preventDefault(); hit(); } if (e.code === 'Escape') stopAll(); });
   buildTypes(); preview();
 })();

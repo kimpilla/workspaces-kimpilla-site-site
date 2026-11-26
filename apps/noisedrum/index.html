@@ -15,9 +15,9 @@
 <main>
 <h1>ノイズドラム</h1>
 <p>ザーッというホワイトノイズ(全部の高さの音がまざった音)から、つまみだけでドラムの音を作る。最初は素のノイズ。「持続」を0にして「減衰」を短くすると、もう打楽器っぽくなる。気に入った音はWAVで保存して、素材にできる。</p>
-<p class="small">スペースキーでも鳴らせる。音が大きいので、最初は音量を下げてから。</p>
+<p class="small">スペースキーでも鳴らせる。Escキーで止まる。音が大きいので、最初は音量を下げてから。</p>
 
-<p><button class="pad" id="hit">鳴らす</button><button id="save">WAVを保存</button></p>
+<p><button class="pad" id="hit">▶ 鳴らす</button><button id="stop">■ 止める</button><button id="random">でたらめにする</button><button id="save">WAVを保存</button></p>
 <p class="small" id="savenote"></p>
 <canvas class="wave" id="wave"></canvas>
 
@@ -29,7 +29,12 @@
 
 <h2>つまみ</h2>
 <div class="knobs" id="knobs"></div>
-<p><button id="random">でたらめにする</button></p>
+
+<h2>設定をテキストで保存・読み込み</h2>
+<p class="small">「書き出す」で、いまの設定が下の枠に文字で出る。メモ帳などに貼って残す。読み込むときは、枠に貼って「読み込む」。</p>
+<p><button id="txtOut">書き出す</button><button id="txtCopy">コピー</button><button id="txtIn">読み込む</button></p>
+<textarea id="txtBox" rows="4" style="width:100%;font:12px monospace" spellcheck="false"></textarea>
+<p class="small" id="txtNote"></p>
 
 <section class="small">
 <h2>なにが起きているか</h2>
@@ -46,6 +51,6 @@
 </main>
 <footer>kimpilla</footer>
 <script src="../common/wav.js"></script>
-<script src="noisedrum.js"></script>
+<script src="noisedrum.js?v=20261126a"></script>
 </body>
 </html>
