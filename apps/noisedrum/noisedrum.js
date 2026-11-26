@@ -186,6 +186,7 @@
     b.onclick = () => { Object.assign(p, PRESETS[name]); resync(); buildTypes(); preview(); hit(); };
     $('presets').appendChild(b);
   }
+  { const b = document.createElement('button'); b.id = 'random'; b.textContent = 'でたらめにする'; $('presets').appendChild(b); }   // ひな形の並びの最後に(2026-11-26、本人)
   $('random').onclick = () => {
     for (const [key, , min, max, , log] of KNOBS) {
       if (key === 'volume') continue;
