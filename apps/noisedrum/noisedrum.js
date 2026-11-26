@@ -15,13 +15,13 @@
     'クラップ':   { decay: 0.18, claps: 4, drive: 0.6, eq1Hz: 1300, eq1Gain: 12, eq1Q: 1.5, volume: 0.1 },
     'スネア':     { ftype: 'bandpass', cutoff: 800, q: 0.8, decay: 0.12, drive: 0.2, eq1Hz: 900, eq1Gain: 6, eq1Q: 1, volume: 0.31 },
     'ハイハット': { ftype: 'highpass', cutoff: 8000, q: 1, decay: 0.06, drive: 0.3, eq1Hz: 10000, eq1Gain: 18, eq1Q: 0.7, volume: 0.1 },
-    'キック':     { ftype: 'lowpass', cutoff: 300, q: 0.7, decay: 0.2, eq1Hz: 55, eq1Gain: 24, eq1Q: 1.2, eq2Hz: 100, eq2Gain: 9, eq2Q: 0.5, comp: 0.7, compAtk: 0.004, volume: 0.62 },
+    'キック':     { ftype: 'lowpass', cutoff: 300, q: 0.7, sweep: 3, decay: 0.18, eq1Hz: 55, eq1Gain: 24, eq1Q: 1.2, eq2Hz: 100, eq2Gain: 9, eq2Q: 0.5, comp: 0.9, compAtk: 0.03, volume: 0.165 },   // アタック: コンプのアタックを遅めにして頭を通し、フィルターを一瞬開く
   };
   for (const k of Object.keys(PRESETS)) PRESETS[k] = Object.assign({}, BASE, PRESETS[k]);
   // 最初は、加工していない素のホワイトノイズ(ザーッ)から始める
   const p = Object.assign({}, PRESETS['ザーッ(素のノイズ)']);
   const KNOBS = [
-    ['volume', '音量', 0, 1, (v) => Math.round(v * 100) + '%'],
+    ['volume', '音量', 0, 4, (v) => Math.round(v * 100) + '%'],
     ['attack', 'アタック(立ち上がり)', 0.001, 0.1, (v) => (v * 1000).toFixed(0) + 'ミリ秒', true],
     ['hold', 'ホールド(ザーッと鳴り続ける長さ)', 0, 3, (v) => v.toFixed(2) + '秒'],
     ['decay', 'ディケイ(消えるまで)', 0.01, 2, (v) => v.toFixed(2) + '秒', true],
@@ -163,7 +163,7 @@
   function preview() {           // つまみを動かすたびに、形だけ描き直す(音は鳴らさない)
     clearTimeout(previewTimer);
     previewTimer = setTimeout(async () => {
-      const rate = 22050, oc = new OfflineAudioContext(1, Math.ceil(len() * rate), rate);
+      const rate = 44100, oc = new OfflineAudioContext(1, Math.ceil(len() * rate), rate);
       render(oc, oc.destination, 0, makeNoise(oc));
       drawBuffer(await oc.startRendering());
     }, 60);
@@ -212,7 +212,21 @@
     $('presets').appendChild(b);
   }
   { const b = document.createElement('button'); b.id = 'random'; b.textContent = 'でたらめにする'; $('presets').appendChild(b); }   // ひな形の並びの最後に(2026-11-26、本人)
-  $('random').onclick = () => {
+  // 書き出しと同じ音を作って、鳴った直後のいちばん強いところ(50ミリ秒)を測り、ひな形と同じくらい(約-20dB)になるよう音量を決める
+  async function level(target = -20) {
+    p.volume = 1;
+    let best = 0;
+    for (let k = 0; k < 3; k++) {   // ノイズは毎回ちがうので、3回作って平均する
+      const rate = 44100, oc = new OfflineAudioContext(1, Math.ceil(len() * rate), rate);   // 書き出しと同じ 44100(低いと高い音が測れない)
+      render(oc, oc.destination, 0, makeNoise(oc));
+      const d = (await oc.startRendering()).getChannelData(0), w = Math.round(rate * 0.05);
+      let b = 0;
+      for (let s = 0; s + w <= d.length; s += Math.floor(w / 2)) { let e = 0; for (let i = s; i < s + w; i++) e += d[i] * d[i]; b = Math.max(b, Math.sqrt(e / w)); }
+      best += b / 3;
+    }
+    if (best > 0) p.volume = Math.min(4, Math.max(0.01, Math.pow(10, target / 20) / best));
+  }
+  $('random').onclick = async () => {
     for (const [key, , min, max, , log] of KNOBS) {
       if (key === 'volume' || key === 'comp' || key === 'compAtk' || key.startsWith('sine')) continue;   // 音量・コンプ・サイン波(予備)は、でたらめでは変えない
       const s = Math.random();
@@ -220,6 +234,7 @@
     }
     p.ftype = FT[1 + Math.floor(Math.random() * 3)][0];
     p.hold = Math.random() < 0.7 ? 0 : p.hold;   // でたらめでも、たいていはドラムらしい短さに
+    await level();   // 音量をそろえる(でたらめでも、極端に大きい・小さい音にならない。2026-11-26、本人)
     resync(); buildTypes(); preview(); hit();
   };
   $('hit').addEventListener('pointerdown', (e) => { e.preventDefault(); hit(); });
