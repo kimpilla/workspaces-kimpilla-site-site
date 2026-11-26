@@ -227,6 +227,7 @@
     if (best > 0) p.volume = Math.min(4, Math.max(0.01, Math.pow(10, target / 20) / best));
   }
   $('random').onclick = async () => {
+    stopAll();   // 前の音は止める(2026-11-26、本人)
     for (const [key, , min, max, , log] of KNOBS) {
       if (key === 'volume' || key === 'comp' || key === 'compAtk' || key.startsWith('sine')) continue;   // 音量・コンプ・サイン波(予備)は、でたらめでは変えない
       const s = Math.random();
