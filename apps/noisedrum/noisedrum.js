@@ -1,35 +1,41 @@
-// ノイズドラム: ホワイトノイズ → フィルター(とスイープ) → 音量の減衰 → 歪み、に、高さの下がる胴鳴りを足す
+// ノイズドラム: 音のもとはホワイトノイズだけ。フィルター(とスイープ) → 鳴り方(エンベロープ) → 歪み → EQ(山2つ) → コンプ。
+// 元の考え: きりたんのDTM解説「ホワイトノイズを使って、自分だけのドラムを作ろう！」(ai-memory の 制作/技術メモ/DTM技術メモ.md)。2026-11-26、胴鳴り(サイン波)を外して作り直した
 (function () {
   'use strict';
   const $ = (id) => document.getElementById(id);
 
+  // ひな形は、動画の手順どおり(クラップ: 短く・歪み強め・1kHzの少し右に山 / スネア: もっと短く・フィルターを1kHzの少し左 /
+  // ハイハット: フィルターを10kHzあたり / キック: 100Hzより下に大きい山と100Hzあたりになだらかな山・コンプでアタック)
+  const BASE = { ftype: 'none', cutoff: 2000, q: 1, sweep: 0, attack: 0.001, hold: 0, decay: 0.05, claps: 1, drive: 0,
+    eq1Hz: 1000, eq1Gain: 0, eq1Q: 1, eq2Hz: 100, eq2Gain: 0, eq2Q: 1, comp: 0, compAtk: 0.003, volume: 0.6 };
   const PRESETS = {
-    'ザーッ(素のノイズ)': { ftype: 'none', cutoff: 2000, q: 1, sweep: 0, hold: 1.5, decay: 0.05, attack: 0.001, noise: 1.0, body: 0, bodyHz: 100, bodyDrop: 1, bodyDecay: 0.1, drive: 0, claps: 1, volume: 0.35 },
-    'キック':      { ftype: 'lowpass',  cutoff: 300,  q: 1,   sweep: 0,    decay: 0.25, attack: 0.001, noise: 0.15, body: 1.0, bodyHz: 55,  bodyDrop: 6,  bodyDecay: 0.45, drive: 0.3, claps: 1, volume: 0.7 },
-    'スネア':      { ftype: 'bandpass', cutoff: 1800, q: 0.8, sweep: 2,    decay: 0.18, attack: 0.001, noise: 0.9,  body: 0.5, bodyHz: 190, bodyDrop: 1.5,bodyDecay: 0.1,  drive: 0.2, claps: 1, volume: 0.7 },
-    'ハイハット':  { ftype: 'highpass', cutoff: 7000, q: 1,   sweep: 0,    decay: 0.05, attack: 0.001, noise: 1.0,  body: 0,   bodyHz: 100, bodyDrop: 1,  bodyDecay: 0.1,  drive: 0,   claps: 1, volume: 0.6 },
-    'オープンハット': { ftype: 'highpass', cutoff: 6000, q: 1.5, sweep: 0, decay: 0.45, attack: 0.001, noise: 1.0,  body: 0,   bodyHz: 100, bodyDrop: 1,  bodyDecay: 0.1,  drive: 0.1, claps: 1, volume: 0.5 },
-    'クラップ':    { ftype: 'bandpass', cutoff: 1200, q: 1.5, sweep: 1,    decay: 0.2,  attack: 0.001, noise: 1.0,  body: 0,   bodyHz: 100, bodyDrop: 1,  bodyDecay: 0.1,  drive: 0.2, claps: 4, volume: 0.7 },
-    'タム':        { ftype: 'lowpass',  cutoff: 900,  q: 2,   sweep: 1,    decay: 0.15, attack: 0.001, noise: 0.3,  body: 0.9, bodyHz: 120, bodyDrop: 2,  bodyDecay: 0.35, drive: 0.1, claps: 1, volume: 0.7 },
+    'ザーッ(素のノイズ)': { hold: 1.5, decay: 0.05, volume: 0.35 },
+    'クラップ':   { decay: 0.18, claps: 4, drive: 0.6, eq1Hz: 1300, eq1Gain: 12, eq1Q: 1.5, volume: 0.35 },
+    'スネア':     { ftype: 'bandpass', cutoff: 800, q: 0.8, decay: 0.12, drive: 0.2, eq1Hz: 900, eq1Gain: 6, eq1Q: 1 },
+    'ハイハット': { ftype: 'highpass', cutoff: 10000, q: 1, decay: 0.05, eq1Hz: 11000, eq1Gain: 12, eq1Q: 0.7, volume: 1 },
+    'キック':     { ftype: 'lowpass', cutoff: 300, q: 0.7, decay: 0.2, eq1Hz: 55, eq1Gain: 24, eq1Q: 1.2, eq2Hz: 100, eq2Gain: 9, eq2Q: 0.5, comp: 0.7, compAtk: 0.004, volume: 0.8 },
   };
-  // 最初は、加工していない素のホワイトノイズ(ザーッ)から始める。ひな形はhold(持続)0
-  for (const k of Object.keys(PRESETS)) if (PRESETS[k].hold === undefined) PRESETS[k].hold = 0;
+  for (const k of Object.keys(PRESETS)) PRESETS[k] = Object.assign({}, BASE, PRESETS[k]);
+  // 最初は、加工していない素のホワイトノイズ(ザーッ)から始める
   const p = Object.assign({}, PRESETS['ザーッ(素のノイズ)']);
   const KNOBS = [
     ['volume', '音量', 0, 1, (v) => Math.round(v * 100) + '%'],
+    ['attack', 'アタック(立ち上がり)', 0.001, 0.1, (v) => (v * 1000).toFixed(0) + 'ミリ秒', true],
     ['hold', 'ホールド(ザーッと鳴り続ける長さ)', 0, 3, (v) => v.toFixed(2) + '秒'],
     ['decay', 'ディケイ(消えるまで)', 0.01, 2, (v) => v.toFixed(2) + '秒', true],
-    ['attack', 'アタック(立ち上がり)', 0.001, 0.1, (v) => (v * 1000).toFixed(0) + 'ミリ秒', true],
+    ['claps', 'リトリガー(連打の回数)', 1, 6, (v) => Math.round(v) + '回'],
     ['cutoff', 'カットオフ(高さ)', 40, 20000, (v) => Math.round(v) + 'Hz', true],
     ['q', 'レゾナンス(クセ)', 0.1, 20, (v) => v.toFixed(1), true],
     ['sweep', 'スイープ(開く量)', 0, 4, (v) => v.toFixed(1) + 'オクターブ'],
-    ['noise', '量', 0, 1, (v) => Math.round(v * 100) + '%'],
-    ['body', '量', 0, 1, (v) => Math.round(v * 100) + '%'],
-    ['bodyHz', 'ピッチ(高さ)', 30, 800, (v) => Math.round(v) + 'Hz', true],
-    ['bodyDrop', 'ピッチの落ち幅(下がり方)', 1, 12, (v) => '×' + v.toFixed(1)],
-    ['bodyDecay', 'ディケイ(長さ)', 0.02, 2, (v) => v.toFixed(2) + '秒', true],
     ['drive', '歪み', 0, 1, (v) => Math.round(v * 100) + '%'],
-    ['claps', 'リトリガー(連打の回数)', 1, 6, (v) => Math.round(v) + '回'],
+    ['eq1Hz', '山1の高さ', 30, 16000, (v) => Math.round(v) + 'Hz', true],
+    ['eq1Gain', '山1の量', -24, 24, (v) => (v > 0 ? '+' : '') + v.toFixed(1) + 'dB'],
+    ['eq1Q', '山1の幅(小さいほど、なだらか)', 0.3, 10, (v) => 'Q ' + v.toFixed(1), true],
+    ['eq2Hz', '山2の高さ', 30, 16000, (v) => Math.round(v) + 'Hz', true],
+    ['eq2Gain', '山2の量', -24, 24, (v) => (v > 0 ? '+' : '') + v.toFixed(1) + 'dB'],
+    ['eq2Q', '山2の幅(小さいほど、なだらか)', 0.3, 10, (v) => 'Q ' + v.toFixed(1), true],
+    ['comp', 'コンプのかかり方', 0, 1, (v) => Math.round(v * 100) + '%'],
+    ['compAtk', 'コンプのアタック', 0.001, 0.05, (v) => (v * 1000).toFixed(1) + 'ミリ秒', true],
   ];
 
   let ctx = null, noiseBuf = null, analyser = null;
@@ -51,45 +57,40 @@
     for (let i = 0; i < n; i++) { const x = i / (n - 1) * 2 - 1; c[i] = k ? Math.tanh(x * (1 + k)) / Math.tanh(1 + k) : x; }
     return c;
   }
-  const len = () => Math.max(p.hold + p.decay, p.body > 0 ? p.bodyDecay : 0) + 0.01 * Math.round(p.claps) + 0.15;
+  const len = () => p.attack + p.hold + p.decay + 0.011 * Math.round(p.claps) + 0.15;
 
   // 1回分の音を、c(ふつうのAudioContextでも、書き出し用のOfflineAudioContextでも)の dest へ流す
   function render(c, dest, t0, nbuf) {
+    const src = c.createBufferSource(); src.buffer = nbuf; src.loop = true;
+    // フィルター
+    const f = c.createBiquadFilter(); f.type = p.ftype === 'none' ? 'allpass' : p.ftype; f.Q.value = p.q;
+    const top = Math.min(20000, p.cutoff * Math.pow(2, p.sweep));
+    f.frequency.setValueAtTime(top, t0);
+    f.frequency.exponentialRampToValueAtTime(Math.max(20, p.cutoff), t0 + Math.min(0.08, p.hold + p.decay));
+    // 鳴り方(エンベロープ)とリトリガー
+    const env = c.createGain();
+    const claps = Math.round(p.claps), gap = 0.011;
+    env.gain.setValueAtTime(0, t0);
+    for (let k = 0; k < claps; k++) {
+      const t = t0 + k * gap, last = k === claps - 1;
+      env.gain.setValueAtTime(0, t);
+      env.gain.linearRampToValueAtTime(1, t + p.attack);
+      if (last && p.hold > 0) env.gain.setValueAtTime(1, t + p.attack + p.hold);
+      env.gain.exponentialRampToValueAtTime(0.001, t + (last ? p.attack + p.hold + p.decay : gap * 0.9));
+    }
+    // 歪み
     const shaper = c.createWaveShaper(); shaper.curve = curve(p.drive); shaper.oversample = '2x';
+    // EQ(山を2つ)
+    const e1 = c.createBiquadFilter(); e1.type = 'peaking'; e1.frequency.value = p.eq1Hz; e1.gain.value = p.eq1Gain; e1.Q.value = p.eq1Q;
+    const e2 = c.createBiquadFilter(); e2.type = 'peaking'; e2.frequency.value = p.eq2Hz; e2.gain.value = p.eq2Gain; e2.Q.value = p.eq2Q;
+    // コンプ(かかり方0%なら素通し)
+    const cp = c.createDynamicsCompressor();
+    cp.threshold.value = -50 * p.comp; cp.ratio.value = 1 + 11 * p.comp; cp.knee.value = 6;
+    cp.attack.value = p.compAtk; cp.release.value = 0.15;
     const vol = c.createGain(); vol.gain.value = p.volume;
-    shaper.connect(vol); vol.connect(dest);
-
-    if (p.noise > 0) {
-      const src = c.createBufferSource(); src.buffer = nbuf; src.loop = true;
-      const f = c.createBiquadFilter(); f.type = p.ftype; f.Q.value = p.q;
-      const top = Math.min(20000, p.cutoff * Math.pow(2, p.sweep));
-      f.frequency.setValueAtTime(top, t0);
-      f.frequency.exponentialRampToValueAtTime(Math.max(20, p.cutoff), t0 + Math.min(0.08, p.hold + p.decay));
-      const env = c.createGain();
-      const claps = Math.round(p.claps), gap = 0.011;
-      env.gain.setValueAtTime(0, t0);
-      for (let k = 0; k < claps; k++) {                       // 連打: 短いバーストを何回か
-        const t = t0 + k * gap, last = k === claps - 1;
-        env.gain.setValueAtTime(0, t);
-        env.gain.linearRampToValueAtTime(p.noise, t + p.attack);
-        if (last && p.hold > 0) env.gain.setValueAtTime(p.noise, t + p.attack + p.hold);   // 持続: しばらく同じ大きさのまま
-        env.gain.exponentialRampToValueAtTime(0.001, t + (last ? p.attack + p.hold + p.decay : gap * 0.9));
-      }
-      if (p.ftype === 'none') src.connect(env); else { src.connect(f); f.connect(env); }   // フィルターなし: 素のノイズのまま
-      env.connect(shaper);
-      src.start(t0); src.stop(t0 + len());
-    }
-    if (p.body > 0) {
-      const o = c.createOscillator(); o.type = 'sine';
-      o.frequency.setValueAtTime(p.bodyHz * p.bodyDrop, t0);
-      o.frequency.exponentialRampToValueAtTime(p.bodyHz, t0 + Math.min(0.12, p.bodyDecay));
-      const e = c.createGain();
-      e.gain.setValueAtTime(0, t0);
-      e.gain.linearRampToValueAtTime(p.body, t0 + p.attack);
-      e.gain.exponentialRampToValueAtTime(0.001, t0 + p.bodyDecay);
-      o.connect(e); e.connect(shaper);
-      o.start(t0); o.stop(t0 + len());
-    }
+    if (p.ftype === 'none') src.connect(env); else { src.connect(f); f.connect(env); }   // フィルターなし: 素のノイズのまま
+    env.connect(shaper); shaper.connect(e1); e1.connect(e2); e2.connect(cp); cp.connect(vol); vol.connect(dest);
+    src.start(t0); src.stop(t0 + len());
   }
 
   const playing = new Set();   // 鳴っている音(止めるボタン用)
@@ -165,13 +166,14 @@
       $('ftype').appendChild(l);
     }
   }
-  // つまみを項目ごとにまとめる(音の流れの順: ノイズ → フィルター → 鳴り方 → 胴鳴り → 音量と歪み)。名前は見出しの言葉をくり返さない(2026-11-26)
+  // つまみを項目ごとにまとめる(音の流れの順)。名前は見出しの言葉をくり返さない(2026-11-26)
   const GROUPS = [
-    ['ノイズ', ['noise', 'claps']],
+    ['鳴り方', ['attack', 'hold', 'decay', 'claps']],
     ['フィルター(どの高さを残すか)', ['cutoff', 'q', 'sweep'], 'ftype'],
-    ['鳴り方', ['attack', 'hold', 'decay']],
-    ['胴鳴り(ボディ)', ['body', 'bodyHz', 'bodyDrop', 'bodyDecay']],
-    ['音量と歪み', ['volume', 'drive']],
+    ['歪み', ['drive']],
+    ['EQ(山を2つ作る)', ['eq1Hz', 'eq1Gain', 'eq1Q', 'eq2Hz', 'eq2Gain', 'eq2Q']],
+    ['コンプ', ['comp', 'compAtk']],
+    ['音量', ['volume']],
   ];
   const syncs = [];
   for (const [title, keys, extra] of GROUPS) {
@@ -189,7 +191,7 @@
   { const b = document.createElement('button'); b.id = 'random'; b.textContent = 'でたらめにする'; $('presets').appendChild(b); }   // ひな形の並びの最後に(2026-11-26、本人)
   $('random').onclick = () => {
     for (const [key, , min, max, , log] of KNOBS) {
-      if (key === 'volume') continue;
+      if (key === 'volume' || key === 'comp' || key === 'compAtk') continue;   // 音量とコンプは、でたらめでは変えない
       const s = Math.random();
       p[key] = log ? min * Math.pow(max / min, s) : min + s * (max - min);
     }
