@@ -11,6 +11,13 @@
   html, body, body * { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: manipulation; }
   body textarea { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
   input[type=range] { touch-action: pan-y pinch-zoom; }
+  /* 波形と、鳴らす・止める・保存は、下へ動かしても上に残る(2026-11-26、本人) */
+  .dock { position: sticky; top: 0; z-index: 5; background: var(--bg); padding: 2px 0 4px; border-bottom: 1px solid var(--line); }
+  .dock p { margin: 0; }
+  .dock button, .dock button.pad { margin: 4px 6px 4px 0; padding: 6px 12px; min-width: 0; min-height: 0; font-size: 15px; }
+  .dock button.pad { font-weight: bold; }
+  .dock canvas.wave { height: 72px; margin: 2px 0 0; }
+  .dock #savenote:empty { display: none; }
 </style>
 </head>
 <body>
@@ -23,9 +30,11 @@
 <p>ザーッというホワイトノイズから、つまみだけでドラムの音を作る。最初は素のノイズ。「ホールド」を0にして「ディケイ」を短くすると、もう打楽器っぽくなる。気に入った音はWAVで保存して、素材にできる。</p>
 <p class="small">スペースキーでも鳴らせる。Escキーで止まる。音が大きいので、最初は音量を下げてから。</p>
 
+<div class="dock">
 <p><button class="pad" id="hit">▶ 鳴らす</button><button id="stop">■ 止める</button><button id="random">でたらめにする</button><button id="save">WAVを保存</button></p>
-<p class="small" id="savenote"></p>
 <canvas class="wave" id="wave"></canvas>
+<p class="small" id="savenote"></p>
+</div>
 
 <h2>ひな形(ここから崩していく)</h2>
 <p id="presets"></p>
@@ -55,6 +64,6 @@
 </main>
 <footer>kimpilla</footer>
 <script src="../common/wav.js"></script>
-<script src="noisedrum.js?v=20261126g"></script>
+<script src="noisedrum.js?v=20261126h"></script>
 </body>
 </html>
