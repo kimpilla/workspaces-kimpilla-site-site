@@ -165,7 +165,22 @@
       $('ftype').appendChild(l);
     }
   }
-  const resync = buildKnobs($('knobs'), KNOBS, p, preview);
+  // つまみを項目ごとにまとめる(音の流れの順: ノイズ → フィルター → 鳴り方 → 胴鳴り → 音量と歪み)
+  const GROUPS = [
+    ['ノイズ', ['noise', 'claps']],
+    ['フィルター(どの高さを残すか)', ['cutoff', 'q', 'sweep'], 'ftype'],
+    ['鳴り方', ['attack', 'hold', 'decay']],
+    ['胴鳴り(ボディ)', ['body', 'bodyHz', 'bodyDrop', 'bodyDecay']],
+    ['音量と歪み', ['volume', 'drive']],
+  ];
+  const syncs = [];
+  for (const [title, keys, extra] of GROUPS) {
+    const h = document.createElement('h3'); h.className = 'sub'; h.textContent = title; $('knobs').appendChild(h);
+    if (extra) $('knobs').appendChild($(extra));
+    const box = document.createElement('div'); box.className = 'knobs'; $('knobs').appendChild(box);
+    syncs.push(buildKnobs(box, keys.map((key) => KNOBS.find((k) => k[0] === key)), p, preview));
+  }
+  const resync = () => syncs.forEach((f) => f());
   for (const name of Object.keys(PRESETS)) {
     const b = document.createElement('button'); b.textContent = name;
     b.onclick = () => { Object.assign(p, PRESETS[name]); resync(); buildTypes(); preview(); hit(); };
