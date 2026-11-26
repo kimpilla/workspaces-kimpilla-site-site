@@ -11,6 +11,13 @@
   html, body, body * { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: manipulation; }
   body textarea { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
   input[type=range] { touch-action: pan-y pinch-zoom; }
+  /* 波形と、鳴らす・止める・保存は、下へ動かしても上に残る(2026-11-26、本人) */
+  .dock { position: sticky; top: 0; z-index: 5; background: var(--bg); padding: 2px 0 4px; border-bottom: 1px solid var(--line); }
+  .dock p { margin: 0; }
+  .dock button, .dock button.pad { margin: 4px 6px 4px 0; padding: 6px 12px; min-width: 0; min-height: 0; font-size: 15px; }
+  .dock button.pad { font-weight: bold; }
+  .dock canvas.wave { height: 72px; margin: 2px 0 0; }
+  .dock #savenote:empty { display: none; }
 </style>
 </head>
 <body>
@@ -20,21 +27,22 @@
 </header>
 <main>
 <h1>ノイズドラム</h1>
-<p>ザーッというホワイトノイズから、つまみだけでドラムの音を作る。キックやタムの「ドン」には、ノイズの下に、高さが下がっていく低い音(サイン波。「胴鳴り」のつまみ)を足している。ハイハット・クラップは、ノイズだけ。最初は素のノイズ。「ホールド」を0にして「ディケイ」を短くすると、もう打楽器っぽくなる。気に入った音はWAVで保存して、素材にできる。</p>
+<p>ザーッというホワイトノイズだけから、つまみでドラムの音を作る。最初は素のノイズ。「ホールド」を0にして「ディケイ」を短くすると、もう打楽器っぽくなる。キックも、ノイズの低いところをEQで持ち上げて作る。気に入った音はWAVで保存して、素材にできる。</p>
+<p class="small">元の考え: <a href="https://youtu.be/4PoSb3SraKA" target="_blank" rel="noopener">きりたんのDTM解説「ホワイトノイズを使って、自分だけのドラムを作ろう！」</a>。ひな形は、この動画の手順どおり。</p>
 <p class="small">スペースキーでも鳴らせる。Escキーで止まる。音が大きいので、最初は音量を下げてから。</p>
 
-<p><button class="pad" id="hit">▶ 鳴らす</button><button id="stop">■ 止める</button><button id="random">でたらめにする</button><button id="save">WAVを保存</button></p>
-<p class="small" id="savenote"></p>
+<div class="dock">
+<p><button class="pad" id="hit">▶ 鳴らす</button><button id="stop">■ 止める</button><button id="save">WAVを保存</button></p>
 <canvas class="wave" id="wave"></canvas>
+<p class="small" id="savenote"></p>
+</div>
 
 <h2>ひな形(ここから崩していく)</h2>
 <p id="presets"></p>
 
-<h2>フィルター(どの高さを残すか)</h2>
-<p class="choices" id="ftype"></p>
-
 <h2>つまみ</h2>
-<div class="knobs" id="knobs"></div>
+<p class="choices" id="ftype"></p>
+<div id="knobs"></div>
 
 <h2>設定をテキストで保存・読み込み</h2>
 <p class="small">「書き出す」で、いまの設定が下の枠に文字で出る。メモ帳などに貼って残す。読み込むときは、枠に貼って「読み込む」。</p>
@@ -47,16 +55,18 @@
 <ul>
 <li><b>ホールド</b>: ザーッと同じ大きさで鳴り続ける長さ。0にすると、鳴った瞬間から消えはじめる。</li>
 <li><b>ディケイ</b>: 音が消えるまでの時間。短いとハイハット、長いとシンバルやスネアの響きに近づく。</li>
-<li><b>フィルター</b>: 低い方だけ残す(ローパス)、高い方だけ残す(ハイパス)、ある高さだけ残す(バンドパス)。ハイハットはハイパス、スネアはバンドパスが近い。</li>
-<li><b>フィルタースイープ</b>: 鳴った瞬間だけフィルターを開いて、すぐ閉じる。アタックの「パシッ」が出る。</li>
-<li><b>ボディ(胴鳴り)</b>: ノイズの下に、高さが下がっていく低い音(サイン波)を足す。キックやタムの「ドン」になる。</li>
-<li><b>歪み</b>: 波を押しつぶして、汚す。</li>
 <li><b>リトリガー(連打)</b>: 短い間隔で何回か鳴らし直す。クラップ(手拍子)の「パラッ」になる。</li>
+<li><b>フィルター</b>: 低い方だけ残す(ローパス)、高い方だけ残す(ハイパス)、ある高さだけ残す(バンドパス)。ハイハットはハイパスで10kHzあたり、スネアはバンドパスで1kHzの少し左。</li>
+<li><b>スイープ</b>: 鳴った瞬間だけフィルターを開いて、すぐ閉じる。アタックの「パシッ」が出る。</li>
+<li><b>歪み</b>: 波を押しつぶして、汚す。クラップは強めに。</li>
+<li><b>EQ</b>: 決めた高さに山を作って、そこを持ち上げる(量をマイナスにすると谷)。クラップは1kHzの少し右に山。キックは100Hzより下に大きい山と、100Hzあたりになだらかな山。</li>
+<li><b>コンプ</b>: 大きいところを抑えて、音の頭(アタック)を立たせる。キックのアタック感はここで作る。</li>
+<li><b>予備: サイン波を足す</b>: ふだんは使わない(ひな形はどれも0)。ノイズだけでは出ない「ドン」の芯がほしいときに、高さが下がっていく低い音を足す。</li>
 </ul>
 </section>
 </main>
 <footer>kimpilla</footer>
 <script src="../common/wav.js"></script>
-<script src="noisedrum.js?v=20261126e"></script>
+<script src="noisedrum.js?v=20261126o"></script>
 </body>
 </html>
