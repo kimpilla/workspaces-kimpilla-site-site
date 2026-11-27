@@ -14,6 +14,9 @@
   details { margin-top: 28px; border-top: 1px solid var(--line); padding-top: 8px; }
   details input[type=password] { width: 100%; font: inherit; padding: 6px 8px; border: 1px solid var(--line); background: var(--bg); color: var(--fg); }
   ol.steps { padding-left: 1.4em; }
+  #results { margin-top: 8px; }
+  #results:empty { display: none; }
+  .gsc-control-cse { padding: 0 !important; border: 0 !important; background: transparent !important; }
 </style>
 </head>
 <body>
@@ -30,6 +33,8 @@
   <button type="submit">検索</button>
 </form>
 <p class="info small" id="status"></p>
+<p class="small" id="openg" hidden><a id="openga" target="_blank" rel="noopener">Googleで開く</a></p>
+<div id="results"></div>
 
 <h2>最近の検索</h2>
 <ul class="list small" id="recent"></ul>
@@ -51,6 +56,8 @@
 <footer>kimpilla</footer>
 <script>
 (() => {
+  // Googleのプログラム可能な検索エンジンのID。空なら、結果はGoogleの別タブで開く
+  const CX = '';
   const REPO = 'kimpilla/ai-memory', BRANCH = 'main';
   const DIR = 'workspaces/archive/sources/raw/検索履歴';
   const K_TOK = 'search.token', K_QUEUE = 'search.queue', K_RECENT = 'search.recent';
@@ -77,6 +84,7 @@
       const li = document.createElement('li');
       const t = document.createElement('span'); t.textContent = r.t.slice(5);
       const a = document.createElement('a'); a.href = gUrl(r.q); a.target = '_blank'; a.rel = 'noopener'; a.textContent = r.q;
+      a.addEventListener('click', ev => { if (!CX) return; ev.preventDefault(); $('q').value = r.q; showResults(r.q); window.scrollTo(0, 0); });
       li.append(t, a); ul.appendChild(li);
     }
   }
@@ -141,13 +149,35 @@
     store(K_QUEUE, [...load(K_QUEUE, []), r]);
     store(K_RECENT, [{ t: r.t, q }, ...load(K_RECENT, []).filter(x => x.q !== q)].slice(0, 30));
     renderRecent();
+    setStatus(token() ? '記録している…' : '鍵がないので、この端末にためた。' + pendingNote());
+    if (CX) { showResults(q); flush(); return; }
     $('q').value = '';
     const w = window.open(gUrl(q), '_blank');
     if (w) { try { w.opener = null; } catch (e) {} }
-    setStatus(token() ? '記録している…' : '鍵がないので、この端末にためた。' + pendingNote());
     const go = flush();
     if (!w) go.finally(() => { location.href = gUrl(q); });
   });
+
+  // 検索窓の下に結果を出す(Googleのプログラム可能な検索エンジン)
+  let cseReady = null, pendingQ = null;
+  function loadCse() {
+    if (cseReady) return cseReady;
+    cseReady = new Promise(res => {
+      window.__gcse = { parsetags: 'explicit', callback: () => {
+        google.search.cse.element.render({ div: 'results', tag: 'searchresults-only', gname: 'r', attributes: { linkTarget: '_blank' } });
+        res();
+      } };
+      const sc = document.createElement('script');
+      sc.async = true; sc.src = 'https://cse.google.com/cse.js?cx=' + encodeURIComponent(CX);
+      document.head.appendChild(sc);
+    });
+    return cseReady;
+  }
+  function showResults(q) {
+    $('openga').href = gUrl(q); $('openg').hidden = false;
+    loadCse().then(() => google.search.cse.element.getElement('r').execute(q));
+  }
+  if (CX) loadCse();
 
   $('save').addEventListener('click', () => {
     const v = $('tok').value.trim();
